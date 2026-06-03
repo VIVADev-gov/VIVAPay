@@ -28,10 +28,7 @@ export function enrichContractWithPaymentStats(
     PENDING_STATUSES.has(account.estado)
   );
 
-  const endDate = contract.actual.fechaFinal ?? contract.fechaFinal;
-  const contractEnded = endDate ? new Date(endDate) < new Date() : false;
-
-  const canSubmitPaymentAccount = hasPending && !contractEnded;
+  const canSubmitPaymentAccount = hasPending;
 
   return {
     ...contract,

@@ -34,7 +34,23 @@ export const cuentasCobroService = {
 
     const contratos = await Contrato.find({ userId }).exec();
     const today = new Date();
-    const currentContractDoc =
+
+    const [nextPaymentAccount, lastPaymentAccount] = await Promise.all([
+      CuentaCobro.findOne({
+        userId,
+        estado: { $in: NEXT_PAYMENT_STATUSES },
+      })
+        .sort({ contratoId: 1, numero: 1, fechaHabilitadaEnvio: 1 })
+        .exec(),
+      CuentaCobro.findOne({
+        userId,
+        estado: { $in: DONE_PAYMENT_STATUSES },
+      })
+        .sort({ numero: -1, fechaEnvio: -1, updatedAt: -1 })
+        .exec(),
+    ]);
+
+    const dateBasedContractDoc =
       contratos.find((contrato) => {
         const current = getCurrentContractSnapshot(contrato);
         return Boolean(
@@ -45,20 +61,14 @@ export const cuentasCobroService = {
         );
       }) ?? null;
 
-    const [nextPaymentAccount, lastPaymentAccount] = await Promise.all([
-      CuentaCobro.findOne({
-        userId,
-        estado: { $in: NEXT_PAYMENT_STATUSES },
-      })
-        .sort({ numero: 1, fechaHabilitadaEnvio: 1 })
-        .exec(),
-      CuentaCobro.findOne({
-        userId,
-        estado: { $in: DONE_PAYMENT_STATUSES },
-      })
-        .sort({ numero: -1, fechaEnvio: -1, updatedAt: -1 })
-        .exec(),
-    ]);
+    const pendingContractDoc = nextPaymentAccount
+      ? (contratos.find(
+          (contrato) =>
+            String(contrato._id) === String(nextPaymentAccount.contratoId)
+        ) ?? null)
+      : null;
+
+    const currentContractDoc = dateBasedContractDoc ?? pendingContractDoc;
 
     const completedAllPaymentAccounts =
       !nextPaymentAccount && Boolean(lastPaymentAccount);

@@ -1,11 +1,9 @@
+import { formatDateOnly } from "@/utils/date";
+
 export function formatDate(value?: string | Date | null) {
   if (!value) return "Sin fecha";
-
-  return new Intl.DateTimeFormat("es-CO", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  }).format(new Date(value));
+  const formatted = formatDateOnly(value);
+  return formatted || "Sin fecha";
 }
 
 export function formatCurrency(value?: number | null) {

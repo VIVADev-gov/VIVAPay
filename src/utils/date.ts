@@ -17,11 +17,72 @@ export function parseToDate(value: unknown): Date | null {
     const s = String(value).trim();
     if (!s) return null;
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-        const d = new Date(`${s}T12:00:00`);
-        return Number.isNaN(d.getTime()) ? null : d;
+        return parseDateOnlyToUtcNoon(s);
     }
     const d = new Date(s);
     return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** Fecha calendario (YYYY-MM-DD o ISO) a mediodía UTC para evitar desfase en Colombia. */
+export function parseDateOnlyToUtcNoon(value: unknown): Date | null {
+    if (value == null) return null;
+    if (value instanceof Date) {
+        if (Number.isNaN(value.getTime())) return null;
+        return new Date(
+            Date.UTC(
+                value.getUTCFullYear(),
+                value.getUTCMonth(),
+                value.getUTCDate(),
+                12,
+                0,
+                0,
+                0
+            )
+        );
+    }
+    const s = String(value).trim();
+    if (!s) return null;
+    const datePart = s.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+        const [y, m, d] = datePart.split("-").map(Number);
+        const parsed = new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+    const fallback = new Date(s);
+    if (Number.isNaN(fallback.getTime())) return null;
+    return new Date(
+        Date.UTC(
+            fallback.getUTCFullYear(),
+            fallback.getUTCMonth(),
+            fallback.getUTCDate(),
+            12,
+            0,
+            0,
+            0
+        )
+    );
+}
+
+/** Parte calendario YYYY-MM-DD en UTC. */
+export function toDateOnlyString(value: unknown): string | null {
+    const d = parseDateOnlyToUtcNoon(value);
+    if (!d) return null;
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+}
+
+/** Formato legible sin corrimiento de zona horaria (usa parte UTC de la fecha). */
+export function formatDateOnly(value: unknown): string {
+    const d = parseDateOnlyToUtcNoon(value);
+    if (!d) return "";
+    return new Intl.DateTimeFormat("es-CO", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        timeZone: "UTC",
+    }).format(d);
 }
 
 export function toIsoStringOrNull(value: unknown): string | null {

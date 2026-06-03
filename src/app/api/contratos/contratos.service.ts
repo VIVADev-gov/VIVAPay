@@ -9,6 +9,7 @@ import {
   toPublicContrato,
   type IContratoDocument,
 } from "@/models/contrato";
+import { parseDateOnlyToUtcNoon } from "@/utils/date";
 import type { CreateContractBodyDto } from "./dto/create-contract.dto";
 import { CONTRACT_ERROR_CODES, ContractServiceError } from "./contratos.errors";
 
@@ -99,8 +100,16 @@ export const contratosService = {
   async create(userId: string, dto: CreateContractBodyDto) {
     await connectDB();
 
-    const fechaActaInicio = new Date(dto.fechaActaInicio);
-    const fechaFinal = new Date(dto.fechaFinal);
+    const fechaActaInicio = parseDateOnlyToUtcNoon(dto.fechaActaInicio);
+    const fechaFinal = parseDateOnlyToUtcNoon(dto.fechaFinal);
+
+    if (!fechaActaInicio || !fechaFinal) {
+      throw new ContractServiceError(
+        "Las fechas del contrato no son válidas",
+        400,
+        CONTRACT_ERROR_CODES.INVALID_CONTRACT_DATES
+      );
+    }
 
     if (fechaFinal < fechaActaInicio) {
       throw new ContractServiceError(
