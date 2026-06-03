@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Send, UserRound } from "lucide-react";
+import { FileText, UserRound } from "lucide-react";
 import {
   DashboardHero,
   DashboardModuleCard,
@@ -13,18 +13,10 @@ const modules = [
   {
     title: "Información contractual",
     description:
-      "Consulta tu contrato vigente, contratos anteriores y el historial de cobros.",
-    href: "/dashboard/informacion-contractual",
+      "Consulta tu contrato vigente, contratos anteriores, cuentas de cobro y gestiona el envío desde el detalle.",
+    href: "/dashboard/contrato",
     icon: FileText,
     accent: "primary" as const,
-  },
-  {
-    title: "Enviar cuenta de cobro",
-    description:
-      "Revisa la cuenta que sigue, fechas disponibles y prepara el envío.",
-    href: "/dashboard/enviar-cuenta-cobro",
-    icon: Send,
-    accent: "ring" as const,
   },
   {
     title: "Perfil",
@@ -45,7 +37,7 @@ export default function DashboardPage() {
         <DashboardHero
           eyebrow="Bienvenido a Vivapay"
           title={`Hola, ${user?.name ?? "funcionario"}.`}
-          description="Desde aquí podrás enviar tu cuenta de cobro y llevar el registro de tu información contractual."
+          description="Gestiona tu información contractual y tus cuentas de cobro desde el detalle de tu contrato vigente."
         />
 
         <DashboardOverviewGrid />
@@ -60,8 +52,8 @@ export default function DashboardPage() {
                 Módulos disponibles
               </h3>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Entra a cada módulo para gestionar tu información contractual,
-                cuentas de cobro y datos de perfil.
+                Entra a información contractual para ver contratos y cuentas de
+                cobro, o actualiza tu perfil.
               </p>
             </div>
             <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm">
@@ -70,7 +62,7 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          <div className="mt-8 grid gap-5 md:grid-cols-3">
+          <div className="mt-8 grid gap-5 md:grid-cols-2">
             {modules.map((module) => (
               <DashboardModuleCard key={module.href} {...module} />
             ))}

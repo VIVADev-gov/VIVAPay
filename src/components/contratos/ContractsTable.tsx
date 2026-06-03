@@ -69,7 +69,7 @@ export default function ContractsTable({
       align: "center",
       body: (row) => (
         <Link
-          href={`/dashboard/informacion-contractual/${row.id}`}
+          href={`/dashboard/contrato/${row.id}`}
           className="inline-flex rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary hover:text-primary-foreground"
         >
           Ver detalle
@@ -161,7 +161,7 @@ export default function ContractsTable({
           </div>
 
           <Link
-            href={`/dashboard/informacion-contractual/${contract.id}`}
+            href={`/dashboard/contrato/${contract.id}`}
             className="mt-5 inline-flex rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-ring"
           >
             Ver detalle

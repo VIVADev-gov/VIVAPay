@@ -6,6 +6,7 @@ import { useContratosQuery } from "@/hooks/api/useContratos";
 import { useCuentasCobroSummaryQuery } from "@/hooks/api/useCuentasCobro";
 import { useContratosStore } from "@/store/contratos/contratos.store";
 import { useCuentasCobroStore } from "@/store/cuentas-cobro/cuentas-cobro.store";
+import { getPaymentAccountHref } from "@/lib/cuentas-cobro/paymentAccountAccess";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
 function OverviewStat({
@@ -83,7 +84,7 @@ export default function DashboardOverviewGrid() {
               />
             </div>
             <Link
-              href={`/dashboard/informacion-contractual/${contract.id}`}
+              href={`/dashboard/contrato/${contract.id}`}
               className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-md transition hover:bg-ring"
             >
               Ver detalle
@@ -137,10 +138,13 @@ export default function DashboardOverviewGrid() {
                 : "."}
             </p>
             <Link
-              href="/dashboard/enviar-cuenta-cobro"
+              href={getPaymentAccountHref(
+                nextPayment.contratoId,
+                nextPayment.numero
+              )}
               className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-md transition hover:bg-ring"
             >
-              Preparar envío
+              Gestionar cuenta
               <ArrowUpRight className="h-4 w-4" />
             </Link>
           </div>
