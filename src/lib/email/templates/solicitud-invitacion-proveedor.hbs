@@ -1,0 +1,50 @@
+{{> header nombreEmpresa="VIVA" badge="Cotizaciones" titulo="Invitación a cotizar" subtitulo="Solicitud de cotización · Portal proveedor"}}
+
+<tr>
+  <td
+    style="background-color:#ffffff; padding:28px 36px 32px; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0;">
+    <p style="font-family:'Inter',Arial,sans-serif; font-size:15px; font-weight:600; color:#0f172a; margin:0 0 10px 0;">
+      Hola, <span style="color:#166534;">{{nombre}}</span></p>
+    <p style="font-family:'Inter',Arial,sans-serif; font-size:14px; color:#64748b; line-height:1.7; margin:0 0 16px 0;">
+      {{mensaje}}</p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+      style="margin-bottom:16px; border:1px solid #e2e8f0; border-radius:8px;">
+      <tr>
+        <td style="padding:12px 16px;">
+          <p
+            style="font-family:'Inter',Arial,sans-serif; font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:#94a3b8; margin:0 0 4px 0;">
+            Solicitud</p>
+          <p style="font-family:'Inter',Arial,sans-serif; font-size:15px; font-weight:700; color:#166534; margin:0;">
+            #{{id_solicitud}}</p>
+        </td>
+      </tr>
+    </table>
+
+    {{#if observacion_viva}}
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+      style="margin-top:8px; border:1px solid #dcfce7; border-radius:10px;">
+      <tr>
+        <td
+          style="background-color:#f0fdf4; padding:10px 16px; border-bottom:1px solid #dcfce7; border-radius:10px 10px 0 0;">
+          <p
+            style="font-family:'Inter',Arial,sans-serif; font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#16a34a; margin:0;">
+            Observación de VIVA</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="background-color:#ffffff; padding:14px 16px; border-radius:0 0 10px 10px;">
+          <p style="font-family:'Inter',Arial,sans-serif; font-size:13.5px; color:#334155; line-height:1.65; margin:0; white-space:pre-wrap;">
+            {{observacion_viva}}</p>
+        </td>
+      </tr>
+    </table>
+    {{/if}}
+
+    {{#if url}}
+    {{> boton url=url texto="Ir al portal proveedor"}}
+    {{/if}}
+  </td>
+</tr>
+
+{{> footer nombreEmpresa="VIVA"}}

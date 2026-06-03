@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>GFR-FO-16</title>
+  <style>
+    @page { size: A4; margin: 18mm; }
+    body { font-family: Arial, sans-serif; font-size: 11pt; color: #111; }
+    h1 { font-size: 14pt; text-align: center; margin: 0 0 20px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; }
+    .field { margin: 8px 0; }
+    .label { font-weight: bold; display: block; font-size: 9pt; color: #444; }
+    .value { min-height: 18px; border-bottom: 1px solid #999; padding: 2px 0; }
+    .full { grid-column: 1 / -1; }
+    .firma { margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <h1>AUTORIZACIÓN DE PAGO — ORDENADOR DEL GASTO (GFR-FO-16)</h1>
+  <div class="grid">
+    <div class="field"><span class="label">Director / Jefe</span><div class="value">{{directorJefe}}</div></div>
+    <div class="field"><span class="label">Cargo</span><div class="value">{{cargoDirectorJefe}}</div></div>
+    <div class="field"><span class="label">Contratista</span><div class="value">{{contratista}}</div></div>
+    <div class="field"><span class="label">CC / NIT</span><div class="value">{{ccNit}}</div></div>
+    <div class="field full"><span class="label">No. contrato / convenio</span><div class="value">{{numeroContratoConvenio}}</div></div>
+    <div class="field"><span class="label">No. disponibilidad</span><div class="value">{{numeroDisponibilidad}}</div></div>
+    <div class="field"><span class="label">No. compromiso</span><div class="value">{{numeroCompromiso}}</div></div>
+    <div class="field full"><span class="label">No. factura / cuenta de cobro</span><div class="value">{{numeroFacturaCobro}}</div></div>
+    <div class="field"><span class="label">Valor del pago</span><div class="value">{{valorPago}}</div></div>
+    <div class="field firma">
+      <span class="label">Firma</span><div class="value">{{firma}}</div>
+      <span class="label">Dirección / Jefatura</span><div class="value">{{direccionJefatura}}</div>
+      <span class="label">C.C.</span><div class="value">{{cc}}</div>
+    </div>
+  </div>
+</body>
+</html>

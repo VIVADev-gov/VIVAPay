@@ -1,0 +1,16 @@
+{{> header nombreEmpresa="Vivapay"}}
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="padding: 24px; font-family: Inter, system-ui, sans-serif; color: #0e251f;">
+  <tr>
+    <td>
+      <p style="color: #0e251f;">Hola <strong style="color: #15372f;">{{nombre}}</strong>,</p>
+      <p style="color: #0e251f;">
+        Gracias por registrarte en Vivapay. Para activar tu cuenta, confirma tu correo institucional haciendo clic en el botón:
+      </p>
+      {{> boton url=verifyUrl texto="Confirmar correo"}}
+      <p style="color: #577075; font-size: 13px; margin-top: 24px;">
+        Si no solicitaste este registro, puedes ignorar este mensaje. El enlace expira en 48 horas.
+      </p>
+    </td>
+  </tr>
+</table>
+{{> footer}}

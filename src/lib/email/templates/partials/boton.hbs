@@ -1,0 +1,19 @@
+{{!-- partial: boton --}}
+{{!-- Uso: {{> boton url="/ruta" texto="Ver orden"}} --}}
+
+<table cellpadding="0" cellspacing="0" role="presentation" style="margin-top:24px;">
+  <tr>
+    <!--[if mso]>
+    <td style="background-color:#16a34a; border-radius:8px; padding:12px 28px;">
+    <a href="{{url}}" style="font-family:'Inter',Arial,sans-serif; font-size:13px; font-weight:600; color:#ffffff; text-decoration:none; letter-spacing:0.04em;">{{texto}} →</a>
+    </td>
+    <![endif]-->
+    <!--[if !mso]><!-->
+    <td style="background-color:#16a34a; border-radius:8px; padding:12px 28px;">
+      <a class="email-btn" href="{{url}}"
+        style="font-family:'Inter',Arial,sans-serif; font-size:13px; font-weight:600; color:#ffffff; text-decoration:none; letter-spacing:0.04em; display:inline-block;">{{texto}}
+        →</a>
+    </td>
+    <!--<![endif]-->
+  </tr>
+</table>

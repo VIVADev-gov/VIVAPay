@@ -1,0 +1,133 @@
+import { Types } from "mongoose";
+import { connectDB } from "@/lib/db/mongoose";
+import { enrichContractWithPaymentStats } from "@/lib/contratos/contractStats";
+import {
+  CUENTA_COBRO_STATUS,
+  CuentaCobro,
+  toPublicCuentaCobro,
+} from "@/models/cuentaCobro";
+import {
+  Contrato,
+  getCurrentContractSnapshot,
+  toPublicContrato,
+} from "@/models/contrato";
+import {
+  PAYMENT_ACCOUNT_ERROR_CODES,
+  PaymentAccountServiceError,
+} from "./cuentas-cobro.errors";
+
+const NEXT_PAYMENT_STATUSES = [
+  CUENTA_COBRO_STATUS.BORRADOR,
+  CUENTA_COBRO_STATUS.PENDIENTE,
+  CUENTA_COBRO_STATUS.HABILITADA,
+];
+
+const DONE_PAYMENT_STATUSES = [
+  CUENTA_COBRO_STATUS.ENVIADA,
+  CUENTA_COBRO_STATUS.APROBADA,
+  CUENTA_COBRO_STATUS.RECHAZADA,
+];
+
+export const cuentasCobroService = {
+  async getSummary(userId: string) {
+    await connectDB();
+
+    const contratos = await Contrato.find({ userId }).exec();
+    const today = new Date();
+    const currentContractDoc =
+      contratos.find((contrato) => {
+        const current = getCurrentContractSnapshot(contrato);
+        return Boolean(
+          current.fechaActaInicio &&
+            current.fechaFinal &&
+            current.fechaActaInicio <= today &&
+            current.fechaFinal >= today
+        );
+      }) ?? null;
+
+    const [nextPaymentAccount, lastPaymentAccount] = await Promise.all([
+      CuentaCobro.findOne({
+        userId,
+        estado: { $in: NEXT_PAYMENT_STATUSES },
+      })
+        .sort({ numero: 1, fechaHabilitadaEnvio: 1 })
+        .exec(),
+      CuentaCobro.findOne({
+        userId,
+        estado: { $in: DONE_PAYMENT_STATUSES },
+      })
+        .sort({ numero: -1, fechaEnvio: -1, updatedAt: -1 })
+        .exec(),
+    ]);
+
+    const completedAllPaymentAccounts =
+      !nextPaymentAccount && Boolean(lastPaymentAccount);
+
+    let currentContract = null;
+    if (currentContractDoc) {
+      const accounts = await CuentaCobro.find({
+        contratoId: currentContractDoc._id,
+      })
+        .select("estado")
+        .lean()
+        .exec();
+      currentContract = enrichContractWithPaymentStats(
+        toPublicContrato(currentContractDoc),
+        accounts
+      );
+    }
+
+    return {
+      currentContract,
+      nextPaymentAccount: nextPaymentAccount
+        ? toPublicCuentaCobro(nextPaymentAccount)
+        : null,
+      lastPaymentAccount: lastPaymentAccount
+        ? toPublicCuentaCobro(lastPaymentAccount)
+        : null,
+      completedAllPaymentAccounts,
+      message: completedAllPaymentAccounts
+        ? "Se han realizado todas las cuentas de cobro registradas."
+        : null,
+    };
+  },
+
+  async listByContract(userId: string, contractId: string) {
+    await connectDB();
+
+    if (!Types.ObjectId.isValid(contractId)) {
+      throw new PaymentAccountServiceError(
+        "Contrato no encontrado",
+        404,
+        PAYMENT_ACCOUNT_ERROR_CODES.CONTRACT_NOT_FOUND
+      );
+    }
+
+    const contract = await Contrato.findOne({ _id: contractId, userId }).exec();
+
+    if (!contract) {
+      throw new PaymentAccountServiceError(
+        "Contrato no encontrado",
+        404,
+        PAYMENT_ACCOUNT_ERROR_CODES.CONTRACT_NOT_FOUND
+      );
+    }
+
+    const paymentAccounts = await CuentaCobro.find({
+      userId,
+      contratoId: contract._id,
+    })
+      .sort({ numero: -1 })
+      .exec();
+
+    const publicContract = enrichContractWithPaymentStats(
+      toPublicContrato(contract),
+      paymentAccounts
+    );
+
+    return {
+      contract: publicContract,
+      paymentAccounts: paymentAccounts.map(toPublicCuentaCobro),
+    };
+  },
+};

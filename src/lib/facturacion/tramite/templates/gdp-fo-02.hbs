@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>GDP-FO-02</title>
+  <style>
+    @page { size: A4; margin: 18mm 20mm; }
+    body {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 12pt;
+      color: #000;
+      line-height: 1.45;
+    }
+    h1 { text-align: center; font-size: 13pt; margin: 0 0 14px; }
+    p { text-align: justify; margin: 0 0 10px; }
+    ul { margin: 0 0 12px 22px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 11pt; }
+    th, td { border: 1px solid #222; padding: 6px 8px; vertical-align: top; }
+    th { font-weight: bold; background: #f3f3f3; }
+    .label { width: 32%; font-weight: bold; }
+    .section { font-weight: bold; margin: 12px 0 6px; }
+    .total-label { font-weight: bold; text-align: right; }
+    .total-value { font-weight: bold; text-align: right; }
+    .firma { text-align: center; margin-top: 16px; }
+    .firma-line { border-top: 1px solid #222; width: 280px; margin: 12px auto 8px; }
+    .muted { color: #666; }
+    .footer-meta { text-align: right; font-size: 10pt; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>INFORME DE SUPERVISIÓN DEL CONTRATO No {{numeroInforme}}</h1>
+
+  <p>{{introParrafo}}</p>
+  <ul>
+    <li>Cumplimiento total de los requerimientos y especificaciones contractuales.</li>
+  </ul>
+  <p>En el periodo establecido en la referencia se han desarrollado las siguientes actividades establecidas en la Alianza Estratégica; se observa que viene cumpliendo a cabalidad cada una de las indicaciones y preceptos normativos y contractuales, que se traducen en actividades específicas:</p>
+  <p>El aliado cumple con las condiciones técnicas y económicas presentadas en la propuesta, entrega oportuna y completa de los productos requeridos por LA EMPRESA DE VIVIENDA DE ANTIOQUIA — VIVA, lo que se constata mediante los CERTIFICADOS A SATISFACCIÓN y para el periodo de este informe.</p>
+  <p>El aliado atiende oportunamente los requerimientos, trámites y gestiones, con el personal idóneo, lo que se verifica mediante las ÓRDENES DE PEDIDO, que son aportadas y verificadas por la persona asignada en el proceso del Banco de Materiales.</p>
+  <p>{{tablaIntro}}</p>
+
+  <table>
+    <tbody>
+      <tr><td class="label">CONTRATISTA:</td><td>{{contratista}}</td></tr>
+      <tr><td class="label">CONTRATO No:</td><td>{{contratoNo}}</td></tr>
+      <tr><td class="label">OBJETO DEL CONTRATO:</td><td>{{objetoContrato}}</td></tr>
+      <tr><td class="label">VALOR DEL CONTRATO:</td><td>{{valorContrato}}</td></tr>
+      <tr><td class="label">FECHA DE INICIO:</td><td>{{fechaInicio}}</td></tr>
+      <tr><td class="label">PLAZO INICIAL:</td><td>{{plazoInicial}}</td></tr>
+      <tr><td class="label">FECHA DE TERMINACIÓN:</td><td>{{fechaTerminacion}}</td></tr>
+      <tr><td class="label">PERÍODO DE SERVICIO:</td><td>{{periodoServicio}}</td></tr>
+    </tbody>
+  </table>
+
+  <p class="section">Relación documental</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Convenio</th>
+        <th>Fecha</th>
+        <th>No. Remisión</th>
+        <th>No. Factura</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each executionRows}}
+      <tr>
+        <td>{{convenio}}</td>
+        <td>{{fecha}}</td>
+        <td>{{remision}}</td>
+        <td>{{noFactura}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="4" class="muted">Sin registros.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <p class="section">Ejecución y pago</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Disponibilidad</th>
+        <th>Compromiso</th>
+        <th>Convenio</th>
+        <th>No. Factura</th>
+        <th>Valor a pagar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each pagoRows}}
+      <tr>
+        <td>{{disponibilidad}}</td>
+        <td>{{compromiso}}</td>
+        <td>{{convenio}}</td>
+        <td>{{noFactura}}</td>
+        <td style="text-align:right">{{valorPagar}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="5" class="muted">Sin registros.</td></tr>
+      {{/each}}
+      <tr>
+        <td colspan="4" class="total-label">TOTAL</td>
+        <td class="total-value">{{totalPagoTexto}}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>En consecuencia, se autoriza la cancelación de la presente cuenta, de conformidad con la ejecución verificada en el periodo.</p>
+  <p>LA EMPRESA DE VIVIENDA DE ANTIOQUIA — VIVA cumple con lo preceptuado contractualmente y efectúa los pagos en los tiempos establecidos, una vez remitida la facturación y cumplidos los requisitos técnicos y de legalidad.</p>
+  <p>Una vez evidenciado el avance técnico, administrativo, financiero y jurídico, el suscrito Supervisor autoriza el pago del periodo reportado por valor de: <strong>{{valorAutorizadoTexto}}</strong>.</p>
+  <p>{{firmaFecha}}</p>
+
+  <div class="firma">
+    <div class="firma-line"></div>
+    <p style="margin:0;font-weight:bold">{{firmaNombre}}</p>
+    <p style="margin:4px 0 0;font-size:11pt">{{firmaCargo}}</p>
+    <p style="margin:4px 0 0;font-size:11pt">{{firmaEntidad}}</p>
+  </div>
+
+  <div class="footer-meta">
+    <div><strong>GDC-FO-03</strong></div>
+    <div>Versión 13</div>
+  </div>
+</body>
+</html>

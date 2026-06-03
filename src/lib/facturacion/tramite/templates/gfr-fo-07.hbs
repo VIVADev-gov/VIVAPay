@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>GFR-FO-07</title>
+  <style>
+    @page { size: A4; margin: 18mm; }
+    body { font-family: Arial, sans-serif; font-size: 11pt; color: #111; }
+    h1 { font-size: 14pt; text-align: center; margin: 0 0 16px; }
+    .field { margin: 6px 0; }
+    .label { font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 9pt; }
+    th, td { border: 1px solid #333; padding: 5px 6px; }
+    th { background: #eee; }
+    .cert { margin-top: 20px; padding: 10px; border: 1px solid #333; }
+  </style>
+</head>
+<body>
+  <h1>CERTIFICADO DE RECIBIDO A SATISFACCIÓN (GFR-FO-07)</h1>
+  <div class="field"><span class="label">Contratista:</span> {{contratista}}</div>
+  <div class="field"><span class="label">No. contrato / convenio:</span> {{noContrato}}</div>
+  <div class="field"><span class="label">Objeto:</span> {{objeto}}</div>
+  <div class="field"><span class="label">Periodo desde:</span> {{periodoDesde}} &nbsp; <span class="label">hasta:</span> {{periodoHasta}}</div>
+  <div class="field"><span class="label">Valor del pago:</span> {{valorPago}}</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Disponibilidad</th>
+        <th>Registro presupuestal</th>
+        <th>Rubro</th>
+        <th>Cuenta corriente</th>
+        <th>Concepto</th>
+        <th>Centro de costo</th>
+        <th>Valor</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each tableRows}}
+      <tr>
+        <td>{{disponibilidad}}</td>
+        <td>{{registro}}</td>
+        <td>{{rubro}}</td>
+        <td>{{cuentaCorriente}}</td>
+        <td>{{concepto}}</td>
+        <td>{{centroCosto}}</td>
+        <td>{{valor}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  <div class="cert">
+    <strong>Certificación:</strong> {{certificoTexto}}
+  </div>
+</body>
+</html>
