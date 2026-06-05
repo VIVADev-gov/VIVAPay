@@ -8,17 +8,14 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import EmptyState from "@/components/ui/EmptyState";
 import {
   ORGANIZACION_TIPO,
-  UNIDADES_ORGANIZACIONALES,
+  getOrganizacionLabelPorRol,
   getUnidadOrganizacional,
+  getUnidadesPermitidasPorRol,
 } from "@/constants/organizacionViva";
+import { normalizeUserRole } from "@/lib/auth/roles";
 import { useProfileQuery, useUpdateProfileMutation } from "@/hooks/api/useProfile";
 import { useProfileStore } from "@/store/profile/profile.store";
 import { useUiStore } from "@/store/ui/ui-store";
-
-const organizationalUnitOptions = UNIDADES_ORGANIZACIONALES.map((unidad) => ({
-  value: unidad.id,
-  label: unidad.name,
-}));
 
 export default function PerfilPage() {
   const profileQuery = useProfileQuery();
@@ -31,6 +28,15 @@ export default function PerfilPage() {
   const setProfileForm = useProfileStore((s) => s.setProfileForm);
   const updateProfile = useUpdateProfileMutation();
   const showToast = useUiStore((s) => s.showToast);
+
+  const userRole = normalizeUserRole(user?.role);
+  const organizationalUnitLabel = getOrganizacionLabelPorRol(userRole);
+  const organizationalUnitOptions = getUnidadesPermitidasPorRol(userRole).map(
+    (unidad) => ({
+      value: unidad.id,
+      label: unidad.name,
+    })
+  );
 
   const selectedOrganizationalUnit = getUnidadOrganizacional(
     form.organizationalUnitId
@@ -152,7 +158,7 @@ export default function PerfilPage() {
                 required
               />
               <FormField
-                label="Dirección o jefatura"
+                label={organizationalUnitLabel}
                 name="organizationalUnitId"
                 type="select"
                 value={form.organizationalUnitId}

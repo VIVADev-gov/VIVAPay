@@ -3,7 +3,11 @@ import { ApiAuthError, requireApiAuth } from "@/app/api/_shared/api-auth";
 import { errorResponse, successResponse } from "@/lib/httpHerlper";
 import logger from "@/lib/logger";
 import { validateRequest } from "@/lib/validation";
-import { updateProfileBodySchema } from "./dto/update-profile.dto";
+import { normalizeUserRole } from "@/lib/auth/roles";
+import {
+  updateProfileBodySchema,
+  validateProfileOrganizacion,
+} from "./dto/update-profile.dto";
 import { profileService } from "./profile.service";
 
 export async function GET(request: NextRequest) {
@@ -28,6 +32,16 @@ export async function PATCH(request: NextRequest) {
     if (!validated.success) return validated.error;
 
     const { publicUser } = await requireApiAuth(request);
+    const role = normalizeUserRole(publicUser.role);
+    const organizacionValidation = validateProfileOrganizacion(
+      validated.data,
+      role
+    );
+
+    if (!organizacionValidation.ok) {
+      return errorResponse(organizacionValidation.message, 400);
+    }
+
     const user = await profileService.updateProfile(
       publicUser.id,
       validated.data

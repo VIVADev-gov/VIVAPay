@@ -3,7 +3,7 @@ import {
   ORGANIZACION_TIPO,
   getSubareaOrganizacional,
   getUnidadOrganizacional,
-  unidadRequiereSubarea,
+  validateOrganizacionParaRol,
 } from "@/constants/organizacionViva";
 import { USER_ROLES } from "@/constants/userRoles";
 import { passwordSchema, vivaEmailSchema } from "../../_shared/dto/shared.dto";
@@ -38,42 +38,17 @@ export const registerBodySchema = z
     subareaId: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    const unidad = getUnidadOrganizacional(data.organizationalUnitId);
-    if (!unidad) {
+    const validation = validateOrganizacionParaRol({
+      role: data.role,
+      organizationalUnitId: data.organizationalUnitId,
+      subareaId: data.subareaId,
+    });
+
+    if (!validation.ok) {
       ctx.addIssue({
         code: "custom",
-        path: ["organizationalUnitId"],
-        message: "Seleccione una dirección o jefatura válida",
-      });
-      return;
-    }
-
-    if (unidadRequiereSubarea(unidad.id)) {
-      if (!data.subareaId) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["subareaId"],
-          message: "Seleccione la subárea o proceso",
-        });
-        return;
-      }
-
-      const subarea = getSubareaOrganizacional(unidad.id, data.subareaId);
-      if (!subarea) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["subareaId"],
-          message: "Seleccione una subárea o proceso válida",
-        });
-      }
-      return;
-    }
-
-    if (data.subareaId) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["subareaId"],
-        message: "Las jefaturas no requieren subárea o proceso",
+        path: [validation.path],
+        message: validation.message,
       });
     }
   });

@@ -8,8 +8,10 @@ import Logo from "@/components/logo/Logo";
 import { AUTH_ERROR_CODES } from "@/app/api/auth/_shared/auth.errors";
 import {
   ORGANIZACION_TIPO,
-  UNIDADES_ORGANIZACIONALES,
+  getOrganizacionLabelPorRol,
   getUnidadOrganizacional,
+  getUnidadesPermitidasPorRol,
+  unidadPermitidaParaRol,
 } from "@/constants/organizacionViva";
 import { USER_ROLE_OPTIONS, type UserRole } from "@/constants/userRoles";
 import { useLoginMutation, useRegisterMutation } from "@/hooks/api/useAuth";
@@ -46,11 +48,6 @@ const roleOptions = USER_ROLE_OPTIONS.map((role) => ({
   label: role.label,
 }));
 
-const organizationalUnitOptions = UNIDADES_ORGANIZACIONALES.map((unidad) => ({
-  value: unidad.id,
-  label: unidad.name,
-}));
-
 const registerHighlights = [
   "Acceso seguro con tu correo institucional",
   "Validación de funcionario Viva",
@@ -83,6 +80,14 @@ export default function AuthForm({ mode }: AuthFormProps) {
   ) => {
     const { name, value } = e.target;
     setRegisterForm((prev) => {
+      if (name === "role") {
+        return {
+          ...prev,
+          role: value,
+          organizationalUnitId: "",
+          subareaId: "",
+        };
+      }
       if (name === "organizationalUnitId") {
         return {
           ...prev,
@@ -93,6 +98,18 @@ export default function AuthForm({ mode }: AuthFormProps) {
       return { ...prev, [name]: value };
     });
   };
+
+  const selectedRole = registerForm.role as UserRole | "";
+  const organizationalUnitOptions =
+    selectedRole !== ""
+      ? getUnidadesPermitidasPorRol(selectedRole).map((unidad) => ({
+          value: unidad.id,
+          label: unidad.name,
+        }))
+      : [];
+  const organizationalUnitLabel = selectedRole
+    ? getOrganizacionLabelPorRol(selectedRole)
+    : "Dirección o jefatura";
 
   const selectedOrganizationalUnit = getUnidadOrganizacional(
     registerForm.organizationalUnitId
@@ -141,7 +158,18 @@ export default function AuthForm({ mode }: AuthFormProps) {
     }
     if (!registerForm.organizationalUnitId) {
       showToast({
-        message: "Seleccione la dirección o jefatura",
+        message: `Seleccione la ${organizationalUnitLabel.toLowerCase()}`,
+        variant: "warning",
+        autoClose: 5000,
+      });
+      return false;
+    }
+    if (
+      selectedRole &&
+      !unidadPermitidaParaRol(registerForm.organizationalUnitId, selectedRole)
+    ) {
+      showToast({
+        message: `El rol ${selectedRole.toLowerCase()} solo puede asociarse a una ${organizationalUnitLabel.toLowerCase()}`,
         variant: "warning",
         autoClose: 5000,
       });
@@ -346,7 +374,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
               required
             />
             <FormField
-              label="Dirección o jefatura"
+              label={organizationalUnitLabel}
               id="organizationalUnitId"
               name="organizationalUnitId"
               type="select"
@@ -355,6 +383,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
               options={organizationalUnitOptions}
               className="md:col-span-2"
               selectAllowEmpty={false}
+              disabled={!selectedRole}
               required
             />
             {requiresSubarea ? (
