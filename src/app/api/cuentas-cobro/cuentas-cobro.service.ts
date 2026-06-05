@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { generatePaymentAccountsForContract } from "@/lib/contratos/generatePaymentAccounts";
 import { connectDB } from "@/lib/db/mongoose";
 import { enrichContractWithPaymentStats } from "@/lib/contratos/contractStats";
 import {
@@ -27,6 +28,28 @@ const DONE_PAYMENT_STATUSES = [
   CUENTA_COBRO_STATUS.APROBADA,
   CUENTA_COBRO_STATUS.RECHAZADA,
 ];
+
+async function resolveContractForUser(userId: string, contractId: string) {
+  if (!Types.ObjectId.isValid(contractId)) {
+    throw new PaymentAccountServiceError(
+      "Contrato no encontrado",
+      404,
+      PAYMENT_ACCOUNT_ERROR_CODES.CONTRACT_NOT_FOUND
+    );
+  }
+
+  const contract = await Contrato.findOne({ _id: contractId, userId }).exec();
+
+  if (!contract) {
+    throw new PaymentAccountServiceError(
+      "Contrato no encontrado",
+      404,
+      PAYMENT_ACCOUNT_ERROR_CODES.CONTRACT_NOT_FOUND
+    );
+  }
+
+  return contract;
+}
 
 export const cuentasCobroService = {
   async getSummary(userId: string) {
@@ -105,23 +128,7 @@ export const cuentasCobroService = {
   async listByContract(userId: string, contractId: string) {
     await connectDB();
 
-    if (!Types.ObjectId.isValid(contractId)) {
-      throw new PaymentAccountServiceError(
-        "Contrato no encontrado",
-        404,
-        PAYMENT_ACCOUNT_ERROR_CODES.CONTRACT_NOT_FOUND
-      );
-    }
-
-    const contract = await Contrato.findOne({ _id: contractId, userId }).exec();
-
-    if (!contract) {
-      throw new PaymentAccountServiceError(
-        "Contrato no encontrado",
-        404,
-        PAYMENT_ACCOUNT_ERROR_CODES.CONTRACT_NOT_FOUND
-      );
-    }
+    const contract = await resolveContractForUser(userId, contractId);
 
     const paymentAccounts = await CuentaCobro.find({
       userId,
@@ -138,6 +145,64 @@ export const cuentasCobroService = {
     return {
       contract: publicContract,
       paymentAccounts: paymentAccounts.map(toPublicCuentaCobro),
+    };
+  },
+
+  async regenerateByContract(userId: string, contractId: string) {
+    await connectDB();
+
+    const contract = await resolveContractForUser(userId, contractId);
+    const existingAccounts = await CuentaCobro.find({
+      userId,
+      contratoId: contract._id,
+    }).exec();
+
+    const hasDoneAccounts = existingAccounts.some((account) =>
+      DONE_PAYMENT_STATUSES.includes(account.estado)
+    );
+
+    if (hasDoneAccounts) {
+      throw new PaymentAccountServiceError(
+        "No se pueden regenerar cuentas porque ya hay cuentas enviadas, aprobadas o rechazadas",
+        409,
+        PAYMENT_ACCOUNT_ERROR_CODES.REGENERATION_BLOCKED
+      );
+    }
+
+    const current = getCurrentContractSnapshot(contract);
+    const fechaActaInicio = current.fechaActaInicio ?? contract.fechaActaInicio;
+    const fechaFinal = current.fechaFinal ?? contract.fechaFinal;
+    const plazoMeses = current.plazoMeses ?? contract.plazoMeses;
+    const valorTotal =
+      current.totalRecursosComprometidos ??
+      current.valorRpc ??
+      current.valorInicialContrato ??
+      contract.valorInicialContrato;
+
+    await CuentaCobro.deleteMany({
+      userId,
+      contratoId: contract._id,
+      estado: { $in: NEXT_PAYMENT_STATUSES },
+    });
+
+    const generated = await generatePaymentAccountsForContract({
+      userId: contract.userId,
+      contratoId: contract._id as Types.ObjectId,
+      fechaActaInicio,
+      fechaFinal,
+      plazoMeses,
+      valorTotal,
+    });
+
+    const publicContract = enrichContractWithPaymentStats(
+      toPublicContrato(contract),
+      generated
+    );
+
+    return {
+      contract: publicContract,
+      paymentAccounts: generated.map(toPublicCuentaCobro),
+      paymentAccountsGenerated: generated.length,
     };
   },
 };

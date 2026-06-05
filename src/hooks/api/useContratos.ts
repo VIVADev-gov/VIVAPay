@@ -102,3 +102,26 @@ export function useCreateContratoMutation() {
     },
   });
 }
+
+export function useRegenerateContratoPaymentAccountsMutation(contractId: string) {
+  const queryClient = useQueryClient();
+  const setContratoDetail = useContratosStore((s) => s.setContratoDetail);
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<ApiResponse<ContratoDetailResponse>>(
+        `/api/cuentas-cobro/contrato/${contractId}`
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+    onSuccess: (data) => {
+      setContratoDetail(data);
+      queryClient.invalidateQueries({ queryKey: contratosQueryKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: contratosQueryKeys.detail(contractId),
+      });
+      queryClient.invalidateQueries({ queryKey: cuentasCobroQueryKeys.summary });
+    },
+  });
+}

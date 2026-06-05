@@ -27,6 +27,13 @@ export const createContractBodySchema = z
       .trim()
       .min(1, "El número de disponibilidad es obligatorio"),
     numeroCompromiso: z.string().trim().min(1, "El número de compromiso es obligatorio"),
+    submittedPaymentAccountsCount: z.coerce
+      .number()
+      .int("La cantidad de cuentas enviadas debe ser un número entero")
+      .min(0, "La cantidad de cuentas enviadas no puede ser negativa")
+      .max(120, "La cantidad de cuentas enviadas es demasiado alta")
+      .optional()
+      .default(0),
   })
   .superRefine((data, ctx) => {
     const start = new Date(data.fechaActaInicio);

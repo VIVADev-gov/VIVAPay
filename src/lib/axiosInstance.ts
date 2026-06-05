@@ -20,6 +20,9 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
+        if (config.data instanceof FormData) {
+            config.headers.delete("Content-Type");
+        }
         if (typeof window !== "undefined") {
             const token = localStorage.getItem("token");
             if (token) {

@@ -61,6 +61,7 @@ export const loginService = {
       email: publicUser.email,
       name: publicUser.name,
       status: publicUser.status,
+      role: publicUser.role,
     });
 
     return { token, user: publicUser };

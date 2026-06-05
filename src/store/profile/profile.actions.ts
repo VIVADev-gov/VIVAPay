@@ -38,7 +38,8 @@ export const createProfileActions: StateCreator<
         ? {
             name: user.name ?? "",
             phone: user.phone ?? "",
-            area: user.area ?? "",
+            organizationalUnitId: user.organizationalUnitId ?? "",
+            subareaId: user.subareaId ?? "",
           }
         : initialProfileForm,
       error: null,

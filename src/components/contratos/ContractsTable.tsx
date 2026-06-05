@@ -13,12 +13,14 @@ type ContractsTableProps = {
   contracts: PublicContrato[];
   loading?: boolean;
   onRefresh?: () => void;
+  contractBasePath?: string;
 };
 
 export default function ContractsTable({
   contracts,
   loading = false,
   onRefresh,
+  contractBasePath = "/dashboard/contratista/contrato",
 }: ContractsTableProps) {
   const columns: DataTableColumnConfig<PublicContrato>[] = [
     {
@@ -69,7 +71,7 @@ export default function ContractsTable({
       align: "center",
       body: (row) => (
         <Link
-          href={`/dashboard/contrato/${row.id}`}
+          href={`${contractBasePath}/${row.id}`}
           className="inline-flex rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary hover:text-primary-foreground"
         >
           Ver detalle
@@ -84,6 +86,7 @@ export default function ContractsTable({
       columns={columns}
       dataKey="id"
       loading={loading}
+      viewModeKey="contratos"
       initialRows={6}
       rowsPerPageOptions={[6, 12, 24]}
       title="Contratos"
@@ -161,7 +164,7 @@ export default function ContractsTable({
           </div>
 
           <Link
-            href={`/dashboard/contrato/${contract.id}`}
+            href={`${contractBasePath}/${contract.id}`}
             className="mt-5 inline-flex rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-ring"
           >
             Ver detalle

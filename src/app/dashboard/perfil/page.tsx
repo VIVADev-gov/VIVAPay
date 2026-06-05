@@ -6,14 +6,18 @@ import { ModuleCreateButton } from "@/components/contratos";
 import FormField from "@/components/forms/FormField";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import EmptyState from "@/components/ui/EmptyState";
-import { AREAS_VIVA } from "@/constants/areasViva";
+import {
+  ORGANIZACION_TIPO,
+  UNIDADES_ORGANIZACIONALES,
+  getUnidadOrganizacional,
+} from "@/constants/organizacionViva";
 import { useProfileQuery, useUpdateProfileMutation } from "@/hooks/api/useProfile";
 import { useProfileStore } from "@/store/profile/profile.store";
 import { useUiStore } from "@/store/ui/ui-store";
 
-const areaOptions = AREAS_VIVA.map((area) => ({
-  value: area.name,
-  label: area.name,
+const organizationalUnitOptions = UNIDADES_ORGANIZACIONALES.map((unidad) => ({
+  value: unidad.id,
+  label: unidad.name,
 }));
 
 export default function PerfilPage() {
@@ -28,18 +32,40 @@ export default function PerfilPage() {
   const updateProfile = useUpdateProfileMutation();
   const showToast = useUiStore((s) => s.showToast);
 
+  const selectedOrganizationalUnit = getUnidadOrganizacional(
+    form.organizationalUnitId
+  );
+  const subareaOptions =
+    selectedOrganizationalUnit?.tipo === ORGANIZACION_TIPO.DIRECCION
+      ? (selectedOrganizationalUnit.subareas ?? []).map((subarea) => ({
+          value: subarea.id,
+          label: subarea.name,
+        }))
+      : [];
+  const requiresSubarea =
+    selectedOrganizationalUnit?.tipo === ORGANIZACION_TIPO.DIRECCION;
+
   const handleChange = (
     event: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
     const { name, value } = event.target;
+    if (name === "organizationalUnitId") {
+      setProfileForm({ organizationalUnitId: value, subareaId: "" });
+      return;
+    }
     setProfileForm({ [name]: value });
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await updateProfile.mutateAsync(form);
+    await updateProfile.mutateAsync({
+      name: form.name,
+      phone: form.phone,
+      organizationalUnitId: form.organizationalUnitId,
+      subareaId: requiresSubarea ? form.subareaId : null,
+    });
   };
 
   const handleAdvanced = () => {
@@ -55,7 +81,7 @@ export default function PerfilPage() {
         <DashboardHero
           eyebrow="Perfil de funcionario"
           title="Actualiza tu información"
-          description="Puedes editar tus datos de contacto y área. El correo institucional y documento de identidad permanecen bloqueados."
+          description="Puedes editar tus datos de contacto y tu dirección o jefatura. El correo institucional, documento y rol permanecen bloqueados."
         />
 
         <div className="flex justify-end">
@@ -106,6 +132,11 @@ export default function PerfilPage() {
                 disabled
               />
               <FormField
+                label="Rol"
+                value={user.role ?? "CONTRATISTA"}
+                disabled
+              />
+              <FormField
                 label="Nombre completo"
                 name="name"
                 value={form.name}
@@ -121,16 +152,29 @@ export default function PerfilPage() {
                 required
               />
               <FormField
-                label="Área"
-                name="area"
+                label="Dirección o jefatura"
+                name="organizationalUnitId"
                 type="select"
-                value={form.area}
+                value={form.organizationalUnitId}
                 onChange={handleChange}
-                options={areaOptions}
+                options={organizationalUnitOptions}
                 required
-                selectAllowEmpty
+                selectAllowEmpty={false}
                 className="md:col-span-2"
               />
+              {requiresSubarea ? (
+                <FormField
+                  label="Subárea o proceso"
+                  name="subareaId"
+                  type="select"
+                  value={form.subareaId}
+                  onChange={handleChange}
+                  options={subareaOptions}
+                  required
+                  selectAllowEmpty={false}
+                  className="md:col-span-2"
+                />
+              ) : null}
             </div>
 
             {successMessage ? (
@@ -139,18 +183,13 @@ export default function PerfilPage() {
               </p>
             ) : null}
 
-            {error ? (
-              <p className="mt-5 rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
-                {error}
-              </p>
-            ) : null}
-
             <div className="mt-6 flex justify-end">
               <ActionButton
                 type="submit"
                 variant="primary"
-                label={isSaving ? "Guardando..." : "Guardar cambios"}
+                label="Guardar cambios"
                 loading={isSaving}
+                loaderLabel="Guardando"
               />
             </div>
           </form>

@@ -86,6 +86,7 @@ export default function PaymentAccountsTable({
       columns={columns}
       dataKey="id"
       loading={loading}
+      viewModeKey="cuentas-cobro"
       initialRows={6}
       rowsPerPageOptions={[6, 12, 24]}
       title="Cuentas de cobro"

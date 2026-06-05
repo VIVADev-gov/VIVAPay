@@ -8,7 +8,8 @@ import {
   ContractsTable,
   ModuleCreateButton,
 } from "@/components/contratos";
-import DashboardLayout from "@/components/layouts/DashboardLayout";
+import RoleDashboardLayout from "@/components/layouts/RoleDashboardLayout";
+import { USER_ROLES } from "@/constants/userRoles";
 import EmptyState from "@/components/ui/EmptyState";
 import { useContratosQuery } from "@/hooks/api/useContratos";
 import { useContratosStore } from "@/store/contratos/contratos.store";
@@ -28,7 +29,10 @@ export default function InformacionContractualPage() {
   const current = heroContract?.actual;
 
   return (
-    <DashboardLayout title="Información contractual">
+    <RoleDashboardLayout
+      allowedRole={USER_ROLES.CONTRATISTA}
+      title="Información contractual"
+    >
       <section className="grid gap-8">
         <DashboardHero
           eyebrow="Información contractual"
@@ -121,6 +125,6 @@ export default function InformacionContractualPage() {
           onCancel={closeCreateModal}
         />
       </Modal>
-    </DashboardLayout>
+    </RoleDashboardLayout>
   );
 }

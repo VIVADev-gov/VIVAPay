@@ -3,7 +3,8 @@ import type { AuthUser } from "@/store/auth/auth.storage";
 export type ProfileFormState = {
   name: string;
   phone: string;
-  area: string;
+  organizationalUnitId: string;
+  subareaId: string;
 };
 
 export type ProfileState = {
@@ -18,7 +19,8 @@ export type ProfileState = {
 export const initialProfileForm: ProfileFormState = {
   name: "",
   phone: "",
-  area: "",
+  organizationalUnitId: "",
+  subareaId: "",
 };
 
 export const initialProfileState: ProfileState = {

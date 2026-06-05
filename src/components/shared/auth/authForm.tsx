@@ -6,9 +6,15 @@ import ActionButton from "@/components/buttons/ActionButton";
 import FormField from "@/components/forms/FormField";
 import Logo from "@/components/logo/Logo";
 import { AUTH_ERROR_CODES } from "@/app/api/auth/_shared/auth.errors";
-import { AREAS_VIVA } from "@/constants/areasViva";
+import {
+  ORGANIZACION_TIPO,
+  UNIDADES_ORGANIZACIONALES,
+  getUnidadOrganizacional,
+} from "@/constants/organizacionViva";
+import { USER_ROLE_OPTIONS, type UserRole } from "@/constants/userRoles";
 import { useLoginMutation, useRegisterMutation } from "@/hooks/api/useAuth";
 import { getApiErrorDetails } from "@/lib/api-error";
+import { getDashboardPathForRole } from "@/lib/auth/roles";
 import { useAuthStore } from "@/store/auth/auth.store";
 import { useUiStore } from "@/store/ui/ui-store";
 
@@ -25,7 +31,9 @@ const emptyRegister = {
   name: "",
   documentId: "",
   phone: "",
-  area: "",
+  role: "",
+  organizationalUnitId: "",
+  subareaId: "",
 };
 
 const emptyLogin = {
@@ -33,9 +41,14 @@ const emptyLogin = {
   password: "",
 };
 
-const areaOptions = AREAS_VIVA.map((area) => ({
-  value: area.name,
-  label: area.name,
+const roleOptions = USER_ROLE_OPTIONS.map((role) => ({
+  value: role.value,
+  label: role.label,
+}));
+
+const organizationalUnitOptions = UNIDADES_ORGANIZACIONALES.map((unidad) => ({
+  value: unidad.id,
+  label: unidad.name,
 }));
 
 const registerHighlights = [
@@ -69,8 +82,30 @@ export default function AuthForm({ mode }: AuthFormProps) {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setRegisterForm((prev) => ({ ...prev, [name]: value }));
+    setRegisterForm((prev) => {
+      if (name === "organizationalUnitId") {
+        return {
+          ...prev,
+          organizationalUnitId: value,
+          subareaId: "",
+        };
+      }
+      return { ...prev, [name]: value };
+    });
   };
+
+  const selectedOrganizationalUnit = getUnidadOrganizacional(
+    registerForm.organizationalUnitId
+  );
+  const subareaOptions =
+    selectedOrganizationalUnit?.tipo === ORGANIZACION_TIPO.DIRECCION
+      ? (selectedOrganizationalUnit.subareas ?? []).map((subarea) => ({
+          value: subarea.id,
+          label: subarea.name,
+        }))
+      : [];
+  const requiresSubarea =
+    selectedOrganizationalUnit?.tipo === ORGANIZACION_TIPO.DIRECCION;
 
   const handleLoginChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -96,6 +131,30 @@ export default function AuthForm({ mode }: AuthFormProps) {
       });
       return false;
     }
+    if (!registerForm.role) {
+      showToast({
+        message: "Seleccione su rol",
+        variant: "warning",
+        autoClose: 5000,
+      });
+      return false;
+    }
+    if (!registerForm.organizationalUnitId) {
+      showToast({
+        message: "Seleccione la dirección o jefatura",
+        variant: "warning",
+        autoClose: 5000,
+      });
+      return false;
+    }
+    if (requiresSubarea && !registerForm.subareaId) {
+      showToast({
+        message: "Seleccione la subárea o proceso",
+        variant: "warning",
+        autoClose: 5000,
+      });
+      return false;
+    }
     return true;
   };
 
@@ -110,7 +169,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
         name: registerForm.name.trim(),
         documentId: registerForm.documentId.trim(),
         phone: registerForm.phone.trim(),
-        area: registerForm.area.trim(),
+        role: registerForm.role as UserRole,
+        organizationalUnitId: registerForm.organizationalUnitId,
+        subareaId: requiresSubarea ? registerForm.subareaId : undefined,
       });
 
       showToast({
@@ -140,7 +201,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
         variant: "success",
         autoClose: 3000,
       });
-      router.push("/dashboard");
+      router.push(getDashboardPathForRole(user.role));
     } catch (err) {
       const { message, code } = getApiErrorDetails(err, "No se pudo iniciar sesión");
 
@@ -273,17 +334,43 @@ export default function AuthForm({ mode }: AuthFormProps) {
               floatingLabel
             />
             <FormField
-              label="Área o dirección"
-              id="area"
-              name="area"
+              label="Rol"
+              id="role"
+              name="role"
               type="select"
-              value={registerForm.area}
+              value={registerForm.role}
               onChange={handleRegisterChange}
-              options={areaOptions}
+              options={roleOptions}
               className="md:col-span-2"
               selectAllowEmpty={false}
               required
             />
+            <FormField
+              label="Dirección o jefatura"
+              id="organizationalUnitId"
+              name="organizationalUnitId"
+              type="select"
+              value={registerForm.organizationalUnitId}
+              onChange={handleRegisterChange}
+              options={organizationalUnitOptions}
+              className="md:col-span-2"
+              selectAllowEmpty={false}
+              required
+            />
+            {requiresSubarea ? (
+              <FormField
+                label="Subárea o proceso"
+                id="subareaId"
+                name="subareaId"
+                type="select"
+                value={registerForm.subareaId}
+                onChange={handleRegisterChange}
+                options={subareaOptions}
+                className="md:col-span-2"
+                selectAllowEmpty={false}
+                required
+              />
+            ) : null}
             <FormField
               label="Contraseña"
               id="password"

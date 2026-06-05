@@ -1,1 +1,1 @@
-export { GET } from "./cuentas-cobro-by-contract.controller";
+export { GET, POST } from "./cuentas-cobro-by-contract.controller";

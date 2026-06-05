@@ -5,6 +5,7 @@ import { Bell, Building2, ChevronDown, LogOut, Search, ShieldCheck } from "lucid
 import Link from "next/link";
 import Logo from "@/components/logo/Logo";
 import { useLogout } from "@/hooks/useLogout";
+import { getDashboardPathForRole } from "@/lib/auth/roles";
 import { useAuthStore } from "@/store/auth/auth.store";
 
 export interface NavSection {
@@ -95,6 +96,8 @@ export default function DashboardHeader({
         onSearchChange?.(value);
     };
 
+    const dashboardHome = getDashboardPathForRole(user?.role);
+
     const initials =
         (user?.name ?? "Usuario")
             .split(" ")
@@ -108,7 +111,7 @@ export default function DashboardHeader({
             <div className="mx-auto flex min-h-20 w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-6 lg:px-8">
                 <div className="flex min-w-0 items-center gap-5">
                     <Link
-                        href="/dashboard"
+                        href={dashboardHome}
                         className="flex items-center gap-3 rounded-2xl bg-background/80 px-3 py-2 shadow-sm transition hover:scale-[1.01] hover:bg-background"
                     >
                         <Logo size="small" variant="default" alt="Vivapay" />
@@ -195,10 +198,13 @@ export default function DashboardHeader({
                                     <div className="grid gap-2 text-xs">
                                         <div className="flex items-center gap-2 rounded-xl bg-background/70 px-3 py-2 text-muted-foreground">
                                             <Building2 className="h-4 w-4 text-primary" />
-                                            <span>{user?.area ?? "Área no registrada"}</span>
+                                            <span>{user?.area ?? "Unidad no registrada"}</span>
                                         </div>
                                         <div className="flex items-center gap-2 rounded-xl bg-background/70 px-3 py-2 text-muted-foreground">
                                             <ShieldCheck className="h-4 w-4 text-primary" />
+                                            <span className="capitalize">
+                                                Rol: {user?.role?.toLowerCase() ?? "contratista"}
+                                            </span>
                                             <span className="capitalize">
                                                 Estado: {user?.status ?? "activo"}
                                             </span>

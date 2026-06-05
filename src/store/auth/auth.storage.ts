@@ -1,9 +1,18 @@
+import type { OrganizacionTipo } from "@/constants/organizacionViva";
+import type { UserRole } from "@/constants/userRoles";
+
 export type AuthUser = {
   id: string;
   email: string;
   name: string;
   documentId?: string;
   phone?: string;
+  role?: UserRole;
+  organizationalUnitId?: string;
+  organizationalUnitName?: string;
+  organizationalUnitType?: OrganizacionTipo;
+  subareaId?: string | null;
+  subareaName?: string | null;
   area?: string;
   emailVerified?: boolean;
   status?: string;

@@ -2,7 +2,9 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import DashboardLayout from "@/components/layouts/DashboardLayout";
+import RoleDashboardLayout from "@/components/layouts/RoleDashboardLayout";
+import { USER_ROLES } from "@/constants/userRoles";
+import { getContractDetailHref } from "@/lib/cuentas-cobro/paymentAccountAccess";
 import EmptyState from "@/components/ui/EmptyState";
 import { useCuentasCobroSummaryQuery } from "@/hooks/api/useCuentasCobro";
 import { getPaymentAccountHref } from "@/lib/cuentas-cobro/paymentAccountAccess";
@@ -28,15 +30,18 @@ export default function EnviarCuentaCobroRedirectPage() {
     }
 
     if (summaryContract?.id) {
-      router.replace(`/dashboard/contrato/${summaryContract.id}`);
+      router.replace(getContractDetailHref(summaryContract.id));
       return;
     }
 
-    router.replace("/dashboard/contrato");
+    router.replace("/dashboard/contratista/contrato");
   }, [isLoading, nextPayment, summaryContract?.id, router]);
 
   return (
-    <DashboardLayout title="Redirigiendo">
+    <RoleDashboardLayout
+      allowedRole={USER_ROLES.CONTRATISTA}
+      title="Redirigiendo"
+    >
       <EmptyState
         message="Redirigiendo"
         description="Las cuentas de cobro se gestionan desde el detalle del contrato."
@@ -44,6 +49,6 @@ export default function EnviarCuentaCobroRedirectPage() {
         icon="refresh"
         variant="loading"
       />
-    </DashboardLayout>
+    </RoleDashboardLayout>
   );
 }

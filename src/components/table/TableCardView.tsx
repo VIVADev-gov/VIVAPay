@@ -1,9 +1,10 @@
 "use client";
 
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Grid3X3, List, Search } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
+import { useUiStore } from "@/store/ui/ui-store";
 import DataTable, { type DataTableColumnConfig } from "./DataTable";
 
 type ViewMode = "table" | "card";
@@ -18,6 +19,7 @@ export type TableCardViewProps<T extends object> = {
   showSearch?: boolean;
   title?: string;
   initialView?: ViewMode;
+  viewModeKey?: string;
   rowsPerPageOptions?: number[];
   initialRows?: number;
   emptyMessage?: string;
@@ -38,7 +40,7 @@ export type TableCardViewProps<T extends object> = {
   onRefresh?: () => void;
 };
 
-const DEFAULT_ROWS_OPTIONS = [6, 12, 24];
+const DEFAULT_ROWS_OPTIONS = [7, 12, 24];
 
 function getValueByPath(item: unknown, path: string): unknown {
   return path.split(".").reduce<unknown>((acc, key) => {
@@ -81,7 +83,8 @@ export default function TableCardView<T extends object>({
   searchPlaceholder = "Buscar...",
   showSearch = true,
   title,
-  initialView = "card",
+  initialView = "table",
+  viewModeKey,
   rowsPerPageOptions = DEFAULT_ROWS_OPTIONS,
   initialRows = rowsPerPageOptions[0] ?? 12,
   emptyMessage = "No hay registros para mostrar.",
@@ -105,6 +108,26 @@ export default function TableCardView<T extends object>({
   const [internalSearchText, setInternalSearchText] = useState("");
   const [rows, setRows] = useState(initialRows);
   const [cardPage, setCardPage] = useState(0);
+  const hydrateTableViewModes = useUiStore((s) => s.hydrateTableViewModes);
+  const setStoredTableViewMode = useUiStore((s) => s.setTableViewMode);
+  const storedViewMode = useUiStore((s) =>
+    viewModeKey ? s.tableViewModes[viewModeKey] : undefined
+  );
+  const effectiveViewMode = viewModeKey
+    ? (storedViewMode ?? initialView)
+    : viewMode;
+
+  useEffect(() => {
+    if (viewModeKey) hydrateTableViewModes();
+  }, [hydrateTableViewModes, viewModeKey]);
+
+  const handleViewModeChange = (next: ViewMode) => {
+    if (viewModeKey) {
+      setStoredTableViewMode(viewModeKey, next);
+    } else {
+      setViewMode(next);
+    }
+  };
 
   const isSearchControlled =
     typeof controlledSearchText === "string" &&
@@ -192,9 +215,9 @@ export default function TableCardView<T extends object>({
           <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-background/90 p-1 shadow-sm">
             <button
               type="button"
-              onClick={() => setViewMode("table")}
+              onClick={() => handleViewModeChange("table")}
               className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                viewMode === "table"
+                effectiveViewMode === "table"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
               }`}
@@ -204,9 +227,9 @@ export default function TableCardView<T extends object>({
             </button>
             <button
               type="button"
-              onClick={() => setViewMode("card")}
+              onClick={() => handleViewModeChange("card")}
               className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                viewMode === "card"
+                effectiveViewMode === "card"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
               }`}
@@ -263,7 +286,7 @@ export default function TableCardView<T extends object>({
         </div>
       </header>
 
-      {viewMode === "table" ? (
+      {effectiveViewMode === "table" ? (
         <>
           <DataTable<T>
             value={filteredData}

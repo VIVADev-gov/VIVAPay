@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { PaymentAccountWorkspace } from "@/components/cuentas-cobro";
-import DashboardLayout from "@/components/layouts/DashboardLayout";
+import RoleDashboardLayout from "@/components/layouts/RoleDashboardLayout";
 import EmptyState from "@/components/ui/EmptyState";
+import { USER_ROLES } from "@/constants/userRoles";
 import { useContratoDetailQuery } from "@/hooks/api/useContratos";
+import { getContractDetailHref } from "@/lib/cuentas-cobro/paymentAccountAccess";
 import { useContratosStore } from "@/store/contratos/contratos.store";
 
 export default function PaymentAccountPage() {
@@ -22,10 +24,13 @@ export default function PaymentAccountPage() {
     detail?.paymentAccounts.find((account) => account.numero === accountNumber) ??
     null;
 
-  const contractDetailHref = `/dashboard/contrato/${contractId}`;
+  const contractDetailHref = getContractDetailHref(contractId);
 
   return (
-    <DashboardLayout title={`Cuenta de cobro ${params.numero}`}>
+    <RoleDashboardLayout
+      allowedRole={USER_ROLES.CONTRATISTA}
+      title={`Cuenta de cobro ${params.numero}`}
+    >
       <section className="grid gap-8">
         <div className="flex flex-wrap gap-3">
           <Link
@@ -35,7 +40,7 @@ export default function PaymentAccountPage() {
             Volver al contrato
           </Link>
           <Link
-            href="/dashboard/contrato"
+            href="/dashboard/contratista/contrato"
             className="rounded-full bg-muted px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
           >
             Todos los contratos
@@ -55,6 +60,7 @@ export default function PaymentAccountPage() {
           <PaymentAccountWorkspace
             contract={contract}
             paymentAccount={paymentAccount}
+            paymentAccounts={detail?.paymentAccounts ?? []}
           />
         ) : (
           <EmptyState
@@ -71,6 +77,6 @@ export default function PaymentAccountPage() {
           />
         )}
       </section>
-    </DashboardLayout>
+    </RoleDashboardLayout>
   );
 }

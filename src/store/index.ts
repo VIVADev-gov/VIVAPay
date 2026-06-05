@@ -1,6 +1,12 @@
 export { useUiStore, uiStore } from "./ui/ui-store";
 export type { OpenModalParams, ShowToastParams, UiStore } from "./ui/ui-actions";
-export type { ModalSize, UiModalState, UiState, UiToastState } from "./ui/ui.storage";
+export type {
+  ModalSize,
+  TableViewMode,
+  UiModalState,
+  UiState,
+  UiToastState,
+} from "./ui/ui.storage";
 
 export { useAuthStore } from "./auth/auth.store";
 export type { AuthState, AuthUser } from "./auth/auth.storage";

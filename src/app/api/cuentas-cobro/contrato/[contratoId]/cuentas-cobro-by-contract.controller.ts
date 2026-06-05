@@ -32,3 +32,31 @@ export async function GET(
     return errorResponse("Error al obtener las cuentas de cobro", 500);
   }
 }
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ contratoId: string }> }
+) {
+  try {
+    const [{ publicUser }, { contratoId }] = await Promise.all([
+      requireApiAuth(request),
+      context.params,
+    ]);
+    const result = await cuentasCobroService.regenerateByContract(
+      publicUser.id,
+      contratoId
+    );
+
+    return successResponse("Cuentas de cobro regeneradas", result);
+  } catch (error) {
+    if (error instanceof ApiAuthError) {
+      return errorResponse(error.message, error.statusCode, error.code);
+    }
+    if (error instanceof PaymentAccountServiceError) {
+      return errorResponse(error.message, error.statusCode, error.code);
+    }
+
+    logger.error("[cuentas-cobro/regenerate-by-contract]", error);
+    return errorResponse("Error al regenerar las cuentas de cobro", 500);
+  }
+}

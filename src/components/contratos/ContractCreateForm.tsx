@@ -3,10 +3,15 @@
 import { useState } from "react";
 import ActionButton from "@/components/buttons/ActionButton";
 import CurrencyFormField from "@/components/forms/CurrencyFormField";
+import FileUpload from "@/components/forms/FileUpload";
 import FormField from "@/components/forms/FormField";
+import ToggleSwitch from "@/components/forms/ToggleSwitch";
 import { useCreateContratoMutation } from "@/hooks/api/useContratos";
+import api from "@/lib/axiosInstance";
+import { buildPaymentAccountPreviews } from "@/lib/cuentas-cobro/paymentAccountPreview";
 import { useUiStore } from "@/store/ui/ui-store";
 import type { CreateContratoBody } from "@/types/contratos";
+import { formatCurrency, formatDate } from "@/utils/formatters";
 import { calculatePlazoMeses } from "@/utils/date";
 
 const initialForm: CreateContratoBody = {
@@ -24,10 +29,52 @@ const initialForm: CreateContratoBody = {
   valorInicialContrato: 0,
   numeroDisponibilidad: "",
   numeroCompromiso: "",
+  submittedPaymentAccountsCount: 0,
 };
 
 const PLAZO_HELPER =
   "Calculado automáticamente según las fechas de inicio y final";
+
+const CONTRACT_DOCUMENTS = [
+  {
+    tipoDocumento: "CONTRATO",
+    label: "Contrato",
+    helperText: "Documento reutilizable del contrato.",
+  },
+  {
+    tipoDocumento: "ACTA_INICIO",
+    label: "Acta de inicio",
+    helperText: "Documento base reutilizable del contrato.",
+  },
+  {
+    tipoDocumento: "POLIZA_FIRMADA",
+    label: "Póliza firmada",
+    helperText: "Reutilizable; subir nueva si hubo prórroga o adición.",
+  },
+  {
+    tipoDocumento: "CERTIFICADO_APROBACION_POLIZA",
+    label: "Certificado de aprobación de póliza",
+    helperText: "Documento reutilizable del contrato.",
+  },
+  {
+    tipoDocumento: "RUT",
+    label: "RUT",
+    helperText: "Documento reutilizable del contrato. Debe estar actualizado.",
+  },
+  {
+    tipoDocumento: "CERTIFICACION_BANCARIA",
+    label: "Certificación bancaria",
+    helperText: "Documento reutilizable; reemplazar si cambia la cuenta bancaria.",
+  },
+] as const;
+
+type ContractDocumentType = (typeof CONTRACT_DOCUMENTS)[number]["tipoDocumento"];
+
+type ApiResponse<T> = {
+  success: boolean;
+  message: string;
+  data: T;
+};
 
 function withPlazoFromDates(
   form: CreateContratoBody,
@@ -56,6 +103,9 @@ export default function ContractCreateForm({
   const showToast = useUiStore((s) => s.showToast);
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [contractFiles, setContractFiles] = useState<
+    Partial<Record<ContractDocumentType, File>>
+  >({});
 
   const handleChange = (
     event: React.ChangeEvent<
@@ -66,7 +116,12 @@ export default function ContractCreateForm({
     setForm((current) => {
       const next: CreateContratoBody = {
         ...current,
-        [name]: value,
+        [name]:
+          name === "submittedPaymentAccountsCount"
+            ? value === ""
+              ? 0
+              : Number(value)
+            : value,
       };
 
       if (name === "fechaActaInicio" || name === "fechaFinal") {
@@ -114,6 +169,17 @@ export default function ContractCreateForm({
     if (!form.valorInicialContrato || form.valorInicialContrato <= 0) {
       next.valorInicialContrato = "Debe ser mayor a 0";
     }
+    if (
+      form.submittedPaymentAccountsCount != null &&
+      form.submittedPaymentAccountsCount < 0
+    ) {
+      next.submittedPaymentAccountsCount = "No puede ser negativo";
+    }
+    for (const document of CONTRACT_DOCUMENTS) {
+      if (!contractFiles[document.tipoDocumento]) {
+        next[`document_${document.tipoDocumento}`] = "Requerido";
+      }
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -121,6 +187,38 @@ export default function ContractCreateForm({
   const plazoHelperText =
     errors.plazoMeses ??
     (form.plazoMeses > 0 ? PLAZO_HELPER : "Completa las fechas para calcular el plazo");
+
+  const paymentPreviews = buildPaymentAccountPreviews({
+    fechaActaInicio: form.fechaActaInicio,
+    fechaFinal: form.fechaFinal,
+    plazoMeses: Number(form.plazoMeses),
+    valorTotal: Number(form.valorInicialContrato),
+  });
+
+  const setSubmittedCountFromToggle = (numero: number, checked: boolean) => {
+    setForm((current) => ({
+      ...current,
+      submittedPaymentAccountsCount: checked ? numero : Math.max(0, numero - 1),
+    }));
+  };
+
+  const uploadContractDocuments = async (contractId: string) => {
+    for (const document of CONTRACT_DOCUMENTS) {
+      const file = contractFiles[document.tipoDocumento];
+      if (!file) continue;
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("tipoDocumento", document.tipoDocumento);
+      formData.append("required", "true");
+
+      const { data } = await api.post<ApiResponse<unknown>>(
+        `/api/cuentas-cobro/contrato/${contractId}/documentos`,
+        formData
+      );
+      if (!data.success) throw new Error(data.message);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -141,13 +239,22 @@ export default function ContractCreateForm({
         valorCdp: Number(form.valorCdp),
         valorRpc: Number(form.valorRpc),
         valorInicialContrato: Number(form.valorInicialContrato),
+        submittedPaymentAccountsCount: Number(
+          form.submittedPaymentAccountsCount ?? 0
+        ),
       });
 
       showToast({
-        message: `Contrato creado. Se generaron ${result.paymentAccountsGenerated} cuentas de cobro.`,
+        message: `Contrato creado. Se generaron ${result.paymentAccountsGenerated} cuentas de cobro${
+          result.paymentAccountsRegularized
+            ? ` y ${result.paymentAccountsRegularized} quedaron marcadas como enviadas.`
+            : "."
+        }`,
         variant: "success",
       });
+      await uploadContractDocuments(result.contract.id);
       setForm(initialForm);
+      setContractFiles({});
       onSuccess?.();
     } catch (error) {
       showToast({
@@ -274,6 +381,89 @@ export default function ContractCreateForm({
           required
         />
       </div>
+
+      <section className="rounded-3xl border border-border/80 bg-muted/20 p-5">
+        <div className="mb-4">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+            Regularización inicial
+          </p>
+          <h3 className="mt-2 text-lg font-black text-foreground">
+            Cuentas ya enviadas
+          </h3>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            Marca en orden las cuentas que ya enviaste manualmente. Si marcas
+            una cuenta, se asumen enviadas todas las anteriores.
+          </p>
+        </div>
+
+        {paymentPreviews.length > 0 ? (
+          <div className="grid gap-3">
+            {paymentPreviews.map((account) => {
+              const checked =
+                account.numero <= (form.submittedPaymentAccountsCount ?? 0);
+              return (
+                <ToggleSwitch
+                  key={account.numero}
+                  label={`Cuenta ${account.numero} — ${formatDate(
+                    account.periodoInicio
+                  )} - ${formatDate(account.periodoFin)} — ${formatCurrency(
+                    account.valor
+                  )}`}
+                  description={`${account.diasPagables} días pagables`}
+                  value={checked}
+                  onChange={(value) =>
+                    setSubmittedCountFromToggle(account.numero, value)
+                  }
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <p className="rounded-2xl bg-background/80 px-4 py-3 text-sm text-muted-foreground">
+            Completa fechas, plazo y valor inicial para ver las cuentas
+            generadas.
+          </p>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-border/80 bg-muted/20 p-5">
+        <div className="mb-4">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+            Documentos del contrato
+          </p>
+          <h3 className="mt-2 text-lg font-black text-foreground">
+            Archivos reutilizables
+          </h3>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            Estos PDFs se guardan en la carpeta del contrato y se reutilizan en
+            el proceso de cuentas de cobro.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {CONTRACT_DOCUMENTS.map((document) => (
+            <FileUpload
+              key={document.tipoDocumento}
+              id={`contract-${document.tipoDocumento}`}
+              name={document.tipoDocumento}
+              label={`${document.label}*`}
+              helperText={document.helperText}
+              error={errors[`document_${document.tipoDocumento}`]}
+              currentFileName={contractFiles[document.tipoDocumento]?.name}
+              onChange={(file) => {
+                setContractFiles((current) => ({
+                  ...current,
+                  [document.tipoDocumento]: file ?? undefined,
+                }));
+                setErrors((current) => ({
+                  ...current,
+                  [`document_${document.tipoDocumento}`]: "",
+                }));
+              }}
+            />
+          ))}
+        </div>
+      </section>
 
       <div className="flex justify-end gap-3 border-t border-border pt-4">
         {onCancel ? (

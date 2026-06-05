@@ -26,7 +26,13 @@ function OverviewStat({
   );
 }
 
-export default function DashboardOverviewGrid() {
+type DashboardOverviewGridProps = {
+  basePath?: string;
+};
+
+export default function DashboardOverviewGrid({
+  basePath = "/dashboard/contratista",
+}: DashboardOverviewGridProps) {
   useContratosQuery();
   useCuentasCobroSummaryQuery();
 
@@ -84,7 +90,7 @@ export default function DashboardOverviewGrid() {
               />
             </div>
             <Link
-              href={`/dashboard/contrato/${contract.id}`}
+              href={`${basePath}/contrato/${contract.id}`}
               className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground shadow-md transition hover:bg-ring"
             >
               Ver detalle

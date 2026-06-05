@@ -13,8 +13,14 @@ const READ_ONLY_STATUSES = new Set<CuentaCobroStatus>([
   "RECHAZADA",
 ]);
 
+const CONTRATISTA_CONTRACT_BASE = "/dashboard/contratista/contrato";
+
+export function getContractDetailHref(contractId: string) {
+  return `${CONTRATISTA_CONTRACT_BASE}/${contractId}`;
+}
+
 export function getPaymentAccountHref(contractId: string, numero: number) {
-  return `/dashboard/contrato/${contractId}/cuentas-cobro/${numero}`;
+  return `${CONTRATISTA_CONTRACT_BASE}/${contractId}/cuentas-cobro/${numero}`;
 }
 
 export function canViewPaymentAccount(account: PublicCuentaCobro) {

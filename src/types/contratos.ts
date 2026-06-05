@@ -67,11 +67,13 @@ export type CreateContratoBody = {
   valorInicialContrato: number;
   numeroDisponibilidad: string;
   numeroCompromiso: string;
+  submittedPaymentAccountsCount?: number;
 };
 
 export type CreateContratoResponse = {
   contract: PublicContrato;
   paymentAccountsGenerated: number;
+  paymentAccountsRegularized?: number;
 };
 
 export type CuentaCobroStatus =
@@ -99,6 +101,27 @@ export type PublicCuentaCobro = {
   updatedAt?: string | null;
 };
 
+export type CuentaCobroDocumentScope = "CONTRATO" | "CUENTA_COBRO";
+
+export type PublicCuentaCobroDocumento = {
+  id: string;
+  userId: string;
+  contratoId: string;
+  cuentaCobroId: string | null;
+  numeroCuenta: number | null;
+  numeroContrato: string;
+  tipoDocumento: string;
+  scope: CuentaCobroDocumentScope;
+  filePath: string;
+  originalName: string | null;
+  size: number | null;
+  mimeType: string | null;
+  required: boolean;
+  generated: boolean;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
 export type ContratosResponse = {
   contracts: PublicContrato[];
   currentContract: PublicContrato | null;
@@ -116,4 +139,13 @@ export type CuentasCobroSummaryResponse = {
   lastPaymentAccount: PublicCuentaCobro | null;
   completedAllPaymentAccounts: boolean;
   message: string | null;
+};
+
+export type CuentaCobroContractDocumentsResponse = {
+  documents: PublicCuentaCobroDocumento[];
+};
+
+export type CuentaCobroAccountDocumentsResponse = {
+  contractDocuments: PublicCuentaCobroDocumento[];
+  accountDocuments: PublicCuentaCobroDocumento[];
 };

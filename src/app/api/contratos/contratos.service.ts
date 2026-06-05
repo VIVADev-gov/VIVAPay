@@ -2,7 +2,11 @@ import { Types } from "mongoose";
 import { connectDB } from "@/lib/db/mongoose";
 import { enrichContractWithPaymentStats } from "@/lib/contratos/contractStats";
 import { generatePaymentAccountsForContract } from "@/lib/contratos/generatePaymentAccounts";
-import { CuentaCobro, toPublicCuentaCobro } from "@/models/cuentaCobro";
+import {
+  CUENTA_COBRO_STATUS,
+  CuentaCobro,
+  toPublicCuentaCobro,
+} from "@/models/cuentaCobro";
 import {
   Contrato,
   getCurrentContractSnapshot,
@@ -160,7 +164,31 @@ export const contratosService = {
       valorTotal: dto.valorInicialContrato,
     });
 
-    const stats = generated.map((a) => ({ estado: a.estado }));
+    const regularizedCount = Math.min(
+      dto.submittedPaymentAccountsCount ?? 0,
+      generated.length
+    );
+
+    if (regularizedCount > 0) {
+      const regularizedIds = generated
+        .slice(0, regularizedCount)
+        .map((account) => account._id);
+
+      await CuentaCobro.updateMany(
+        { _id: { $in: regularizedIds } },
+        {
+          $set: {
+            estado: CUENTA_COBRO_STATUS.ENVIADA,
+            fechaEnvio: new Date(),
+          },
+        }
+      );
+    }
+
+    const stats = generated.map((a, index) => ({
+      estado:
+        index < regularizedCount ? CUENTA_COBRO_STATUS.ENVIADA : a.estado,
+    }));
     const contract = enrichContractWithPaymentStats(
       toPublicContrato(contrato),
       stats
@@ -169,6 +197,7 @@ export const contratosService = {
     return {
       contract,
       paymentAccountsGenerated: generated.length,
+      paymentAccountsRegularized: regularizedCount,
     };
   },
 

@@ -20,6 +20,101 @@ export interface SaveFileResult {
     error?: string;
 }
 
+function safeStorageSegment(value: string | number): string {
+    const safe = String(value)
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_+|_+$/g, "");
+    return safe || "sin-identificar";
+}
+
+function documentFileName(tipoDocumento: string): string {
+    return `${safeStorageSegment(tipoDocumento)}.pdf`;
+}
+
+export function contratoUploadRelativeDir(numeroContrato: string): string {
+    return `contratos/${safeStorageSegment(numeroContrato)}`;
+}
+
+export function cuentaCobroContratoUploadRelativeDir(
+    numeroContrato: string,
+    numeroCuentaCobro: number
+): string {
+    return `${contratoUploadRelativeDir(numeroContrato)}/cuentas/${safeStorageSegment(numeroCuentaCobro)}`;
+}
+
+export function contratoDocumentRelativePath(
+    numeroContrato: string,
+    tipoDocumento: string
+): string {
+    return `${DB_URL_PREFIX}/${contratoUploadRelativeDir(numeroContrato)}/${documentFileName(tipoDocumento)}`;
+}
+
+export function cuentaCobroContratoDocumentRelativePath(
+    numeroContrato: string,
+    numeroCuentaCobro: number,
+    tipoDocumento: string
+): string {
+    return `${DB_URL_PREFIX}/${cuentaCobroContratoUploadRelativeDir(
+        numeroContrato,
+        numeroCuentaCobro
+    )}/${documentFileName(tipoDocumento)}`;
+}
+
+async function savePdfToUploads(
+    file: File,
+    relativeUnderUploads: string
+): Promise<SaveFileResult> {
+    try {
+        const validationError = validateFile(file);
+        if (validationError) {
+            return { success: false, error: validationError };
+        }
+
+        const absolutePath = resolveWritableStorageUploadPath(relativeUnderUploads);
+        if (!absolutePath) {
+            return { success: false, error: "Ruta de destino inválida" };
+        }
+
+        await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+        const arrayBuffer = await file.arrayBuffer();
+        await fs.writeFile(absolutePath, Buffer.from(arrayBuffer));
+
+        const relativePath = `${DB_URL_PREFIX}/${relativeUnderUploads}`;
+        logger.info(`[FileUpload] Documento guardado: ${relativePath}`);
+        return { success: true, filePath: relativePath };
+    } catch (error) {
+        logger.error("[FileUpload] Error al guardar documento:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Error al guardar el archivo",
+        };
+    }
+}
+
+export async function saveContratoDocumento(
+    file: File,
+    numeroContrato: string,
+    tipoDocumento: string
+): Promise<SaveFileResult> {
+    const relUnderUploads = `${contratoUploadRelativeDir(numeroContrato)}/${documentFileName(tipoDocumento)}`;
+    return savePdfToUploads(file, relUnderUploads);
+}
+
+export async function saveCuentaCobroContratoDocumento(
+    file: File,
+    numeroContrato: string,
+    numeroCuentaCobro: number,
+    tipoDocumento: string
+): Promise<SaveFileResult> {
+    const relUnderUploads = `${cuentaCobroContratoUploadRelativeDir(
+        numeroContrato,
+        numeroCuentaCobro
+    )}/${documentFileName(tipoDocumento)}`;
+    return savePdfToUploads(file, relUnderUploads);
+}
+
 export function cuentaCobroUploadDirAbs(id_cuenta_cobro: number): string {
     return path.join(FACTURACION_DIR, `cuenta-cobro-${id_cuenta_cobro}`);
 }
