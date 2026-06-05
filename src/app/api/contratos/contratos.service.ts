@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { connectDB } from "@/lib/db/mongoose";
+import { validateNewContractForUser } from "@/lib/contratos/contractCreationRules.server";
 import { enrichContractWithPaymentStats } from "@/lib/contratos/contractStats";
 import { generatePaymentAccountsForContract } from "@/lib/contratos/generatePaymentAccounts";
 import {
@@ -120,6 +121,21 @@ export const contratosService = {
         "La fecha final debe ser posterior a la fecha de acta de inicio",
         400,
         CONTRACT_ERROR_CODES.INVALID_CONTRACT_DATES
+      );
+    }
+
+    const userContracts = await Contrato.find({ userId }).exec();
+    const creationValidation = validateNewContractForUser(
+      userContracts,
+      fechaActaInicio,
+      fechaFinal
+    );
+
+    if (!creationValidation.allowed) {
+      throw new ContractServiceError(
+        creationValidation.message,
+        409,
+        CONTRACT_ERROR_CODES.ACTIVE_CONTRACT_CONFLICT
       );
     }
 

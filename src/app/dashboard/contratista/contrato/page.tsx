@@ -27,6 +27,7 @@ export default function InformacionContractualPage() {
 
   const heroContract = currentContract ?? lastContract;
   const current = heroContract?.actual;
+  const hasVigenteContract = Boolean(currentContract?.vigente);
 
   return (
     <RoleDashboardLayout
@@ -78,6 +79,19 @@ export default function InformacionContractualPage() {
             </div>
           ) : null}
         </DashboardHero>
+
+        {hasVigenteContract && currentContract ? (
+          <section className="rounded-3xl border border-primary/20 bg-primary/5 px-5 py-4 text-sm leading-6 text-muted-foreground">
+            Tienes un contrato vigente hasta{" "}
+            <span className="font-semibold text-foreground">
+              {formatDate(
+                currentContract.actual.fechaFinal ?? currentContract.fechaFinal
+              )}
+            </span>
+            . Mientras esté en curso solo puedes registrar contratos anteriores a
+            su fecha de inicio.
+          </section>
+        ) : null}
 
         <section className="overflow-hidden rounded-4xl border border-border/80 bg-linear-to-br from-card via-background to-muted/20 p-6 shadow-sm md:p-8">
           <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

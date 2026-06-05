@@ -8,11 +8,13 @@ import FormField from "@/components/forms/FormField";
 import ToggleSwitch from "@/components/forms/ToggleSwitch";
 import { useCreateContratoMutation } from "@/hooks/api/useContratos";
 import api from "@/lib/axiosInstance";
+import { validateContractCreationAgainstVigente } from "@/lib/contratos/contractCreationValidation";
 import { buildPaymentAccountPreviews } from "@/lib/cuentas-cobro/paymentAccountPreview";
+import { useContratosStore } from "@/store/contratos/contratos.store";
 import { useUiStore } from "@/store/ui/ui-store";
 import type { CreateContratoBody } from "@/types/contratos";
 import { formatCurrency, formatDate } from "@/utils/formatters";
-import { calculatePlazoMeses } from "@/utils/date";
+import { calculatePlazoMeses, parseDateOnlyToUtcNoon } from "@/utils/date";
 
 const initialForm: CreateContratoBody = {
   numeroContrato: "",
@@ -101,6 +103,7 @@ export default function ContractCreateForm({
 }: ContractCreateFormProps) {
   const createMutation = useCreateContratoMutation();
   const showToast = useUiStore((s) => s.showToast);
+  const currentContract = useContratosStore((s) => s.currentContract);
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [contractFiles, setContractFiles] = useState<
@@ -180,6 +183,36 @@ export default function ContractCreateForm({
         next[`document_${document.tipoDocumento}`] = "Requerido";
       }
     }
+
+    if (
+      currentContract?.vigente &&
+      form.fechaActaInicio &&
+      form.fechaFinal &&
+      !next.fechaFinal
+    ) {
+      const newInicio = parseDateOnlyToUtcNoon(form.fechaActaInicio);
+      const newFin = parseDateOnlyToUtcNoon(form.fechaFinal);
+      const vigenteInicio = parseDateOnlyToUtcNoon(
+        currentContract.actual.fechaActaInicio ?? currentContract.fechaActaInicio
+      );
+      const vigenteFin = parseDateOnlyToUtcNoon(
+        currentContract.actual.fechaFinal ?? currentContract.fechaFinal
+      );
+
+      if (newInicio && newFin && vigenteInicio && vigenteFin) {
+        const validation = validateContractCreationAgainstVigente({
+          newFechaActaInicio: newInicio,
+          newFechaFinal: newFin,
+          vigenteFechaActaInicio: vigenteInicio,
+          vigenteFechaFinal: vigenteFin,
+        });
+
+        if (!validation.allowed) {
+          next.fechaFinal = validation.message;
+        }
+      }
+    }
+
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -267,6 +300,22 @@ export default function ContractCreateForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-4">
+      {currentContract?.vigente ? (
+        <p className="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm leading-6 text-muted-foreground">
+          Tienes un contrato vigente (
+          {formatDate(
+            currentContract.actual.fechaActaInicio ??
+              currentContract.fechaActaInicio
+          )}{" "}
+          -{" "}
+          {formatDate(
+            currentContract.actual.fechaFinal ?? currentContract.fechaFinal
+          )}
+          ). Solo puedes registrar un contrato anterior a ese periodo o esperar a
+          que finalice.
+        </p>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-2">
         <FormField
           label="No. del contrato"
