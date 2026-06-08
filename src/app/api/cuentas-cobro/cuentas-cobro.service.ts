@@ -6,6 +6,7 @@ import {
   CUENTA_COBRO_STATUS,
   CuentaCobro,
   toPublicCuentaCobro,
+  type CuentaCobroStatus,
 } from "@/models/cuentaCobro";
 import {
   Contrato,
@@ -17,13 +18,13 @@ import {
   PaymentAccountServiceError,
 } from "./cuentas-cobro.errors";
 
-const NEXT_PAYMENT_STATUSES = [
+const NEXT_PAYMENT_STATUSES: CuentaCobroStatus[] = [
   CUENTA_COBRO_STATUS.BORRADOR,
   CUENTA_COBRO_STATUS.PENDIENTE,
   CUENTA_COBRO_STATUS.HABILITADA,
 ];
 
-const DONE_PAYMENT_STATUSES = [
+const DONE_PAYMENT_STATUSES: CuentaCobroStatus[] = [
   CUENTA_COBRO_STATUS.ENVIADA,
   CUENTA_COBRO_STATUS.APROBADA,
   CUENTA_COBRO_STATUS.RECHAZADA,

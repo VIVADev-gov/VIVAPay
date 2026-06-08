@@ -149,3 +149,35 @@ export type CuentaCobroAccountDocumentsResponse = {
   contractDocuments: PublicCuentaCobroDocumento[];
   accountDocuments: PublicCuentaCobroDocumento[];
 };
+
+export type CuentaCobroActividadSoporteTipo = "TEXTO" | "ARCHIVO";
+
+export type PublicCuentaCobroActividadItem = {
+  id?: string;
+  orden: number;
+  actividad: string;
+  accion: string;
+  soporteTipo: CuentaCobroActividadSoporteTipo;
+  soporteTexto: string | null;
+  soporteArchivoPath: string | null;
+  soporteArchivoNombre: string | null;
+  soporteArchivoMimeType: string | null;
+  soporteArchivoSize: number | null;
+  ejecucion: number;
+};
+
+export type PublicCuentaCobroActividades = {
+  id: string | null;
+  userId?: string;
+  contratoId?: string;
+  cuentaCobroId?: string;
+  numeroCuenta?: number;
+  numeroContrato?: string;
+  actividades: PublicCuentaCobroActividadItem[];
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+export type CuentaCobroActivitiesResponse = {
+  activities: PublicCuentaCobroActividades;
+};

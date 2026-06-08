@@ -6,7 +6,7 @@ import { Loader } from "@/components/loaders/loader";
 import { useAuthStore } from "@/store/auth/auth.store";
 import DashboardHeader, { NavSection } from "./DashboardHeader";
 
-interface DashboardLayoutProps {
+export interface DashboardLayoutProps {
     children: React.ReactNode;
     title?: string;
     showSearch?: boolean;

@@ -115,6 +115,74 @@ export async function saveCuentaCobroContratoDocumento(
     return savePdfToUploads(file, relUnderUploads);
 }
 
+const ACTIVITY_SUPPORT_ALLOWED_EXTENSIONS = [
+    ".pdf",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
+];
+
+function activitySupportFileName(orden: number, originalName: string): string {
+    const ext = path.extname(originalName).toLowerCase() || ".bin";
+    return `actividad-${safeStorageSegment(orden)}-soporte${ext}`;
+}
+
+function validateActivitySupportFile(file: File): string | null {
+    if (!file || file.size === 0) {
+        return "Archivo vacío o inválido";
+    }
+    if (file.size > MAX_FILE_SIZE) {
+        return `El archivo excede el tamaño máximo permitido de ${MAX_FILE_SIZE / 1024 / 1024}MB`;
+    }
+    const ext = path.extname(file.name).toLowerCase();
+    if (!ACTIVITY_SUPPORT_ALLOWED_EXTENSIONS.includes(ext)) {
+        return `Extensión de archivo no permitida. Solo se permiten: ${ACTIVITY_SUPPORT_ALLOWED_EXTENSIONS.join(", ")}`;
+    }
+    return null;
+}
+
+export async function saveCuentaCobroActividadSoporte(
+    file: File,
+    numeroContrato: string,
+    numeroCuentaCobro: number,
+    orden: number
+): Promise<SaveFileResult> {
+    try {
+        const validationError = validateActivitySupportFile(file);
+        if (validationError) {
+            return { success: false, error: validationError };
+        }
+
+        const relUnderUploads = `${cuentaCobroContratoUploadRelativeDir(
+            numeroContrato,
+            numeroCuentaCobro
+        )}/actividades/soportes/${activitySupportFileName(orden, file.name)}`;
+        const absolutePath = resolveWritableStorageUploadPath(relUnderUploads);
+        if (!absolutePath) {
+            return { success: false, error: "Ruta de destino inválida" };
+        }
+
+        await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+        const arrayBuffer = await file.arrayBuffer();
+        await fs.writeFile(absolutePath, Buffer.from(arrayBuffer));
+
+        const relativePath = `${DB_URL_PREFIX}/${relUnderUploads}`;
+        logger.info(`[FileUpload] Soporte de actividad guardado: ${relativePath}`);
+        return { success: true, filePath: relativePath };
+    } catch (error) {
+        logger.error("[FileUpload] Error al guardar soporte de actividad:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Error al guardar el archivo",
+        };
+    }
+}
+
 export function cuentaCobroUploadDirAbs(id_cuenta_cobro: number): string {
     return path.join(FACTURACION_DIR, `cuenta-cobro-${id_cuenta_cobro}`);
 }

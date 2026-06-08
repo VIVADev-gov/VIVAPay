@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import ActionButton from "@/components/buttons/ActionButton";
+import PaymentAccountActivitiesModal from "@/components/cuentas-cobro/PaymentAccountActivitiesModal";
 import FileLink from "@/components/files/FileLink";
 import FileUpload from "@/components/forms/FileUpload";
 import {
+  useCuentaCobroActivitiesQuery,
   useCuentaCobroDocumentsQuery,
   useUploadContratoDocumentMutation,
   useUploadCuentaCobroDocumentMutation,
@@ -26,7 +29,7 @@ import type {
   PublicCuentaCobroDocumento,
 } from "@/types/contratos";
 import { formatCurrency, formatDate } from "@/utils/formatters";
-import { CalendarClock, ReceiptText } from "lucide-react";
+import { CalendarClock, ListChecks, ReceiptText } from "lucide-react";
 import { useUiStore } from "@/store/ui/ui-store";
 
 type PaymentAccountWorkspaceProps = {
@@ -109,6 +112,7 @@ export default function PaymentAccountWorkspace({
   paymentAccount,
   paymentAccounts,
 }: PaymentAccountWorkspaceProps) {
+  const [isActivitiesModalOpen, setIsActivitiesModalOpen] = useState(false);
   const showToast = useUiStore((s) => s.showToast);
   const readOnly = isPaymentAccountReadOnly(paymentAccount);
   const isActionable = isPaymentAccountActionable(paymentAccount, paymentAccounts);
@@ -127,6 +131,10 @@ export default function PaymentAccountWorkspace({
     contract.id,
     paymentAccount.numero
   );
+  const activitiesQuery = useCuentaCobroActivitiesQuery(
+    contract.id,
+    paymentAccount.numero
+  );
   const uploadContractDocument = useUploadContratoDocumentMutation(contract.id);
   const uploadAccountDocument = useUploadCuentaCobroDocumentMutation(
     contract.id,
@@ -135,6 +143,14 @@ export default function PaymentAccountWorkspace({
 
   const contractDocuments = documentsQuery.data?.contractDocuments ?? [];
   const accountDocuments = documentsQuery.data?.accountDocuments ?? [];
+  const activities = activitiesQuery.data?.activities.actividades ?? [];
+  const averageExecution =
+    activities.length > 0
+      ? Math.round(
+          activities.reduce((sum, activity) => sum + activity.ejecucion, 0) /
+            activities.length
+        )
+      : null;
   const isUploading =
     uploadContractDocument.isPending || uploadAccountDocument.isPending;
 
@@ -276,6 +292,61 @@ export default function PaymentAccountWorkspace({
         ) : null}
       </article>
 
+      <article className="rounded-4xl border border-border/80 bg-linear-to-br from-card via-background to-ring/5 p-6 shadow-sm md:p-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+              Actividades ejecutadas
+            </p>
+            <h3 className="mt-2 text-xl font-black text-foreground">
+              Acciones, soportes y ejecución
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Registra las actividades del periodo con acciones realizadas,
+              soporte textual o archivo y porcentaje de ejecución.
+            </p>
+          </div>
+          <ActionButton
+            type="button"
+            variant="primary"
+            icon={ListChecks}
+            label={activities.length > 0 ? "Editar actividades" : "Agregar actividades"}
+            onClick={() => setIsActivitiesModalOpen(true)}
+          />
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              Actividades
+            </p>
+            <p className="mt-1 text-2xl font-black text-foreground">
+              {activities.length}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              Ejecución promedio
+            </p>
+            <p className="mt-1 text-2xl font-black text-foreground">
+              {averageExecution == null ? "Sin datos" : `${averageExecution}%`}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              Soportes por archivo
+            </p>
+            <p className="mt-1 text-2xl font-black text-foreground">
+              {
+                activities.filter(
+                  (activity) => activity.soporteTipo === "ARCHIVO"
+                ).length
+              }
+            </p>
+          </div>
+        </div>
+      </article>
+
       {contractRequirements.length > 0 ? (
         <article className="rounded-4xl border border-border/80 bg-linear-to-br from-card via-background to-muted/20 p-6 shadow-sm md:p-8">
           <div className="mb-5">
@@ -337,6 +408,23 @@ export default function PaymentAccountWorkspace({
           ))}
         </div>
       </article>
+
+      {isActivitiesModalOpen ? (
+        <PaymentAccountActivitiesModal
+          isOpen={isActivitiesModalOpen}
+          onClose={() => setIsActivitiesModalOpen(false)}
+          contractId={contract.id}
+          numeroCuenta={paymentAccount.numero}
+          initialActivities={activities}
+          onSaved={() => {
+            showToast({
+              message: "Actividades guardadas correctamente",
+              variant: "success",
+            });
+            void activitiesQuery.refetch();
+          }}
+        />
+      ) : null}
     </section>
   );
 }

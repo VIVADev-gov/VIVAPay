@@ -5,9 +5,11 @@ import api from "@/lib/axiosInstance";
 import { useCuentasCobroStore } from "@/store/cuentas-cobro/cuentas-cobro.store";
 import type {
   CuentaCobroAccountDocumentsResponse,
+  CuentaCobroActivitiesResponse,
   CuentaCobroContractDocumentsResponse,
   ContratoDetailResponse,
   CuentasCobroSummaryResponse,
+  PublicCuentaCobroActividadItem,
   PublicCuentaCobroDocumento,
 } from "@/types/contratos";
 
@@ -25,6 +27,8 @@ export const cuentasCobroQueryKeys = {
     ["cuentas-cobro", "contract", contractId, "documents"] as const,
   documentsByAccount: (contractId: string, numeroCuenta: number) =>
     ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "documents"] as const,
+  activitiesByAccount: (contractId: string, numeroCuenta: number) =>
+    ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "activities"] as const,
 };
 
 export function useCuentasCobroSummaryQuery() {
@@ -110,6 +114,78 @@ export function useContratoDocumentsQuery(contractId: string) {
       >(`/api/cuentas-cobro/contrato/${contractId}/documentos`);
       if (!data.success) throw new Error(data.message);
       return data.data;
+    },
+  });
+}
+
+export function useCuentaCobroActivitiesQuery(
+  contractId: string,
+  numeroCuenta: number
+) {
+  return useQuery({
+    queryKey: cuentasCobroQueryKeys.activitiesByAccount(contractId, numeroCuenta),
+    enabled: Boolean(contractId) && Number.isInteger(numeroCuenta),
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<CuentaCobroActivitiesResponse>>(
+        `/api/cuentas-cobro/contrato/${contractId}/cuentas/${numeroCuenta}/actividades`
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+  });
+}
+
+export type SaveCuentaCobroActivityItem = Pick<
+  PublicCuentaCobroActividadItem,
+  "orden" | "actividad" | "accion" | "soporteTipo" | "soporteTexto" | "ejecucion"
+> & {
+  file?: File | null;
+};
+
+export function useSaveCuentaCobroActivitiesMutation(
+  contractId: string,
+  numeroCuenta: number
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (activities: SaveCuentaCobroActivityItem[]) => {
+      const formData = new FormData();
+      const payload = activities.map((activity, index) => {
+        const soporteFileKey =
+          activity.soporteTipo === "ARCHIVO" && activity.file
+            ? `file_${index}`
+            : null;
+        if (soporteFileKey && activity.file) {
+          formData.append(soporteFileKey, activity.file);
+        }
+        return {
+          orden: activity.orden,
+          actividad: activity.actividad,
+          accion: activity.accion,
+          soporteTipo: activity.soporteTipo,
+          soporteTexto: activity.soporteTexto,
+          soporteFileKey,
+          ejecucion: activity.ejecucion,
+        };
+      });
+
+      formData.append("payload", JSON.stringify(payload));
+
+      const { data } = await api.put<ApiResponse<CuentaCobroActivitiesResponse>>(
+        `/api/cuentas-cobro/contrato/${contractId}/cuentas/${numeroCuenta}/actividades`,
+        formData
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: cuentasCobroQueryKeys.activitiesByAccount(
+          contractId,
+          numeroCuenta
+        ),
+      });
     },
   });
 }

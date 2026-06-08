@@ -7,6 +7,7 @@ import {
   CUENTA_COBRO_STATUS,
   CuentaCobro,
   toPublicCuentaCobro,
+  type CuentaCobroStatus,
 } from "@/models/cuentaCobro";
 import {
   Contrato,
@@ -23,7 +24,9 @@ function getContractEndDate(contrato: IContratoDocument) {
 }
 
 async function getPaymentStatsByContractIds(contractIds: Types.ObjectId[]) {
-  if (contractIds.length === 0) return new Map<string, { estado: string }[]>();
+  if (contractIds.length === 0) {
+    return new Map<string, { estado: CuentaCobroStatus }[]>();
+  }
 
   const accounts = await CuentaCobro.find({
     contratoId: { $in: contractIds },
@@ -32,7 +35,7 @@ async function getPaymentStatsByContractIds(contractIds: Types.ObjectId[]) {
     .lean()
     .exec();
 
-  const map = new Map<string, { estado: string }[]>();
+  const map = new Map<string, { estado: CuentaCobroStatus }[]>();
   for (const account of accounts) {
     const key = String(account.contratoId);
     const list = map.get(key) ?? [];
