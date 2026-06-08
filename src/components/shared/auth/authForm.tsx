@@ -13,9 +13,10 @@ import {
   getUnidadesPermitidasPorRol,
   unidadPermitidaParaRol,
 } from "@/constants/organizacionViva";
-import { USER_ROLE_OPTIONS, type UserRole } from "@/constants/userRoles";
+import { USER_ROLE_OPTIONS, USER_ROLES, type UserRole } from "@/constants/userRoles";
 import { useLoginMutation, useRegisterMutation } from "@/hooks/api/useAuth";
 import { getApiErrorDetails } from "@/lib/api-error";
+import { isDevSuperUserLoginUiEnabled } from "@/lib/auth/devSuperUser.client";
 import { getDashboardPathForRole } from "@/lib/auth/roles";
 import { useAuthStore } from "@/store/auth/auth.store";
 import { useUiStore } from "@/store/ui/ui-store";
@@ -41,6 +42,7 @@ const emptyRegister = {
 const emptyLogin = {
   identifier: "",
   password: "",
+  devRole: USER_ROLES.CONTRATISTA,
 };
 
 const roleOptions = USER_ROLE_OPTIONS.map((role) => ({
@@ -74,6 +76,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const isRegister = mode === "register";
   const isRegisterPending = registerMutation.isPending;
   const isLoginPending = loginMutation.isPending;
+  const devSuperUserEnabled = isDevSuperUserLoginUiEnabled();
 
   const handleRegisterChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -221,6 +224,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
       const { token, user } = await loginMutation.mutateAsync({
         identifier: loginForm.identifier.trim(),
         password: loginForm.password,
+        ...(devSuperUserEnabled
+          ? { devRole: loginForm.devRole as UserRole }
+          : {}),
       });
 
       setSession(token, user);
@@ -482,6 +488,19 @@ export default function AuthForm({ mode }: AuthFormProps) {
               required
               floatingLabel
             />
+            {devSuperUserEnabled ? (
+              <FormField
+                label="Entrar como (dev)"
+                id="devRole"
+                name="devRole"
+                type="select"
+                value={loginForm.devRole}
+                onChange={handleLoginChange}
+                options={roleOptions}
+                selectAllowEmpty={false}
+                helperText="Solo para la cuenta dev configurada en variables de entorno."
+              />
+            ) : null}
             <ActionButton
               type="submit"
               label="Iniciar sesión"

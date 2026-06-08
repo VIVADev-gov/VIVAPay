@@ -1,6 +1,19 @@
 import type { CuentaCobroStatus, PublicCuentaCobro } from "@/types/contratos";
 import { CONTRACTOR_EDITABLE_STATUSES } from "@/constants/cuentaCobroWorkflow";
+import { isDevPaymentAccountWindowSkipped } from "@/lib/cuentas-cobro/devPaymentAccountWindow";
 import { parseDateOnlyToUtcNoon } from "@/utils/date";
+
+const SUBMITTABLE_STATUSES: CuentaCobroStatus[] = [
+  "HABILITADA",
+  "PENDIENTE_CONTRATISTA",
+];
+
+function getSubmittableStatuses(): CuentaCobroStatus[] {
+  if (isDevPaymentAccountWindowSkipped()) {
+    return [...SUBMITTABLE_STATUSES, "PENDIENTE"];
+  }
+  return SUBMITTABLE_STATUSES;
+}
 
 const MANAGEABLE_STATUSES = new Set<CuentaCobroStatus>(CONTRACTOR_EDITABLE_STATUSES);
 
@@ -50,6 +63,10 @@ export function isPaymentAccountSubmissionWindowOpen(
   account: PublicCuentaCobro,
   today: Date = new Date()
 ) {
+  if (isDevPaymentAccountWindowSkipped()) {
+    return true;
+  }
+
   const from = parseDateOnlyToUtcNoon(account.fechaHabilitadaEnvio);
   const to = parseDateOnlyToUtcNoon(account.fechaLimiteEnvio);
 
@@ -63,8 +80,7 @@ export function canSubmitPaymentAccount(
   today: Date = new Date()
 ) {
   return (
-    (account.estado === "HABILITADA" ||
-      account.estado === "PENDIENTE_CONTRATISTA") &&
+    getSubmittableStatuses().includes(account.estado) &&
     isPaymentAccountSubmissionWindowOpen(account, today)
   );
 }

@@ -1,5 +1,6 @@
 import { ORGANIZACION_TIPO } from "@/constants/organizacionViva";
 import { USER_ROLES, type UserRole } from "@/constants/userRoles";
+import { isDevPaymentAccountWindowSkipped } from "@/lib/cuentas-cobro/devPaymentAccountWindow";
 import type { CuentaCobroStatus } from "@/types/contratos";
 
 export type WorkflowContractor = {
@@ -65,7 +66,11 @@ export function resolveStateAfterContractorSubmit(
 }
 
 export function canContractorSubmit(account: WorkflowAccount) {
-  return account.estado === "HABILITADA" || account.estado === "PENDIENTE_CONTRATISTA";
+  if (account.estado === "HABILITADA" || account.estado === "PENDIENTE_CONTRATISTA") {
+    return true;
+  }
+
+  return isDevPaymentAccountWindowSkipped() && account.estado === "PENDIENTE";
 }
 
 export function canSupervisorForwardDirector(account: WorkflowAccount) {

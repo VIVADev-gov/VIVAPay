@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import type { UserRole } from "@/constants/userRoles";
+import type { SessionPayload } from "./session-payload";
 import { JWT_EXPIRY } from "./auth.constants";
 
 export function getJwtSecret(): string {
@@ -11,13 +11,7 @@ export function getJwtSecret(): string {
   return secret;
 }
 
-export function createSessionToken(payload: {
-  id: string;
-  email: string;
-  name: string;
-  status: string;
-  role: UserRole;
-}): string {
+export function createSessionToken(payload: SessionPayload): string {
   return jwt.sign(payload, getJwtSecret(), { expiresIn: JWT_EXPIRY });
 }
 

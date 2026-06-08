@@ -28,6 +28,7 @@ import {
   isPaymentAccountReadOnly,
   isPaymentAccountSubmissionWindowOpen,
 } from "@/lib/cuentas-cobro/paymentAccountAccess";
+import { isDevPaymentAccountWindowSkipped } from "@/lib/cuentas-cobro/devPaymentAccountWindow";
 import {
   getNextActionablePaymentAccount,
   getPaymentDocumentRequirements,
@@ -252,6 +253,7 @@ export default function PaymentAccountWorkspace({
   const nextActionable = getNextActionablePaymentAccount(paymentAccounts);
   const canSubmit = canSubmitPaymentAccount(paymentAccount) && isActionable;
   const windowOpen = isPaymentAccountSubmissionWindowOpen(paymentAccount);
+  const devWindowSkipped = isDevPaymentAccountWindowSkipped();
   const phase = resolvePaymentPhase(paymentAccount, paymentAccounts);
   const requirements = getPaymentDocumentRequirements(phase);
   const contractRequirements = requirements.filter(
@@ -498,6 +500,15 @@ export default function PaymentAccountWorkspace({
                 label="Fuera de ventana"
                 tone="neutral"
                 title="Aún no está en periodo de envío o ya venció"
+              />
+            ) : null}
+
+            {devWindowSkipped ? (
+              <WorkflowChip
+                icon={CalendarClock}
+                label="Ventana omitida (dev)"
+                tone="neutral"
+                title="DEV_SKIP_PAYMENT_ACCOUNT_WINDOW está activo"
               />
             ) : null}
 

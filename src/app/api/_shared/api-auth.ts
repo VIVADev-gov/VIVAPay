@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import type { NextRequest } from "next/server";
+import type { SessionPayload } from "@/app/api/auth/_shared/session-payload";
 import { connectDB } from "@/lib/db/mongoose";
 import { User, toPublicUser } from "@/models/user";
 import { getJwtSecret } from "../auth/_shared/tokens";
@@ -22,13 +23,6 @@ export class ApiAuthError extends Error {
     super(message);
   }
 }
-
-type SessionPayload = {
-  id: string;
-  email: string;
-  name: string;
-  status: string;
-};
 
 export async function requireApiAuth(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -66,8 +60,15 @@ export async function requireApiAuth(request: NextRequest) {
     );
   }
 
+  const publicUser = toPublicUser(user);
+
+  if (payload.isDevSuperUser && payload.role) {
+    user.role = payload.role;
+    publicUser.role = payload.role;
+  }
+
   return {
     user,
-    publicUser: toPublicUser(user),
+    publicUser,
   };
 }
