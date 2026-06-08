@@ -7,7 +7,9 @@ import type {
   CuentaCobroAccountDocumentsResponse,
   CuentaCobroActivitiesResponse,
   CuentaCobroContractDocumentsResponse,
+  CuentaCobroDeclarationsResponse,
   CuentasCobroSummaryResponse,
+  PaymentAccountDeclarations,
   PublicCuentaCobroActividadItem,
   PublicCuentaCobroDocumento,
   SeguridadSocialPlantillaMetadata,
@@ -27,6 +29,8 @@ export const cuentasCobroQueryKeys = {
     ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "documents"] as const,
   activitiesByAccount: (contractId: string, numeroCuenta: number) =>
     ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "activities"] as const,
+  declarationsByAccount: (contractId: string, numeroCuenta: number) =>
+    ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "declarations"] as const,
 };
 
 export function useCuentasCobroSummaryQuery() {
@@ -89,6 +93,64 @@ export function useContratoDocumentsQuery(contractId: string) {
       >(`/api/cuentas-cobro/contrato/${contractId}/documentos`);
       if (!data.success) throw new Error(data.message);
       return data.data;
+    },
+  });
+}
+
+export function useCuentaCobroDeclarationsQuery(
+  contractId: string,
+  numeroCuenta: number
+) {
+  const setPaymentAccountDeclarations = useCuentasCobroStore(
+    (s) => s.setPaymentAccountDeclarations
+  );
+
+  return useQuery({
+    queryKey: cuentasCobroQueryKeys.declarationsByAccount(contractId, numeroCuenta),
+    enabled: Boolean(contractId) && Number.isInteger(numeroCuenta),
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<CuentaCobroDeclarationsResponse>>(
+        `/api/cuentas-cobro/contrato/${contractId}/cuentas/${numeroCuenta}/declaraciones`
+      );
+      if (!data.success) throw new Error(data.message);
+
+      if (data.data.declarations) {
+        setPaymentAccountDeclarations(contractId, numeroCuenta, data.data.declarations);
+      }
+
+      return data.data;
+    },
+  });
+}
+
+export function useSaveCuentaCobroDeclarationsMutation(
+  contractId: string,
+  numeroCuenta: number
+) {
+  const queryClient = useQueryClient();
+  const setPaymentAccountDeclarations = useCuentasCobroStore(
+    (s) => s.setPaymentAccountDeclarations
+  );
+
+  return useMutation({
+    mutationFn: async (declarations: PaymentAccountDeclarations) => {
+      const { data } = await api.put<ApiResponse<CuentaCobroDeclarationsResponse>>(
+        `/api/cuentas-cobro/contrato/${contractId}/cuentas/${numeroCuenta}/declaraciones`,
+        declarations
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+    onSuccess: (result) => {
+      if (result.declarations) {
+        setPaymentAccountDeclarations(contractId, numeroCuenta, result.declarations);
+      }
+      queryClient.invalidateQueries({
+        queryKey: cuentasCobroQueryKeys.declarationsByAccount(
+          contractId,
+          numeroCuenta
+        ),
+      });
     },
   });
 }

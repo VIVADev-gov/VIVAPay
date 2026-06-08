@@ -12,6 +12,11 @@ export const CUENTA_COBRO_STATUS = {
 export type CuentaCobroStatus =
   (typeof CUENTA_COBRO_STATUS)[keyof typeof CUENTA_COBRO_STATUS];
 
+export type ICuentaCobroDeclaracionesJuradas = {
+  contratoMultiplesTrabajadores: boolean;
+  rutActualizado: boolean;
+};
+
 export interface ICuentaCobro {
   userId: Types.ObjectId;
   contratoId: Types.ObjectId;
@@ -24,6 +29,7 @@ export interface ICuentaCobro {
   estado: CuentaCobroStatus;
   valor?: number;
   observaciones?: string;
+  declaracionesJuradas?: ICuentaCobroDeclaracionesJuradas | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -58,14 +64,21 @@ const cuentaCobroSchema = new Schema<ICuentaCobroDocument>(
     },
     valor: { type: Number, min: 0 },
     observaciones: { type: String, trim: true },
+    declaracionesJuradas: {
+      contratoMultiplesTrabajadores: { type: Boolean },
+      rutActualizado: { type: Boolean },
+    },
   },
   { timestamps: true, collection: "cuentas_cobro" }
 );
 
 cuentaCobroSchema.index({ contratoId: 1, numero: 1 }, { unique: true });
 
+if (mongoose.models.CuentaCobro) {
+  delete mongoose.models.CuentaCobro;
+}
+
 export const CuentaCobro: Model<ICuentaCobroDocument> =
-  mongoose.models.CuentaCobro ??
   mongoose.model<ICuentaCobroDocument>("CuentaCobro", cuentaCobroSchema);
 
 function toDateIso(value?: Date | null) {

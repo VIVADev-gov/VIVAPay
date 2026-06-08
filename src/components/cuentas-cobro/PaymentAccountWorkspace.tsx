@@ -10,7 +10,9 @@ import FileLink from "@/components/files/FileLink";
 import FileUpload from "@/components/forms/FileUpload";
 import {
   useCuentaCobroActivitiesQuery,
+  useCuentaCobroDeclarationsQuery,
   useCuentaCobroDocumentsQuery,
+  useSaveCuentaCobroDeclarationsMutation,
   useUploadContratoDocumentMutation,
   useUploadCuentaCobroDocumentMutation,
 } from "@/hooks/api/useCuentasCobro";
@@ -46,7 +48,18 @@ import type {
   SeguridadSocialPlantillaMetadata,
 } from "@/types/contratos";
 import { formatCurrency, formatDate } from "@/utils/formatters";
-import { CalendarClock, ListChecks, ReceiptText } from "lucide-react";
+import type { ElementType } from "react";
+import {
+  AlertCircle,
+  CalendarClock,
+  CheckCircle2,
+  Eye,
+  ListChecks,
+  Lock,
+  PenLine,
+  ReceiptText,
+  Send,
+} from "lucide-react";
 import { useUiStore } from "@/store/ui/ui-store";
 
 type PaymentAccountWorkspaceProps = {
@@ -60,6 +73,48 @@ function findDocument(
   tipoDocumento: string
 ) {
   return documents.find((document) => document.tipoDocumento === tipoDocumento);
+}
+
+type WorkflowChipTone = "neutral" | "primary" | "destructive" | "success";
+
+function WorkflowChip({
+  icon: Icon,
+  label,
+  tone = "neutral",
+  href,
+  title,
+}: {
+  icon: ElementType<{ className?: string }>;
+  label: string;
+  tone?: WorkflowChipTone;
+  href?: string;
+  title?: string;
+}) {
+  const toneClasses: Record<WorkflowChipTone, string> = {
+    neutral: "border-border/70 bg-muted/40 text-muted-foreground",
+    primary: "border-primary/25 bg-primary/10 text-primary",
+    destructive: "border-destructive/25 bg-destructive/10 text-destructive",
+    success: "border-primary/25 bg-primary/10 text-primary",
+  };
+
+  const className = `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors ${toneClasses[tone]} ${href ? "hover:border-primary/40 hover:bg-primary/15" : ""}`;
+
+  const content = (
+    <span className={className} title={title}>
+      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      {label}
+    </span>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className="inline-flex">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
 
 function DocumentUploadRow({
@@ -184,9 +239,6 @@ export default function PaymentAccountWorkspace({
   const signatureUser = profileUser ?? authUser;
   const hasSignature = hasContractorSignature(signatureUser);
   const declarationsByAccount = useCuentasCobroStore((s) => s.declarationsByAccount);
-  const setPaymentAccountDeclarations = useCuentasCobroStore(
-    (s) => s.setPaymentAccountDeclarations
-  );
   const accountStoreKey = paymentAccountStoreKey(contract.id, paymentAccount.numero);
   const savedDeclarations = declarationsByAccount[accountStoreKey] ?? null;
   const readOnly = isPaymentAccountReadOnly(paymentAccount);
@@ -203,6 +255,14 @@ export default function PaymentAccountWorkspace({
     (requirement) => requirement.scope === "account"
   );
   const documentsQuery = useCuentaCobroDocumentsQuery(
+    contract.id,
+    paymentAccount.numero
+  );
+  const declarationsQuery = useCuentaCobroDeclarationsQuery(
+    contract.id,
+    paymentAccount.numero
+  );
+  const saveDeclarationsMutation = useSaveCuentaCobroDeclarationsMutation(
     contract.id,
     paymentAccount.numero
   );
@@ -374,54 +434,72 @@ export default function PaymentAccountWorkspace({
           </div>
         </div>
 
-        {!windowOpen && !readOnly ? (
-          <p className="mt-4 flex items-start gap-2 rounded-2xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-            <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            Esta cuenta aún no está en ventana de envío o el periodo ya venció.
-            Podrás gestionarla cuando corresponda según las fechas del contrato.
-          </p>
-        ) : null}
-        {!isActionable && !readOnly ? (
-          <p className="mt-4 rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
-            Debes completar primero la cuenta No. {nextActionable?.numero}. Para
-            mantener el orden del proceso, esta cuenta queda solo en consulta.
-          </p>
-        ) : null}
-      </article>
+        <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-border/60 bg-background/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            {readOnly ? (
+              <WorkflowChip
+                icon={Eye}
+                label="Solo consulta"
+                tone="neutral"
+                title="Cuenta enviada o finalizada"
+              />
+            ) : (
+              <WorkflowChip
+                icon={PenLine}
+                label="En preparación"
+                tone="primary"
+                title="Completa soportes y actividades"
+              />
+            )}
 
-      <article className="rounded-4xl border border-dashed border-primary/25 bg-linear-to-br from-background via-card to-primary/5 p-8 shadow-sm">
-        <h3 className="text-xl font-black text-foreground">
-          {readOnly ? "Detalle de cuenta enviada" : "Formulario de cuenta de cobro"}
-        </h3>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          {readOnly
-            ? "Esta cuenta ya fue enviada o finalizada. Aquí podrás consultar soportes y trazabilidad cuando esté disponible."
-            : "Completa el formulario con soportes y validaciones. El envío formal se conectará en la siguiente iteración."}
-        </p>
+            {!readOnly && !windowOpen ? (
+              <WorkflowChip
+                icon={CalendarClock}
+                label="Fuera de ventana"
+                tone="neutral"
+                title="Aún no está en periodo de envío o ya venció"
+              />
+            ) : null}
 
-        {!readOnly && !hasSignature ? (
-          <p className="mt-4 rounded-2xl bg-destructive/10 px-4 py-3 text-sm leading-6 text-destructive">
-            Debes subir tu firma en{" "}
-            <Link
-              href="/dashboard/perfil"
-              className="font-bold underline underline-offset-2"
-            >
-              Perfil
-            </Link>{" "}
-            antes de enviar la cuenta de cobro.
-          </p>
-        ) : null}
+            {!readOnly && !isActionable ? (
+              <WorkflowChip
+                icon={Lock}
+                label={`Completa cuenta No. ${nextActionable?.numero ?? "—"}`}
+                tone="destructive"
+                title="Debes terminar la cuenta anterior primero"
+              />
+            ) : null}
 
-        {!readOnly && canSubmit ? (
-          <div className="mt-6 flex justify-end">
+            {!readOnly && hasSignature ? (
+              <WorkflowChip
+                icon={CheckCircle2}
+                label="Firma lista"
+                tone="success"
+              />
+            ) : null}
+
+            {!readOnly && !hasSignature ? (
+              <WorkflowChip
+                icon={AlertCircle}
+                label="Firma pendiente"
+                tone="destructive"
+                href="/dashboard/perfil"
+                title="Sube tu firma en Perfil para enviar"
+              />
+            ) : null}
+          </div>
+
+          {!readOnly && canSubmit ? (
             <ActionButton
               type="button"
               variant="primary"
-              label="Enviar cuenta de cobro"
+              icon={Send}
+              label="Enviar cuenta"
               onClick={handleSubmitPlaceholder}
+              className="w-full shrink-0 sm:w-auto"
             />
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </article>
 
       <article className="rounded-4xl border border-border/80 bg-linear-to-br from-card via-background to-ring/5 p-6 shadow-sm md:p-8">
@@ -563,16 +641,24 @@ export default function PaymentAccountWorkspace({
           onClose={() => setIsDeclarationsModalOpen(false)}
           initialDeclarations={savedDeclarations}
           disabled={readOnly || !isActionable}
-          onSave={(declarations) => {
-            setPaymentAccountDeclarations(
-              contract.id,
-              paymentAccount.numero,
-              declarations
-            );
-            showToast({
-              message: "Declaraciones juradas guardadas",
-              variant: "success",
-            });
+          loading={saveDeclarationsMutation.isPending || declarationsQuery.isLoading}
+          onSave={async (declarations) => {
+            try {
+              await saveDeclarationsMutation.mutateAsync(declarations);
+              showToast({
+                message: "Declaraciones juradas guardadas",
+                variant: "success",
+              });
+              setIsDeclarationsModalOpen(false);
+            } catch (error) {
+              showToast({
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : "No se pudieron guardar las declaraciones",
+                variant: "error",
+              });
+            }
           }}
         />
       ) : null}

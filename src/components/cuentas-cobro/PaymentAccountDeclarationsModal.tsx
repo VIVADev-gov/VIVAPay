@@ -14,7 +14,8 @@ type PaymentAccountDeclarationsModalProps = {
   onClose: () => void;
   initialDeclarations?: PaymentAccountDeclarations | null;
   disabled?: boolean;
-  onSave: (declarations: PaymentAccountDeclarations) => void;
+  onSave: (declarations: PaymentAccountDeclarations) => void | Promise<void>;
+  loading?: boolean;
 };
 
 export default function PaymentAccountDeclarationsModal({
@@ -23,6 +24,7 @@ export default function PaymentAccountDeclarationsModal({
   initialDeclarations,
   disabled = false,
   onSave,
+  loading = false,
 }: PaymentAccountDeclarationsModalProps) {
   const [contratoMultiplesTrabajadores, setContratoMultiplesTrabajadores] =
     useState(defaultPaymentAccountDeclarations.contratoMultiplesTrabajadores);
@@ -43,12 +45,11 @@ export default function PaymentAccountDeclarationsModal({
     );
   }, [isOpen, initialDeclarations]);
 
-  const handleSave = () => {
-    onSave({
+  const handleSave = async () => {
+    await onSave({
       contratoMultiplesTrabajadores,
       rutActualizado,
     });
-    onClose();
   };
 
   return (
@@ -80,7 +81,7 @@ export default function PaymentAccountDeclarationsModal({
             label="He contratado o vinculado más de un trabajador asociado a mi actividad económica por al menos noventa (90) días continuos o discontinuos"
             description="En el momento en que contrate o vincule más de un trabajador asociado a mi actividad económica, me comprometo a informar."
             value={contratoMultiplesTrabajadores}
-            disabled={disabled}
+            disabled={disabled || loading}
             onChange={setContratoMultiplesTrabajadores}
           />
         </section>
@@ -95,7 +96,7 @@ export default function PaymentAccountDeclarationsModal({
           <ToggleSwitch
             label="Declaro que a la fecha de presentación de este documento, mi RUT se encuentra actualizado"
             value={rutActualizado}
-            disabled={disabled}
+            disabled={disabled || loading}
             onChange={setRutActualizado}
           />
         </section>
@@ -106,14 +107,15 @@ export default function PaymentAccountDeclarationsModal({
             variant="outline"
             label="Cancelar"
             onClick={onClose}
-            disabled={disabled}
+            disabled={disabled || loading}
           />
           <ActionButton
             type="button"
             variant="primary"
             label={initialDeclarations ? "Actualizar declaraciones" : "Guardar declaraciones"}
+            loading={loading}
             disabled={disabled}
-            onClick={handleSave}
+            onClick={() => void handleSave()}
           />
         </div>
       </div>

@@ -191,3 +191,12 @@ export type PublicCuentaCobroActividades = {
 export type CuentaCobroActivitiesResponse = {
   activities: PublicCuentaCobroActividades;
 };
+
+export type PaymentAccountDeclarations = {
+  contratoMultiplesTrabajadores: boolean;
+  rutActualizado: boolean;
+};
+
+export type CuentaCobroDeclarationsResponse = {
+  declarations: PaymentAccountDeclarations | null;
+};
