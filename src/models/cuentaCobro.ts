@@ -1,10 +1,18 @@
 import mongoose, { Schema, type Document, type Model, type Types } from "mongoose";
+import type { UserRole } from "@/constants/userRoles";
 
 export const CUENTA_COBRO_STATUS = {
   BORRADOR: "BORRADOR",
   PENDIENTE: "PENDIENTE",
   HABILITADA: "HABILITADA",
+  PENDIENTE_CONTRATISTA: "PENDIENTE_CONTRATISTA",
+  ENVIADA_CONTRATISTA: "ENVIADA_CONTRATISTA",
+  PENDIENTE_SUPERVISOR: "PENDIENTE_SUPERVISOR",
+  PENDIENTE_DIRECTOR: "PENDIENTE_DIRECTOR",
+  PENDIENTE_ENVIO_CAD: "PENDIENTE_ENVIO_CAD",
+  PENDIENTE_JEFE: "PENDIENTE_JEFE",
   ENVIADA: "ENVIADA",
+  ENVIADA_CAD: "ENVIADA_CAD",
   APROBADA: "APROBADA",
   RECHAZADA: "RECHAZADA",
 } as const;
@@ -15,6 +23,15 @@ export type CuentaCobroStatus =
 export type ICuentaCobroDeclaracionesJuradas = {
   contratoMultiplesTrabajadores: boolean;
   rutActualizado: boolean;
+};
+
+export type ICuentaCobroDevolucion = {
+  deRol: UserRole;
+  deUserId: Types.ObjectId;
+  mensaje: string;
+  fecha: Date;
+  estadoAnterior: CuentaCobroStatus;
+  estadoNuevo: CuentaCobroStatus;
 };
 
 export interface ICuentaCobro {
@@ -30,11 +47,30 @@ export interface ICuentaCobro {
   valor?: number;
   observaciones?: string;
   declaracionesJuradas?: ICuentaCobroDeclaracionesJuradas | null;
+  directorFirmadoAt?: Date | null;
+  directorFirmadoPor?: Types.ObjectId | null;
+  jefeFirmadoAt?: Date | null;
+  jefeFirmadoPor?: Types.ObjectId | null;
+  enviadaCadAt?: Date | null;
+  enviadaCadPor?: Types.ObjectId | null;
+  devoluciones?: ICuentaCobroDevolucion[];
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 export type ICuentaCobroDocument = ICuentaCobro & Document;
+
+const devolucionSchema = new Schema<ICuentaCobroDevolucion>(
+  {
+    deRol: { type: String, required: true },
+    deUserId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    mensaje: { type: String, required: true, trim: true },
+    fecha: { type: Date, required: true },
+    estadoAnterior: { type: String, required: true },
+    estadoNuevo: { type: String, required: true },
+  },
+  { _id: true }
+);
 
 const cuentaCobroSchema = new Schema<ICuentaCobroDocument>(
   {
@@ -68,6 +104,25 @@ const cuentaCobroSchema = new Schema<ICuentaCobroDocument>(
       contratoMultiplesTrabajadores: { type: Boolean },
       rutActualizado: { type: Boolean },
     },
+    directorFirmadoAt: { type: Date, default: null },
+    directorFirmadoPor: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    jefeFirmadoAt: { type: Date, default: null },
+    jefeFirmadoPor: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    enviadaCadAt: { type: Date, default: null },
+    enviadaCadPor: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    devoluciones: { type: [devolucionSchema], default: [] },
   },
   { timestamps: true, collection: "cuentas_cobro" }
 );
@@ -99,6 +154,23 @@ export function toPublicCuentaCobro(doc: ICuentaCobroDocument) {
     estado: doc.estado,
     valor: doc.valor ?? null,
     observaciones: doc.observaciones ?? null,
+    directorFirmadoAt: toDateIso(doc.directorFirmadoAt),
+    directorFirmadoPor: doc.directorFirmadoPor
+      ? String(doc.directorFirmadoPor)
+      : null,
+    jefeFirmadoAt: toDateIso(doc.jefeFirmadoAt),
+    jefeFirmadoPor: doc.jefeFirmadoPor ? String(doc.jefeFirmadoPor) : null,
+    enviadaCadAt: toDateIso(doc.enviadaCadAt),
+    enviadaCadPor: doc.enviadaCadPor ? String(doc.enviadaCadPor) : null,
+    devoluciones: (doc.devoluciones ?? []).map((item, index) => ({
+      id: String((item as { _id?: Types.ObjectId })._id ?? index),
+      deRol: item.deRol,
+      deUserId: String(item.deUserId),
+      mensaje: item.mensaje,
+      fecha: toDateIso(item.fecha),
+      estadoAnterior: item.estadoAnterior,
+      estadoNuevo: item.estadoNuevo,
+    })),
     createdAt: toDateIso(doc.createdAt),
     updatedAt: toDateIso(doc.updatedAt),
   };

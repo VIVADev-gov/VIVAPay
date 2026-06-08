@@ -28,11 +28,11 @@ export default function ProfileSignatureSection({
         Firma digital
       </p>
       <h3 className="mt-2 text-xl font-black text-foreground">
-        Firma para cuentas de cobro
+        Firma institucional
       </h3>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
         Sube una imagen de tu firma (PNG, JPG o WEBP con fondo transparente de
-        preferencia). Se usará al enviar tus cuentas de cobro.
+        preferencia). Se usará al enviar, aprobar o firmar cuentas de cobro.
       </p>
 
       {user.signaturePath ? (
@@ -44,14 +44,14 @@ export default function ProfileSignatureSection({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={user.signaturePath}
-              alt="Firma del contratista"
+              alt="Firma del usuario"
               className="max-h-28 max-w-full object-contain"
             />
           </div>
         </div>
       ) : (
         <p className="mt-5 rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
-          Aún no has subido tu firma. Es obligatoria para enviar cuentas de cobro.
+          Aún no has subido tu firma. Es obligatoria para enviar o aprobar cuentas de cobro.
         </p>
       )}
 

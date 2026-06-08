@@ -11,7 +11,7 @@ const modules = [
     title: "Seguimiento de jefatura",
     description:
       "Consulta el estado consolidado de contratos y cuentas de cobro de tu dependencia.",
-    href: "/dashboard/jefe",
+    href: "/dashboard/jefe/cuentas-cobro",
     icon: BarChart3,
     accent: "primary" as const,
   },
@@ -38,11 +38,6 @@ export default function JefeDashboardPage() {
           title={`Hola, ${user?.name ?? "jefe"}.`}
           description="Visualiza el avance de tu jefatura y los pendientes de revisión del equipo."
         />
-
-        <section className="rounded-4xl border border-dashed border-primary/25 bg-muted/20 p-6 text-sm leading-6 text-muted-foreground">
-          El tablero de jefatura se conectará en la siguiente iteración. Este
-          panel ya queda separado del flujo del contratista.
-        </section>
 
         <div className="grid gap-5 md:grid-cols-2">
           {modules.map((module) => (

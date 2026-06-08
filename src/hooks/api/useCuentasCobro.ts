@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axiosInstance";
 import { useCuentasCobroStore } from "@/store/cuentas-cobro/cuentas-cobro.store";
+import type { CuentaCobroWorkflowAction } from "@/constants/cuentaCobroWorkflow";
 import type {
   CuentaCobroAccountDocumentsResponse,
   CuentaCobroActivitiesResponse,
@@ -10,6 +11,9 @@ import type {
   CuentaCobroDeclarationsResponse,
   CuentasCobroSummaryResponse,
   PaymentAccountDeclarations,
+  PaymentAccountReviewDetailResponse,
+  PaymentAccountReviewListResponse,
+  PublicCuentaCobro,
   PublicCuentaCobroActividadItem,
   PublicCuentaCobroDocumento,
   SeguridadSocialPlantillaMetadata,
@@ -31,6 +35,9 @@ export const cuentasCobroQueryKeys = {
     ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "activities"] as const,
   declarationsByAccount: (contractId: string, numeroCuenta: number) =>
     ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "declarations"] as const,
+  reviewList: ["cuentas-cobro", "revision"] as const,
+  reviewDetail: (contractId: string, numeroCuenta: number) =>
+    ["cuentas-cobro", "revision", contractId, numeroCuenta] as const,
 };
 
 export function useCuentasCobroSummaryQuery() {
@@ -255,6 +262,69 @@ export function useUploadContratoDocumentMutation(contractId: string) {
       queryClient.invalidateQueries({
         queryKey: cuentasCobroQueryKeys.documentsByContract(contractId),
       });
+    },
+  });
+}
+
+export function usePaymentAccountReviewListQuery() {
+  return useQuery({
+    queryKey: cuentasCobroQueryKeys.reviewList,
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<PaymentAccountReviewListResponse>>(
+        "/api/cuentas-cobro/revision"
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+  });
+}
+
+export function usePaymentAccountReviewDetailQuery(
+  contractId: string,
+  numeroCuenta: number
+) {
+  return useQuery({
+    queryKey: cuentasCobroQueryKeys.reviewDetail(contractId, numeroCuenta),
+    enabled: Boolean(contractId) && Number.isInteger(numeroCuenta),
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<PaymentAccountReviewDetailResponse>>(
+        `/api/cuentas-cobro/revision/${contractId}/${numeroCuenta}`
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+  });
+}
+
+export function usePaymentAccountWorkflowMutation(
+  contractId: string,
+  numeroCuenta: number
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      action,
+      mensaje,
+    }: {
+      action: CuentaCobroWorkflowAction;
+      mensaje?: string;
+    }) => {
+      const { data } = await api.post<ApiResponse<{ paymentAccount: PublicCuentaCobro }>>(
+        `/api/cuentas-cobro/contrato/${contractId}/cuentas/${numeroCuenta}/workflow`,
+        { action, mensaje }
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cuentasCobroQueryKeys.summary });
+      queryClient.invalidateQueries({ queryKey: cuentasCobroQueryKeys.reviewList });
+      queryClient.invalidateQueries({
+        queryKey: cuentasCobroQueryKeys.reviewDetail(contractId, numeroCuenta),
+      });
+      queryClient.invalidateQueries({ queryKey: ["contratos"] });
+      queryClient.invalidateQueries({ queryKey: ["contratos", contractId] });
     },
   });
 }

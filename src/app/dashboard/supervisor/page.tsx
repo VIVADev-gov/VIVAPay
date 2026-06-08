@@ -11,7 +11,7 @@ const modules = [
     title: "Supervisión de cuentas",
     description:
       "Revisa y da seguimiento a las cuentas de cobro de los contratistas asignados.",
-    href: "/dashboard/supervisor",
+    href: "/dashboard/supervisor/cuentas-cobro",
     icon: ClipboardCheck,
     accent: "primary" as const,
   },
@@ -38,11 +38,6 @@ export default function SupervisorDashboardPage() {
           title={`Hola, ${user?.name ?? "supervisor"}.`}
           description="Desde aquí podrás revisar el avance de contratos y cuentas de cobro de tu equipo."
         />
-
-        <section className="rounded-4xl border border-dashed border-primary/25 bg-muted/20 p-6 text-sm leading-6 text-muted-foreground">
-          El módulo de supervisión estará disponible en la siguiente iteración.
-          Por ahora tienes acceso a tu perfil y a este panel base por rol.
-        </section>
 
         <div className="grid gap-5 md:grid-cols-2">
           {modules.map((module) => (

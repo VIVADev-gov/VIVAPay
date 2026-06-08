@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { IN_REVIEW_STATUSES } from "@/constants/cuentaCobroWorkflow";
 import { generatePaymentAccountsForContract } from "@/lib/contratos/generatePaymentAccounts";
 import { connectDB } from "@/lib/db/mongoose";
 import { enrichContractWithPaymentStats } from "@/lib/contratos/contractStats";
@@ -22,10 +23,12 @@ const NEXT_PAYMENT_STATUSES: CuentaCobroStatus[] = [
   CUENTA_COBRO_STATUS.BORRADOR,
   CUENTA_COBRO_STATUS.PENDIENTE,
   CUENTA_COBRO_STATUS.HABILITADA,
+  CUENTA_COBRO_STATUS.PENDIENTE_CONTRATISTA,
 ];
 
 const DONE_PAYMENT_STATUSES: CuentaCobroStatus[] = [
   CUENTA_COBRO_STATUS.ENVIADA,
+  CUENTA_COBRO_STATUS.ENVIADA_CAD,
   CUENTA_COBRO_STATUS.APROBADA,
   CUENTA_COBRO_STATUS.RECHAZADA,
 ];
@@ -158,8 +161,10 @@ export const cuentasCobroService = {
       contratoId: contract._id,
     }).exec();
 
-    const hasDoneAccounts = existingAccounts.some((account) =>
-      DONE_PAYMENT_STATUSES.includes(account.estado)
+    const hasDoneAccounts = existingAccounts.some(
+      (account) =>
+        DONE_PAYMENT_STATUSES.includes(account.estado) ||
+        IN_REVIEW_STATUSES.includes(account.estado)
     );
 
     if (hasDoneAccounts) {

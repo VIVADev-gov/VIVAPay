@@ -80,9 +80,26 @@ export type CuentaCobroStatus =
   | "BORRADOR"
   | "PENDIENTE"
   | "HABILITADA"
+  | "PENDIENTE_CONTRATISTA"
+  | "ENVIADA_CONTRATISTA"
+  | "PENDIENTE_SUPERVISOR"
+  | "PENDIENTE_DIRECTOR"
+  | "PENDIENTE_ENVIO_CAD"
+  | "PENDIENTE_JEFE"
   | "ENVIADA"
+  | "ENVIADA_CAD"
   | "APROBADA"
   | "RECHAZADA";
+
+export type PublicCuentaCobroDevolucion = {
+  id: string;
+  deRol: string;
+  deUserId: string;
+  mensaje: string;
+  fecha: string | null;
+  estadoAnterior: CuentaCobroStatus;
+  estadoNuevo: CuentaCobroStatus;
+};
 
 export type PublicCuentaCobro = {
   id: string;
@@ -97,8 +114,47 @@ export type PublicCuentaCobro = {
   estado: CuentaCobroStatus;
   valor: number | null;
   observaciones: string | null;
+  directorFirmadoAt?: string | null;
+  directorFirmadoPor?: string | null;
+  jefeFirmadoAt?: string | null;
+  jefeFirmadoPor?: string | null;
+  enviadaCadAt?: string | null;
+  enviadaCadPor?: string | null;
+  devoluciones?: PublicCuentaCobroDevolucion[];
   createdAt?: string | null;
   updatedAt?: string | null;
+};
+
+export type PaymentAccountReviewContractor = {
+  id: string;
+  name: string;
+  email: string;
+  documentId: string;
+  organizationalUnitName: string;
+  subareaName?: string | null;
+};
+
+export type PaymentAccountReviewListItem = {
+  paymentAccount: PublicCuentaCobro;
+  contract: Pick<
+    PublicContrato,
+    "id" | "numeroContrato" | "actual" | "objeto"
+  >;
+  contractor: PaymentAccountReviewContractor;
+};
+
+export type PaymentAccountReviewListResponse = {
+  items: PaymentAccountReviewListItem[];
+};
+
+export type PaymentAccountReviewDetailResponse = {
+  paymentAccount: PublicCuentaCobro;
+  contract: PublicContrato;
+  contractor: PaymentAccountReviewContractor;
+  paymentAccounts: PublicCuentaCobro[];
+  activities: PublicCuentaCobroActividadItem[];
+  contractDocuments: PublicCuentaCobroDocumento[];
+  accountDocuments: PublicCuentaCobroDocumento[];
 };
 
 export type CuentaCobroDocumentScope = "CONTRATO" | "CUENTA_COBRO";

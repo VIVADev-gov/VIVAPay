@@ -15,6 +15,7 @@ import {
   getPaymentAccountActionLabel,
   getPaymentAccountHref,
 } from "@/lib/cuentas-cobro/paymentAccountAccess";
+import { CUENTA_COBRO_STATUS_LABELS } from "@/constants/cuentaCobroWorkflow";
 import type { CuentaCobroStatus } from "@/types/contratos";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
@@ -53,20 +54,17 @@ function OverviewStat({
   );
 }
 
-const PAYMENT_STATUS_LABELS: Record<CuentaCobroStatus, string> = {
-  BORRADOR: "Borrador",
-  PENDIENTE: "Pendiente",
-  HABILITADA: "Habilitada",
-  ENVIADA: "Enviada",
-  APROBADA: "Aprobada",
-  RECHAZADA: "Rechazada",
-};
-
-const PAYMENT_STATUS_STYLES: Record<CuentaCobroStatus, string> = {
+const PAYMENT_STATUS_STYLES: Partial<Record<CuentaCobroStatus, string>> = {
   BORRADOR: "border-border bg-muted text-muted-foreground",
   PENDIENTE: "border-accent/30 bg-accent/10 text-accent",
   HABILITADA: "border-primary/30 bg-primary/10 text-primary",
+  PENDIENTE_CONTRATISTA: "border-destructive/30 bg-destructive/10 text-destructive",
+  PENDIENTE_SUPERVISOR: "border-ring/30 bg-ring/10 text-ring",
+  PENDIENTE_DIRECTOR: "border-ring/30 bg-ring/10 text-ring",
+  PENDIENTE_ENVIO_CAD: "border-primary/30 bg-primary/10 text-primary",
+  PENDIENTE_JEFE: "border-accent/30 bg-accent/10 text-accent",
   ENVIADA: "border-ring/30 bg-ring/10 text-ring",
+  ENVIADA_CAD: "border-primary/30 bg-primary/15 text-primary",
   APROBADA: "border-primary/30 bg-primary/15 text-primary",
   RECHAZADA: "border-destructive/30 bg-destructive/10 text-destructive",
 };
@@ -74,9 +72,9 @@ const PAYMENT_STATUS_STYLES: Record<CuentaCobroStatus, string> = {
 function PaymentStatusBadge({ estado }: { estado: CuentaCobroStatus }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${PAYMENT_STATUS_STYLES[estado]}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${PAYMENT_STATUS_STYLES[estado] ?? "border-border bg-muted text-muted-foreground"}`}
     >
-      {PAYMENT_STATUS_LABELS[estado]}
+      {CUENTA_COBRO_STATUS_LABELS[estado]}
     </span>
   );
 }

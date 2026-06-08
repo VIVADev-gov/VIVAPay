@@ -13,7 +13,12 @@ export type PaymentDocumentRequirement = {
   phases: PaymentPhase[];
 };
 
-const OPEN_STATUSES = new Set(["BORRADOR", "PENDIENTE", "HABILITADA"]);
+const OPEN_STATUSES = new Set([
+  "BORRADOR",
+  "PENDIENTE",
+  "HABILITADA",
+  "PENDIENTE_CONTRATISTA",
+]);
 
 export function resolvePaymentPhase(
   paymentAccount: PublicCuentaCobro,

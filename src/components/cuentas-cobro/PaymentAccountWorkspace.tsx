@@ -12,10 +12,16 @@ import {
   useCuentaCobroActivitiesQuery,
   useCuentaCobroDeclarationsQuery,
   useCuentaCobroDocumentsQuery,
+  usePaymentAccountWorkflowMutation,
   useSaveCuentaCobroDeclarationsMutation,
   useUploadContratoDocumentMutation,
   useUploadCuentaCobroDocumentMutation,
 } from "@/hooks/api/useCuentasCobro";
+import {
+  CUENTA_COBRO_STATUS_LABELS,
+  CUENTA_COBRO_WORKFLOW_ACTION,
+  isDirectorSigned,
+} from "@/constants/cuentaCobroWorkflow";
 import { useProfileQuery } from "@/hooks/api/useProfile";
 import {
   canSubmitPaymentAccount,
@@ -275,6 +281,10 @@ export default function PaymentAccountWorkspace({
     contract.id,
     paymentAccount.numero
   );
+  const submitWorkflow = usePaymentAccountWorkflowMutation(
+    contract.id,
+    paymentAccount.numero
+  );
 
   const contractDocuments = documentsQuery.data?.contractDocuments ?? [];
   const accountDocuments = documentsQuery.data?.accountDocuments ?? [];
@@ -356,7 +366,7 @@ export default function PaymentAccountWorkspace({
     }
   };
 
-  const handleSubmitPlaceholder = () => {
+  const handleSubmit = async () => {
     if (!hasSignature) {
       showToast({
         message:
@@ -366,11 +376,21 @@ export default function PaymentAccountWorkspace({
       return;
     }
 
-    showToast({
-      message:
-        "El envío formal de la cuenta de cobro se habilitará en la siguiente iteración.",
-      variant: "info",
-    });
+    try {
+      await submitWorkflow.mutateAsync({
+        action: CUENTA_COBRO_WORKFLOW_ACTION.SUBMIT,
+      });
+      showToast({
+        message: "Cuenta enviada correctamente",
+        variant: "success",
+      });
+    } catch (error) {
+      showToast({
+        message:
+          error instanceof Error ? error.message : "No se pudo enviar la cuenta",
+        variant: "error",
+      });
+    }
   };
 
   return (
@@ -394,9 +414,29 @@ export default function PaymentAccountWorkspace({
             </div>
           </div>
           <span className="inline-flex w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-            {paymentAccount.estado} · {phase.toLowerCase()}
+            {CUENTA_COBRO_STATUS_LABELS[paymentAccount.estado]} · {phase.toLowerCase()}
           </span>
         </div>
+
+        {paymentAccount.estado === "PENDIENTE_CONTRATISTA" &&
+        paymentAccount.observaciones ? (
+          <div className="mt-4 rounded-2xl border border-destructive/25 bg-destructive/5 p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-destructive">
+              Devuelta para corrección
+            </p>
+            <p className="mt-2 text-sm leading-6 text-foreground">
+              {paymentAccount.observaciones}
+            </p>
+          </div>
+        ) : null}
+
+        {paymentAccount.estado === "PENDIENTE_CONTRATISTA" &&
+        isDirectorSigned(paymentAccount) ? (
+          <p className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm font-semibold text-primary">
+            El director ya firmó esta cuenta. Al reenviarla irá directo al
+            supervisor para envío al CAD.
+          </p>
+        ) : null}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-border/60 bg-muted/30 p-3">
@@ -495,7 +535,8 @@ export default function PaymentAccountWorkspace({
               variant="primary"
               icon={Send}
               label="Enviar cuenta"
-              onClick={handleSubmitPlaceholder}
+              onClick={() => void handleSubmit()}
+              loading={submitWorkflow.isPending}
               className="w-full shrink-0 sm:w-auto"
             />
           ) : null}

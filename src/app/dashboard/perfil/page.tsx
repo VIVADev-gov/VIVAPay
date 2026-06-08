@@ -32,7 +32,12 @@ export default function PerfilPage() {
   const showToast = useUiStore((s) => s.showToast);
 
   const userRole = normalizeUserRole(user?.role);
-  const isContratista = userRole === USER_ROLES.CONTRATISTA;
+  const requiresSignature = [
+    USER_ROLES.CONTRATISTA,
+    USER_ROLES.SUPERVISOR,
+    USER_ROLES.JEFE,
+    USER_ROLES.DIRECTOR,
+  ].includes(userRole);
   const organizationalUnitLabel = getOrganizacionLabelPorRol(userRole);
   const organizationalUnitOptions = getUnidadesPermitidasPorRol(userRole).map(
     (unidad) => ({
@@ -119,7 +124,7 @@ export default function PerfilPage() {
           />
         ) : (
           <>
-          {isContratista ? <ProfileSignatureSection user={user} /> : null}
+          {requiresSignature ? <ProfileSignatureSection user={user} /> : null}
 
           <form
             onSubmit={handleSubmit}
