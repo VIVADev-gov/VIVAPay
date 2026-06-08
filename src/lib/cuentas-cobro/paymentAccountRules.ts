@@ -9,6 +9,7 @@ export type PaymentDocumentRequirement = {
   helperText: string;
   scope: PaymentDocumentScope;
   required?: boolean;
+  requiresPlantilla?: boolean;
   phases: PaymentPhase[];
 };
 
@@ -46,9 +47,11 @@ export const PAYMENT_DOCUMENT_REQUIREMENTS: PaymentDocumentRequirement[] = [
   {
     tipoDocumento: "SEGURIDAD_SOCIAL",
     label: "Soporte de pago de seguridad social",
-    helperText: "Soporte propio del periodo de esta cuenta de cobro.",
+    helperText:
+      "Soporte del periodo. Indica el número de plantilla de pensión, EPS y ARL.",
     scope: "account",
     required: true,
+    requiresPlantilla: true,
     phases: ["PRIMERA", "INTERMEDIA", "ULTIMA", "UNICA"],
   },
 ];

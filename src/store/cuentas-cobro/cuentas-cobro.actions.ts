@@ -1,8 +1,5 @@
 import type { StateCreator } from "zustand";
-import type {
-  ContratoDetailResponse,
-  CuentasCobroSummaryResponse,
-} from "@/types/contratos";
+import type { CuentasCobroSummaryResponse } from "@/types/contratos";
 import {
   initialCuentasCobroState,
   type CuentasCobroState,
@@ -12,8 +9,6 @@ export type CuentasCobroActions = {
   setSummaryLoading: (loading: boolean) => void;
   setSummaryError: (error: string | null) => void;
   setSummary: (data: CuentasCobroSummaryResponse) => void;
-  setByContractLoading: (loading: boolean) => void;
-  setByContract: (contractId: string, data: ContratoDetailResponse) => void;
   resetCuentasCobro: () => void;
 };
 
@@ -38,15 +33,6 @@ export const createCuentasCobroActions: StateCreator<
       completedAllPaymentAccounts: data.completedAllPaymentAccounts,
       summaryMessage: data.message,
       summaryError: null,
-    }),
-
-  setByContractLoading: (isLoadingByContract) => set({ isLoadingByContract }),
-
-  setByContract: (contractId, data) =>
-    set({
-      byContractId: contractId,
-      byContractAccounts: data.paymentAccounts,
-      isLoadingByContract: false,
     }),
 
   resetCuentasCobro: () => set({ ...initialCuentasCobroState }),

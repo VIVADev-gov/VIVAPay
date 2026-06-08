@@ -7,10 +7,10 @@ import type {
   CuentaCobroAccountDocumentsResponse,
   CuentaCobroActivitiesResponse,
   CuentaCobroContractDocumentsResponse,
-  ContratoDetailResponse,
   CuentasCobroSummaryResponse,
   PublicCuentaCobroActividadItem,
   PublicCuentaCobroDocumento,
+  SeguridadSocialPlantillaMetadata,
 } from "@/types/contratos";
 
 type ApiResponse<T> = {
@@ -21,8 +21,6 @@ type ApiResponse<T> = {
 
 export const cuentasCobroQueryKeys = {
   summary: ["cuentas-cobro", "summary"] as const,
-  byContract: (contractId: string) =>
-    ["cuentas-cobro", "contract", contractId] as const,
   documentsByContract: (contractId: string) =>
     ["cuentas-cobro", "contract", contractId, "documents"] as const,
   documentsByAccount: (contractId: string, numeroCuenta: number) =>
@@ -57,29 +55,6 @@ export function useCuentasCobroSummaryQuery() {
         throw error;
       } finally {
         setSummaryLoading(false);
-      }
-    },
-  });
-}
-
-export function useCuentasCobroByContractQuery(contractId: string) {
-  const setByContractLoading = useCuentasCobroStore((s) => s.setByContractLoading);
-  const setByContract = useCuentasCobroStore((s) => s.setByContract);
-
-  return useQuery({
-    queryKey: cuentasCobroQueryKeys.byContract(contractId),
-    enabled: Boolean(contractId),
-    queryFn: async () => {
-      setByContractLoading(true);
-      try {
-        const { data } = await api.get<ApiResponse<ContratoDetailResponse>>(
-          `/api/cuentas-cobro/contrato/${contractId}`
-        );
-        if (!data.success) throw new Error(data.message);
-        setByContract(contractId, data.data);
-        return data.data;
-      } finally {
-        setByContractLoading(false);
       }
     },
   });
@@ -233,15 +208,30 @@ export function useUploadCuentaCobroDocumentMutation(
       file,
       tipoDocumento,
       required = false,
+      plantillaMetadata,
     }: {
-      file: File;
+      file?: File | null;
       tipoDocumento: string;
       required?: boolean;
+      plantillaMetadata?: SeguridadSocialPlantillaMetadata;
     }) => {
       const formData = new FormData();
-      formData.append("file", file);
+      if (file) {
+        formData.append("file", file);
+      }
       formData.append("tipoDocumento", tipoDocumento);
       formData.append("required", String(required));
+
+      if (plantillaMetadata) {
+        formData.append("plantillaModo", plantillaMetadata.modo);
+        if (plantillaMetadata.modo === "UNICO") {
+          formData.append("plantillaUnica", plantillaMetadata.plantillaPension);
+        } else {
+          formData.append("plantillaPension", plantillaMetadata.plantillaPension);
+          formData.append("plantillaEps", plantillaMetadata.plantillaEps);
+          formData.append("plantillaArl", plantillaMetadata.plantillaArl);
+        }
+      }
 
       const { data } = await api.post<
         ApiResponse<{ document: PublicCuentaCobroDocumento }>

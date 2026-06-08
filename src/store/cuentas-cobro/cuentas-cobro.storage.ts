@@ -11,10 +11,7 @@ export type CuentasCobroState = {
   lastPaymentAccount: PublicCuentaCobro | null;
   completedAllPaymentAccounts: boolean;
   summaryMessage: string | null;
-  byContractId: string | null;
-  byContractAccounts: PublicCuentaCobro[];
   isLoadingSummary: boolean;
-  isLoadingByContract: boolean;
   summaryError: string | null;
 };
 
@@ -25,9 +22,6 @@ export const initialCuentasCobroState: CuentasCobroState = {
   lastPaymentAccount: null,
   completedAllPaymentAccounts: false,
   summaryMessage: null,
-  byContractId: null,
-  byContractAccounts: [],
   isLoadingSummary: false,
-  isLoadingByContract: false,
   summaryError: null,
 };

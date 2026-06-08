@@ -1,4 +1,5 @@
 import mongoose, { Schema, type Document, type Model, type Types } from "mongoose";
+import { parseSeguridadSocialPlantillaMetadata } from "@/lib/cuentas-cobro/seguridadSocialPlantilla";
 
 export const CUENTA_COBRO_DOCUMENT_SCOPE = {
   CONTRATO: "CONTRATO",
@@ -22,6 +23,7 @@ export interface ICuentaCobroDocumento {
   mimeType?: string;
   required?: boolean;
   generated?: boolean;
+  metadata?: Record<string, unknown> | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -63,6 +65,7 @@ const cuentaCobroDocumentoSchema = new Schema<ICuentaCobroDocumentoDocument>(
     mimeType: { type: String, trim: true },
     required: { type: Boolean, default: false },
     generated: { type: Boolean, default: false },
+    metadata: { type: Schema.Types.Mixed, default: null },
   },
   { timestamps: true, collection: "cuentas_cobro_documentos" }
 );
@@ -90,8 +93,11 @@ cuentaCobroDocumentoSchema.index(
   }
 );
 
+if (mongoose.models.CuentaCobroDocumento) {
+  delete mongoose.models.CuentaCobroDocumento;
+}
+
 export const CuentaCobroDocumento: Model<ICuentaCobroDocumentoDocument> =
-  mongoose.models.CuentaCobroDocumento ??
   mongoose.model<ICuentaCobroDocumentoDocument>(
     "CuentaCobroDocumento",
     cuentaCobroDocumentoSchema
@@ -119,6 +125,7 @@ export function toPublicCuentaCobroDocumento(
     mimeType: doc.mimeType ?? null,
     required: doc.required ?? false,
     generated: doc.generated ?? false,
+    metadata: parseSeguridadSocialPlantillaMetadata(doc.metadata),
     createdAt: toDateIso(doc.createdAt),
     updatedAt: toDateIso(doc.updatedAt),
   };

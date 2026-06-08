@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axiosInstance";
 import { useContratosStore } from "@/store/contratos/contratos.store";
@@ -55,6 +56,17 @@ export function useContratoDetailQuery(id: string) {
   const setDetailLoading = useContratosStore((s) => s.setDetailLoading);
   const setDetailError = useContratosStore((s) => s.setDetailError);
   const setContratoDetail = useContratosStore((s) => s.setContratoDetail);
+  const detailContractId = useContratosStore(
+    (s) => s.detail?.contract.id ?? null
+  );
+
+  useEffect(() => {
+    if (!id) return;
+    if (detailContractId !== null && detailContractId !== id) {
+      setContratoDetail(null);
+      setDetailError(null);
+    }
+  }, [id, detailContractId, setContratoDetail, setDetailError]);
 
   return useQuery({
     queryKey: contratosQueryKeys.detail(id),

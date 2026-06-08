@@ -13,14 +13,15 @@ import { useCuentasCobroStore } from "@/store/cuentas-cobro/cuentas-cobro.store"
 /** Redirige al flujo por contrato (módulo enviar cuenta de cobro retirado). */
 export default function EnviarCuentaCobroRedirectPage() {
   const router = useRouter();
-  useCuentasCobroSummaryQuery();
+  const summaryQuery = useCuentasCobroSummaryQuery();
 
   const nextPayment = useCuentasCobroStore((s) => s.nextPaymentAccount);
   const isLoading = useCuentasCobroStore((s) => s.isLoadingSummary);
+  const summaryError = useCuentasCobroStore((s) => s.summaryError);
   const summaryContract = useCuentasCobroStore((s) => s.currentContract);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || summaryError) return;
 
     if (nextPayment) {
       router.replace(
@@ -35,7 +36,24 @@ export default function EnviarCuentaCobroRedirectPage() {
     }
 
     router.replace("/dashboard/contratista/contrato");
-  }, [isLoading, nextPayment, summaryContract?.id, router]);
+  }, [isLoading, summaryError, nextPayment, summaryContract?.id, router]);
+
+  if (summaryError) {
+    return (
+      <RoleDashboardLayout
+        allowedRole={USER_ROLES.CONTRATISTA}
+        title="Cuentas de cobro"
+      >
+        <EmptyState
+          message="No se pudo cargar la información"
+          description={summaryError}
+          variant="error"
+          icon="alert"
+          onRefresh={() => summaryQuery.refetch()}
+        />
+      </RoleDashboardLayout>
+    );
+  }
 
   return (
     <RoleDashboardLayout

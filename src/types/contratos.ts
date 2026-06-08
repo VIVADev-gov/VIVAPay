@@ -103,6 +103,15 @@ export type PublicCuentaCobro = {
 
 export type CuentaCobroDocumentScope = "CONTRATO" | "CUENTA_COBRO";
 
+export type SeguridadSocialPlantillaModo = "UNICO" | "SEPARADO";
+
+export type SeguridadSocialPlantillaMetadata = {
+  modo: SeguridadSocialPlantillaModo;
+  plantillaPension: string;
+  plantillaEps: string;
+  plantillaArl: string;
+};
+
 export type PublicCuentaCobroDocumento = {
   id: string;
   userId: string;
@@ -118,6 +127,7 @@ export type PublicCuentaCobroDocumento = {
   mimeType: string | null;
   required: boolean;
   generated: boolean;
+  metadata?: SeguridadSocialPlantillaMetadata | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 };

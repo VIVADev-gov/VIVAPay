@@ -255,16 +255,30 @@ export default function FileUpload(props: FileUploadProps) {
                                     </div>
                                 </div>
                                 {!disabled && (
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleRemove();
-                                        }}
-                                        className="p-2 rounded-lg hover:bg-destructive/10 transition-colors shrink-0"
-                                    >
-                                        <X className="w-4 h-4 text-destructive" />
-                                    </button>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {!selectedFile && currentFileName ? (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    inputRef.current?.click();
+                                                }}
+                                                className="rounded-lg px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+                                            >
+                                                Cambiar
+                                            </button>
+                                        ) : null}
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleRemove();
+                                            }}
+                                            className="p-2 rounded-lg hover:bg-destructive/10 transition-colors"
+                                        >
+                                            <X className="w-4 h-4 text-destructive" />
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         )}

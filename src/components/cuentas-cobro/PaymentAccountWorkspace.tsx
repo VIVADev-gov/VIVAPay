@@ -3,6 +3,7 @@
 import { useState } from "react";
 import ActionButton from "@/components/buttons/ActionButton";
 import PaymentAccountActivitiesModal from "@/components/cuentas-cobro/PaymentAccountActivitiesModal";
+import PaymentAccountSeguridadSocialModal from "@/components/cuentas-cobro/PaymentAccountSeguridadSocialModal";
 import FileLink from "@/components/files/FileLink";
 import FileUpload from "@/components/forms/FileUpload";
 import {
@@ -23,10 +24,12 @@ import {
   resolvePaymentPhase,
   type PaymentDocumentRequirement,
 } from "@/lib/cuentas-cobro/paymentAccountRules";
+import { formatSeguridadSocialPlantillaSummary } from "@/lib/cuentas-cobro/seguridadSocialPlantilla";
 import type {
   PublicContrato,
   PublicCuentaCobro,
   PublicCuentaCobroDocumento,
+  SeguridadSocialPlantillaMetadata,
 } from "@/types/contratos";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { CalendarClock, ListChecks, ReceiptText } from "lucide-react";
@@ -50,6 +53,7 @@ function DocumentUploadRow({
   document,
   disabled,
   onUpload,
+  onOpenPlantillaModal,
 }: {
   requirement: PaymentDocumentRequirement;
   document?: PublicCuentaCobroDocumento;
@@ -58,6 +62,7 @@ function DocumentUploadRow({
     requirement: PaymentDocumentRequirement,
     file: File
   ) => Promise<void>;
+  onOpenPlantillaModal?: (requirement: PaymentDocumentRequirement) => void;
 }) {
   return (
     <div className="rounded-3xl border border-border/70 bg-background/70 p-4">
@@ -85,24 +90,40 @@ function DocumentUploadRow({
       </div>
 
       {document ? (
-        <div className="mb-3 rounded-2xl bg-muted/40 p-3 text-sm">
+        <div className="mb-3 space-y-2 rounded-2xl bg-muted/40 p-3 text-sm">
           <FileLink
             url={document.filePath}
             displayName={document.originalName ?? requirement.label}
           />
+          {document.metadata ? (
+            <p className="text-xs font-semibold text-muted-foreground">
+              {formatSeguridadSocialPlantillaSummary(document.metadata)}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
-      <FileUpload
-        id={`${requirement.scope}-${requirement.tipoDocumento}`}
-        name={requirement.tipoDocumento}
-        label={document ? "Reemplazar PDF" : "Subir PDF"}
-        disabled={disabled}
-        currentFileName={document?.originalName ?? undefined}
-        onChange={(file) => {
-          if (file) void onUpload(requirement, file);
-        }}
-      />
+      {requirement.requiresPlantilla && onOpenPlantillaModal ? (
+        <ActionButton
+          type="button"
+          variant={document ? "outline" : "primary"}
+          label={document ? "Editar soporte" : "Subir soporte"}
+          disabled={disabled}
+          onClick={() => onOpenPlantillaModal(requirement)}
+          className="w-full sm:w-auto"
+        />
+      ) : (
+        <FileUpload
+          id={`${requirement.scope}-${requirement.tipoDocumento}`}
+          name={requirement.tipoDocumento}
+          label={document ? "Reemplazar PDF" : "Subir PDF"}
+          disabled={disabled}
+          currentFileName={document?.originalName ?? undefined}
+          onChange={(file) => {
+            if (file) void onUpload(requirement, file);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -113,6 +134,8 @@ export default function PaymentAccountWorkspace({
   paymentAccounts,
 }: PaymentAccountWorkspaceProps) {
   const [isActivitiesModalOpen, setIsActivitiesModalOpen] = useState(false);
+  const [seguridadSocialRequirement, setSeguridadSocialRequirement] =
+    useState<PaymentDocumentRequirement | null>(null);
   const showToast = useUiStore((s) => s.showToast);
   const readOnly = isPaymentAccountReadOnly(paymentAccount);
   const isActionable = isPaymentAccountActionable(paymentAccount, paymentAccounts);
@@ -181,6 +204,41 @@ export default function PaymentAccountWorkspace({
       showToast({
         message:
           error instanceof Error ? error.message : "No se pudo guardar el PDF",
+        variant: "error",
+      });
+    }
+  };
+
+  const seguridadSocialDocument = seguridadSocialRequirement
+    ? findDocument(accountDocuments, seguridadSocialRequirement.tipoDocumento)
+    : null;
+
+  const handleSeguridadSocialSave = async ({
+    file,
+    plantillaMetadata,
+  }: {
+    file: File | null;
+    plantillaMetadata: SeguridadSocialPlantillaMetadata;
+  }) => {
+    if (!seguridadSocialRequirement) return;
+
+    try {
+      await uploadAccountDocument.mutateAsync({
+        file,
+        tipoDocumento: seguridadSocialRequirement.tipoDocumento,
+        required: seguridadSocialRequirement.required,
+        plantillaMetadata,
+      });
+      showToast({
+        message: "Soporte de seguridad social guardado correctamente",
+        variant: "success",
+      });
+      await documentsQuery.refetch();
+      setSeguridadSocialRequirement(null);
+    } catch (error) {
+      showToast({
+        message:
+          error instanceof Error ? error.message : "No se pudo guardar el soporte",
         variant: "error",
       });
     }
@@ -404,10 +462,26 @@ export default function PaymentAccountWorkspace({
               )}
               disabled={readOnly || isUploading || !isActionable}
               onUpload={handleDocumentUpload}
+              onOpenPlantillaModal={
+                requirement.requiresPlantilla
+                  ? setSeguridadSocialRequirement
+                  : undefined
+              }
             />
           ))}
         </div>
       </article>
+
+      {seguridadSocialRequirement ? (
+        <PaymentAccountSeguridadSocialModal
+          isOpen={Boolean(seguridadSocialRequirement)}
+          onClose={() => setSeguridadSocialRequirement(null)}
+          existingDocument={seguridadSocialDocument}
+          disabled={readOnly || !isActionable}
+          loading={uploadAccountDocument.isPending}
+          onSave={handleSeguridadSocialSave}
+        />
+      ) : null}
 
       {isActivitiesModalOpen ? (
         <PaymentAccountActivitiesModal

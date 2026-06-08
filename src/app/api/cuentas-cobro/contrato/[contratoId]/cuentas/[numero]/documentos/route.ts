@@ -2,7 +2,11 @@ import type { NextRequest } from "next/server";
 import { ApiAuthError, requireApiAuth } from "@/app/api/_shared/api-auth";
 import { errorResponse, successResponse } from "@/lib/httpHerlper";
 import logger from "@/lib/logger";
-import { cuentasCobroDocumentosService } from "../../../../../documentos.service";
+import {
+  cuentasCobroDocumentosService,
+  parsePlantillaMetadataFromFormData,
+} from "../../../../../documentos.service";
+import { SEGURIDAD_SOCIAL_TIPO } from "@/lib/cuentas-cobro/seguridadSocialPlantilla";
 import { PaymentAccountServiceError } from "../../../../../cuentas-cobro.errors";
 
 function boolFromFormData(value: FormDataEntryValue | null) {
@@ -66,14 +70,23 @@ export async function POST(
     }
 
     const formData = await request.formData();
-    const file = formData.get("file");
+    const fileEntry = formData.get("file");
+    const file =
+      fileEntry instanceof File && fileEntry.size > 0 ? fileEntry : null;
     const tipoDocumento = String(formData.get("tipoDocumento") ?? "").trim();
 
-    if (!(file instanceof File)) {
-      return errorResponse("Debes adjuntar un archivo PDF", 400);
-    }
     if (!tipoDocumento) {
       return errorResponse("El tipo de documento es obligatorio", 400);
+    }
+
+    const normalizedTipo = tipoDocumento.trim().toUpperCase();
+    const plantillaMetadata =
+      normalizedTipo === SEGURIDAD_SOCIAL_TIPO
+        ? parsePlantillaMetadataFromFormData(formData)
+        : null;
+
+    if (!file && normalizedTipo !== SEGURIDAD_SOCIAL_TIPO) {
+      return errorResponse("Debes adjuntar un archivo PDF", 400);
     }
 
     const result = await cuentasCobroDocumentosService.uploadAccountDocument({
@@ -83,6 +96,7 @@ export async function POST(
       file,
       tipoDocumento,
       required: boolFromFormData(formData.get("required")),
+      plantillaMetadata,
     });
 
     return successResponse("Documento de la cuenta guardado", result, 201);

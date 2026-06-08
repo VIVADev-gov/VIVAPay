@@ -21,6 +21,7 @@ export default function InformacionContractualPage() {
   const currentContract = useContratosStore((s) => s.currentContract);
   const lastContract = useContratosStore((s) => s.lastContract);
   const listError = useContratosStore((s) => s.listError);
+  const isLoadingList = useContratosStore((s) => s.isLoadingList);
   const isCreateModalOpen = useContratosStore((s) => s.isCreateModalOpen);
   const openCreateModal = useContratosStore((s) => s.openCreateModal);
   const closeCreateModal = useContratosStore((s) => s.closeCreateModal);
@@ -121,7 +122,7 @@ export default function InformacionContractualPage() {
           ) : (
             <ContractsTable
               contracts={contracts}
-              loading={contratosQuery.isLoading}
+              loading={isLoadingList}
               onRefresh={() => contratosQuery.refetch()}
             />
           )}

@@ -12,6 +12,11 @@ import {
 } from "@/models/cuentaCobroDocumento";
 import { Contrato, getCurrentContractSnapshot } from "@/models/contrato";
 import {
+  buildPlantillaMetadata,
+  SEGURIDAD_SOCIAL_TIPO,
+  type SeguridadSocialPlantillaMetadata,
+} from "@/lib/cuentas-cobro/seguridadSocialPlantilla";
+import {
   PAYMENT_ACCOUNT_ERROR_CODES,
   PaymentAccountServiceError,
 } from "./cuentas-cobro.errors";
@@ -19,9 +24,10 @@ import {
 type UploadDocumentInput = {
   userId: string;
   contractId: string;
-  file: File;
+  file?: File | null;
   tipoDocumento: string;
   required?: boolean;
+  plantillaMetadata?: SeguridadSocialPlantillaMetadata | null;
 };
 
 type UploadAccountDocumentInput = UploadDocumentInput & {
@@ -30,6 +36,43 @@ type UploadAccountDocumentInput = UploadDocumentInput & {
 
 function normalizeTipoDocumento(value: string) {
   return value.trim().toUpperCase().replace(/[^A-Z0-9_ -]/g, "_");
+}
+
+function resolveDocumentMetadata(
+  tipoDocumento: string,
+  plantillaMetadata?: SeguridadSocialPlantillaMetadata | null
+) {
+  if (tipoDocumento !== SEGURIDAD_SOCIAL_TIPO) {
+    return null;
+  }
+
+  if (!plantillaMetadata) {
+    throw new PaymentAccountServiceError(
+      "Debes indicar los números de plantilla de seguridad social",
+      400
+    );
+  }
+
+  return plantillaMetadata;
+}
+
+export function parsePlantillaMetadataFromFormData(formData: FormData) {
+  const modo = String(formData.get("plantillaModo") ?? "UNICO").trim();
+  const plantillaModo = modo === "SEPARADO" ? "SEPARADO" : "UNICO";
+
+  const { metadata, error } = buildPlantillaMetadata({
+    modo: plantillaModo,
+    plantillaUnica: String(formData.get("plantillaUnica") ?? ""),
+    plantillaPension: String(formData.get("plantillaPension") ?? ""),
+    plantillaEps: String(formData.get("plantillaEps") ?? ""),
+    plantillaArl: String(formData.get("plantillaArl") ?? ""),
+  });
+
+  if (error || !metadata) {
+    throw new PaymentAccountServiceError(error ?? "Datos de plantilla inválidos", 400);
+  }
+
+  return metadata;
 }
 
 async function resolveContractForUser(userId: string, contractId: string) {
@@ -184,6 +227,41 @@ export const cuentasCobroDocumentosService = {
     const current = getCurrentContractSnapshot(contract);
     const numeroContrato = current.numeroContrato ?? contract.numeroContrato;
     const tipoDocumento = normalizeTipoDocumento(input.tipoDocumento);
+    const metadata = resolveDocumentMetadata(tipoDocumento, input.plantillaMetadata);
+
+    const existingDocument = await CuentaCobroDocumento.findOne({
+      contratoId: contract._id,
+      scope: CUENTA_COBRO_DOCUMENT_SCOPE.CUENTA_COBRO,
+      tipoDocumento,
+      numeroCuenta: input.numeroCuenta,
+    }).exec();
+
+    if (!input.file) {
+      if (!existingDocument) {
+        throw new PaymentAccountServiceError(
+          "Debes adjuntar un archivo PDF",
+          400
+        );
+      }
+
+      const document = await CuentaCobroDocumento.findOneAndUpdate(
+        { _id: existingDocument._id },
+        {
+          metadata,
+          required: input.required ?? existingDocument.required ?? false,
+        },
+        { new: true }
+      ).exec();
+
+      if (!document) {
+        throw new PaymentAccountServiceError(
+          "No se pudo actualizar el documento",
+          500
+        );
+      }
+
+      return { document: toPublicCuentaCobroDocumento(document) };
+    }
 
     const saved = await saveCuentaCobroContratoDocumento(
       input.file,
@@ -219,6 +297,7 @@ export const cuentasCobroDocumentosService = {
         mimeType: input.file.type,
         required: input.required ?? false,
         generated: false,
+        metadata,
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     ).exec();
