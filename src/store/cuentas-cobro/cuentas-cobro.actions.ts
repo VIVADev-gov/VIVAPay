@@ -1,4 +1,6 @@
 import type { StateCreator } from "zustand";
+import type { PaymentAccountDeclarations } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
+import { paymentAccountStoreKey } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
 import type { CuentasCobroSummaryResponse } from "@/types/contratos";
 import {
   initialCuentasCobroState,
@@ -9,6 +11,11 @@ export type CuentasCobroActions = {
   setSummaryLoading: (loading: boolean) => void;
   setSummaryError: (error: string | null) => void;
   setSummary: (data: CuentasCobroSummaryResponse) => void;
+  setPaymentAccountDeclarations: (
+    contractId: string,
+    numeroCuenta: number,
+    declarations: PaymentAccountDeclarations
+  ) => void;
   resetCuentasCobro: () => void;
 };
 
@@ -34,6 +41,14 @@ export const createCuentasCobroActions: StateCreator<
       summaryMessage: data.message,
       summaryError: null,
     }),
+
+  setPaymentAccountDeclarations: (contractId, numeroCuenta, declarations) =>
+    set((state) => ({
+      declarationsByAccount: {
+        ...state.declarationsByAccount,
+        [paymentAccountStoreKey(contractId, numeroCuenta)]: declarations,
+      },
+    })),
 
   resetCuentasCobro: () => set({ ...initialCuentasCobroState }),
 });

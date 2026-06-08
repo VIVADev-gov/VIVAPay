@@ -1,4 +1,5 @@
 import { formatOrganizacionDisplay } from "@/constants/organizacionViva";
+import { saveUserSignature } from "@/lib/fileUpload";
 import { User, toPublicUser, type IUserDocument } from "@/models/user";
 import {
   resolveOrganizacionFromProfile,
@@ -30,6 +31,25 @@ export const profileService = {
         subareaName: organizacion.subareaName,
         area: areaDisplay,
       },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
+
+    return toPublicUser(user);
+  },
+
+  async uploadSignature(userId: string, file: File) {
+    const saved = await saveUserSignature(file, userId);
+    if (!saved.success || !saved.filePath) {
+      throw new Error(saved.error ?? "No se pudo guardar la firma");
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { signaturePath: saved.filePath },
       { new: true, runValidators: true }
     );
 

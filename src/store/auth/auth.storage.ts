@@ -16,6 +16,7 @@ export type AuthUser = {
   area?: string;
   emailVerified?: boolean;
   status?: string;
+  signaturePath?: string | null;
 };
 
 export type AuthState = {

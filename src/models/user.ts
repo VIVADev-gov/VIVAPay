@@ -25,6 +25,7 @@ export interface IUser {
   status: UserStatus;
   verificationTokenHash?: string | null;
   verificationTokenExpiresAt?: Date | null;
+  signaturePath?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -76,12 +77,19 @@ const userSchema = new Schema<IUserDocument>(
     },
     verificationTokenHash: { type: String, default: null },
     verificationTokenExpiresAt: { type: Date, default: null },
+    signaturePath: { type: String, default: null, trim: true },
   },
   { timestamps: true, collection: "users" }
 );
 
-export const User: Model<IUserDocument> =
-  mongoose.models.User ?? mongoose.model<IUserDocument>("User", userSchema);
+if (mongoose.models.User) {
+  delete mongoose.models.User;
+}
+
+export const User: Model<IUserDocument> = mongoose.model<IUserDocument>(
+  "User",
+  userSchema
+);
 
 export function toPublicUser(doc: IUserDocument) {
   const organizationalUnitType =
@@ -110,5 +118,6 @@ export function toPublicUser(doc: IUserDocument) {
       }),
     emailVerified: doc.emailVerified,
     status: doc.status,
+    signaturePath: doc.signaturePath ?? null,
   };
 }

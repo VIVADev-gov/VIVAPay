@@ -85,3 +85,40 @@ export function useUpdateProfileMutation() {
     },
   });
 }
+
+export function useUploadSignatureMutation() {
+  const queryClient = useQueryClient();
+  const token = useAuthStore((state) => state.token);
+  const setSession = useAuthStore((state) => state.setSession);
+  const setProfileError = useProfileStore((s) => s.setProfileError);
+  const setProfileSuccess = useProfileStore((s) => s.setProfileSuccess);
+  const setProfileUser = useProfileStore((s) => s.setProfileUser);
+
+  return useMutation({
+    mutationFn: async (file: File) => {
+      setProfileError(null);
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const { data } = await api.post<ApiResponse<{ user: AuthUser }>>(
+        "/api/profile/firma",
+        formData
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data.user;
+    },
+    onSuccess: (user) => {
+      if (token) {
+        setSession(token, user);
+      }
+      setProfileUser(user);
+      setProfileSuccess("Firma guardada correctamente.");
+      queryClient.setQueryData(profileQueryKeys.me, user);
+    },
+    onError: (error) => {
+      setProfileError(
+        error instanceof Error ? error.message : "Error al guardar la firma"
+      );
+    },
+  });
+}

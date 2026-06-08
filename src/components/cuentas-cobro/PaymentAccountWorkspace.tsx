@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import ActionButton from "@/components/buttons/ActionButton";
 import PaymentAccountActivitiesModal from "@/components/cuentas-cobro/PaymentAccountActivitiesModal";
+import PaymentAccountDeclarationsModal from "@/components/cuentas-cobro/PaymentAccountDeclarationsModal";
 import PaymentAccountSeguridadSocialModal from "@/components/cuentas-cobro/PaymentAccountSeguridadSocialModal";
 import FileLink from "@/components/files/FileLink";
 import FileUpload from "@/components/forms/FileUpload";
@@ -12,6 +14,7 @@ import {
   useUploadContratoDocumentMutation,
   useUploadCuentaCobroDocumentMutation,
 } from "@/hooks/api/useCuentasCobro";
+import { useProfileQuery } from "@/hooks/api/useProfile";
 import {
   canSubmitPaymentAccount,
   isPaymentAccountReadOnly,
@@ -24,7 +27,18 @@ import {
   resolvePaymentPhase,
   type PaymentDocumentRequirement,
 } from "@/lib/cuentas-cobro/paymentAccountRules";
-import { formatSeguridadSocialPlantillaSummary } from "@/lib/cuentas-cobro/seguridadSocialPlantilla";
+import {
+  formatDeclarationsSummary,
+  paymentAccountStoreKey,
+} from "@/lib/cuentas-cobro/paymentAccountDeclarations";
+import {
+  formatSeguridadSocialPlantillaSummary,
+  SEGURIDAD_SOCIAL_TIPO,
+} from "@/lib/cuentas-cobro/seguridadSocialPlantilla";
+import { hasContractorSignature } from "@/lib/profile/hasContractorSignature";
+import { useAuthStore } from "@/store/auth/auth.store";
+import { useCuentasCobroStore } from "@/store/cuentas-cobro/cuentas-cobro.store";
+import { useProfileStore } from "@/store/profile/profile.store";
 import type {
   PublicContrato,
   PublicCuentaCobro,
@@ -54,6 +68,8 @@ function DocumentUploadRow({
   disabled,
   onUpload,
   onOpenPlantillaModal,
+  onOpenDeclarationsModal,
+  declarationsSummary,
 }: {
   requirement: PaymentDocumentRequirement;
   document?: PublicCuentaCobroDocumento;
@@ -63,6 +79,8 @@ function DocumentUploadRow({
     file: File
   ) => Promise<void>;
   onOpenPlantillaModal?: (requirement: PaymentDocumentRequirement) => void;
+  onOpenDeclarationsModal?: () => void;
+  declarationsSummary?: string | null;
 }) {
   return (
     <div className="rounded-3xl border border-border/70 bg-background/70 p-4">
@@ -103,15 +121,37 @@ function DocumentUploadRow({
         </div>
       ) : null}
 
+      {declarationsSummary ? (
+        <p className="mb-3 text-xs font-semibold text-muted-foreground">
+          {declarationsSummary}
+        </p>
+      ) : null}
+
       {requirement.requiresPlantilla && onOpenPlantillaModal ? (
-        <ActionButton
-          type="button"
-          variant={document ? "outline" : "primary"}
-          label={document ? "Editar soporte" : "Subir soporte"}
-          disabled={disabled}
-          onClick={() => onOpenPlantillaModal(requirement)}
-          className="w-full sm:w-auto"
-        />
+        <div className="flex flex-wrap gap-3">
+          <ActionButton
+            type="button"
+            variant={document ? "outline" : "primary"}
+            label={document ? "Editar soporte" : "Subir soporte"}
+            disabled={disabled}
+            onClick={() => onOpenPlantillaModal(requirement)}
+            className="w-full sm:w-auto"
+          />
+          {onOpenDeclarationsModal ? (
+            <ActionButton
+              type="button"
+              variant={declarationsSummary ? "outline" : "primary"}
+              label={
+                declarationsSummary
+                  ? "Editar declaraciones"
+                  : "Declaraciones juradas"
+              }
+              disabled={disabled}
+              onClick={onOpenDeclarationsModal}
+              className="w-full sm:w-auto"
+            />
+          ) : null}
+        </div>
       ) : (
         <FileUpload
           id={`${requirement.scope}-${requirement.tipoDocumento}`}
@@ -136,7 +176,19 @@ export default function PaymentAccountWorkspace({
   const [isActivitiesModalOpen, setIsActivitiesModalOpen] = useState(false);
   const [seguridadSocialRequirement, setSeguridadSocialRequirement] =
     useState<PaymentDocumentRequirement | null>(null);
+  const [isDeclarationsModalOpen, setIsDeclarationsModalOpen] = useState(false);
+  useProfileQuery();
   const showToast = useUiStore((s) => s.showToast);
+  const authUser = useAuthStore((s) => s.user);
+  const profileUser = useProfileStore((s) => s.user);
+  const signatureUser = profileUser ?? authUser;
+  const hasSignature = hasContractorSignature(signatureUser);
+  const declarationsByAccount = useCuentasCobroStore((s) => s.declarationsByAccount);
+  const setPaymentAccountDeclarations = useCuentasCobroStore(
+    (s) => s.setPaymentAccountDeclarations
+  );
+  const accountStoreKey = paymentAccountStoreKey(contract.id, paymentAccount.numero);
+  const savedDeclarations = declarationsByAccount[accountStoreKey] ?? null;
   const readOnly = isPaymentAccountReadOnly(paymentAccount);
   const isActionable = isPaymentAccountActionable(paymentAccount, paymentAccounts);
   const nextActionable = getNextActionablePaymentAccount(paymentAccounts);
@@ -245,6 +297,15 @@ export default function PaymentAccountWorkspace({
   };
 
   const handleSubmitPlaceholder = () => {
+    if (!hasSignature) {
+      showToast({
+        message:
+          "Debes subir tu firma en Perfil antes de enviar la cuenta de cobro.",
+        variant: "error",
+      });
+      return;
+    }
+
     showToast({
       message:
         "El envío formal de la cuenta de cobro se habilitará en la siguiente iteración.",
@@ -337,6 +398,19 @@ export default function PaymentAccountWorkspace({
             ? "Esta cuenta ya fue enviada o finalizada. Aquí podrás consultar soportes y trazabilidad cuando esté disponible."
             : "Completa el formulario con soportes y validaciones. El envío formal se conectará en la siguiente iteración."}
         </p>
+
+        {!readOnly && !hasSignature ? (
+          <p className="mt-4 rounded-2xl bg-destructive/10 px-4 py-3 text-sm leading-6 text-destructive">
+            Debes subir tu firma en{" "}
+            <Link
+              href="/dashboard/perfil"
+              className="font-bold underline underline-offset-2"
+            >
+              Perfil
+            </Link>{" "}
+            antes de enviar la cuenta de cobro.
+          </p>
+        ) : null}
 
         {!readOnly && canSubmit ? (
           <div className="mt-6 flex justify-end">
@@ -467,10 +541,41 @@ export default function PaymentAccountWorkspace({
                   ? setSeguridadSocialRequirement
                   : undefined
               }
+              onOpenDeclarationsModal={
+                requirement.tipoDocumento === SEGURIDAD_SOCIAL_TIPO
+                  ? () => setIsDeclarationsModalOpen(true)
+                  : undefined
+              }
+              declarationsSummary={
+                requirement.tipoDocumento === SEGURIDAD_SOCIAL_TIPO &&
+                savedDeclarations
+                  ? formatDeclarationsSummary(savedDeclarations)
+                  : null
+              }
             />
           ))}
         </div>
       </article>
+
+      {isDeclarationsModalOpen ? (
+        <PaymentAccountDeclarationsModal
+          isOpen={isDeclarationsModalOpen}
+          onClose={() => setIsDeclarationsModalOpen(false)}
+          initialDeclarations={savedDeclarations}
+          disabled={readOnly || !isActionable}
+          onSave={(declarations) => {
+            setPaymentAccountDeclarations(
+              contract.id,
+              paymentAccount.numero,
+              declarations
+            );
+            showToast({
+              message: "Declaraciones juradas guardadas",
+              variant: "success",
+            });
+          }}
+        />
+      ) : null}
 
       {seguridadSocialRequirement ? (
         <PaymentAccountSeguridadSocialModal

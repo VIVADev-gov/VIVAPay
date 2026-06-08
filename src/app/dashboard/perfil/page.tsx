@@ -12,6 +12,8 @@ import {
   getUnidadOrganizacional,
   getUnidadesPermitidasPorRol,
 } from "@/constants/organizacionViva";
+import ProfileSignatureSection from "@/components/profile/ProfileSignatureSection";
+import { USER_ROLES } from "@/constants/userRoles";
 import { normalizeUserRole } from "@/lib/auth/roles";
 import { useProfileQuery, useUpdateProfileMutation } from "@/hooks/api/useProfile";
 import { useProfileStore } from "@/store/profile/profile.store";
@@ -30,6 +32,7 @@ export default function PerfilPage() {
   const showToast = useUiStore((s) => s.showToast);
 
   const userRole = normalizeUserRole(user?.role);
+  const isContratista = userRole === USER_ROLES.CONTRATISTA;
   const organizationalUnitLabel = getOrganizacionLabelPorRol(userRole);
   const organizationalUnitOptions = getUnidadesPermitidasPorRol(userRole).map(
     (unidad) => ({
@@ -115,6 +118,9 @@ export default function PerfilPage() {
             onRefresh={() => profileQuery.refetch()}
           />
         ) : (
+          <>
+          {isContratista ? <ProfileSignatureSection user={user} /> : null}
+
           <form
             onSubmit={handleSubmit}
             className="overflow-hidden rounded-4xl border border-border/80 bg-linear-to-br from-card via-background to-muted/20 p-6 shadow-sm md:p-8"
@@ -199,6 +205,7 @@ export default function PerfilPage() {
               />
             </div>
           </form>
+          </>
         )}
       </section>
     </DashboardLayout>

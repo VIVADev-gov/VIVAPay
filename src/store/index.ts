@@ -24,6 +24,7 @@ export type { ContratosStore } from "./contratos/contratos.actions";
 
 export { useCuentasCobroStore } from "./cuentas-cobro/cuentas-cobro.store";
 export type { CuentasCobroStore } from "./cuentas-cobro/cuentas-cobro.actions";
+export type { PaymentAccountDeclarations } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
 
 export { useProfileStore } from "./profile/profile.store";
 export type { ProfileStore } from "./profile/profile.actions";

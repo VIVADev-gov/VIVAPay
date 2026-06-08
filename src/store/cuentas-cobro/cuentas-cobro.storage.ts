@@ -1,3 +1,4 @@
+import type { PaymentAccountDeclarations } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
 import type {
   CuentasCobroSummaryResponse,
   PublicContrato,
@@ -13,6 +14,7 @@ export type CuentasCobroState = {
   summaryMessage: string | null;
   isLoadingSummary: boolean;
   summaryError: string | null;
+  declarationsByAccount: Record<string, PaymentAccountDeclarations>;
 };
 
 export const initialCuentasCobroState: CuentasCobroState = {
@@ -24,4 +26,5 @@ export const initialCuentasCobroState: CuentasCobroState = {
   summaryMessage: null,
   isLoadingSummary: false,
   summaryError: null,
+  declarationsByAccount: {},
 };

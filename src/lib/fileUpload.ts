@@ -146,6 +146,70 @@ function validateActivitySupportFile(file: File): string | null {
     return null;
 }
 
+const SIGNATURE_ALLOWED_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
+const MAX_SIGNATURE_SIZE = 2 * 1024 * 1024;
+
+function validateSignatureImage(file: File): string | null {
+    if (!file || file.size === 0) {
+        return "Archivo vacío o inválido";
+    }
+    if (file.size > MAX_SIGNATURE_SIZE) {
+        return `La firma no debe superar ${MAX_SIGNATURE_SIZE / 1024 / 1024}MB`;
+    }
+    const ext = path.extname(file.name).toLowerCase();
+    if (!SIGNATURE_ALLOWED_EXTENSIONS.includes(ext)) {
+        return `Formato no permitido. Usa: ${SIGNATURE_ALLOWED_EXTENSIONS.join(", ")}`;
+    }
+    const allowedMimeTypes = new Set([
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "image/webp",
+    ]);
+    if (file.type && !allowedMimeTypes.has(file.type)) {
+        return "El archivo debe ser una imagen PNG, JPG o WEBP";
+    }
+    return null;
+}
+
+export function userSignatureRelativePath(userId: string, originalName: string) {
+    const ext = path.extname(originalName).toLowerCase() || ".png";
+    const safeExt = SIGNATURE_ALLOWED_EXTENSIONS.includes(ext) ? ext : ".png";
+    return `users/${safeStorageSegment(userId)}/firma${safeExt}`;
+}
+
+export async function saveUserSignature(
+    file: File,
+    userId: string
+): Promise<SaveFileResult> {
+    try {
+        const validationError = validateSignatureImage(file);
+        if (validationError) {
+            return { success: false, error: validationError };
+        }
+
+        const relUnderUploads = userSignatureRelativePath(userId, file.name);
+        const absolutePath = resolveWritableStorageUploadPath(relUnderUploads);
+        if (!absolutePath) {
+            return { success: false, error: "Ruta de destino inválida" };
+        }
+
+        await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+        const arrayBuffer = await file.arrayBuffer();
+        await fs.writeFile(absolutePath, Buffer.from(arrayBuffer));
+
+        const relativePath = `${DB_URL_PREFIX}/${relUnderUploads}`;
+        logger.info(`[FileUpload] Firma de usuario guardada: ${relativePath}`);
+        return { success: true, filePath: relativePath };
+    } catch (error) {
+        logger.error("[FileUpload] Error al guardar firma de usuario:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Error al guardar la firma",
+        };
+    }
+}
+
 export async function saveCuentaCobroActividadSoporte(
     file: File,
     numeroContrato: string,
