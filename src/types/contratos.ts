@@ -114,6 +114,7 @@ export type PublicCuentaCobro = {
   estado: CuentaCobroStatus;
   valor: number | null;
   observaciones: string | null;
+  declaracionesJuradas?: PaymentAccountDeclarations | null;
   directorFirmadoAt?: string | null;
   directorFirmadoPor?: string | null;
   jefeFirmadoAt?: string | null;

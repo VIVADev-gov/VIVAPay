@@ -1,3 +1,4 @@
+import { CONTRACT_PAYMENT_DOCUMENTS } from "@/constants/contractDocuments";
 import type { PublicCuentaCobro } from "@/types/contratos";
 
 export type PaymentPhase = "PRIMERA" | "INTERMEDIA" | "ULTIMA" | "UNICA";
@@ -48,7 +49,20 @@ export function isPaymentAccountActionable(
   return next?.id === paymentAccount.id;
 }
 
+const CONTRACT_SCOPE_PHASES: PaymentPhase[] = ["PRIMERA", "ULTIMA", "UNICA"];
+
+const CONTRACT_SCOPE_REQUIREMENTS: PaymentDocumentRequirement[] =
+  CONTRACT_PAYMENT_DOCUMENTS.map((document) => ({
+    tipoDocumento: document.tipoDocumento,
+    label: document.label,
+    helperText: document.helperText,
+    scope: "contract" as const,
+    required: true,
+    phases: CONTRACT_SCOPE_PHASES,
+  }));
+
 export const PAYMENT_DOCUMENT_REQUIREMENTS: PaymentDocumentRequirement[] = [
+  ...CONTRACT_SCOPE_REQUIREMENTS,
   {
     tipoDocumento: "SEGURIDAD_SOCIAL",
     label: "Soporte de pago de seguridad social",
@@ -65,4 +79,11 @@ export function getPaymentDocumentRequirements(phase: PaymentPhase) {
   return PAYMENT_DOCUMENT_REQUIREMENTS.filter((item) =>
     item.phases.includes(phase)
   );
+}
+
+export function getPaymentDocumentLabel(tipoDocumento: string) {
+  const match = PAYMENT_DOCUMENT_REQUIREMENTS.find(
+    (item) => item.tipoDocumento === tipoDocumento
+  );
+  return match?.label ?? tipoDocumento;
 }

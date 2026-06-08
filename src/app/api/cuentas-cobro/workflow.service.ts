@@ -20,6 +20,7 @@ import {
   resolveStateAfterContractorSubmit,
 } from "@/lib/cuentas-cobro/paymentAccountWorkflow";
 import { isPaymentAccountSubmissionWindowOpen } from "@/lib/cuentas-cobro/paymentAccountAccess";
+import { validatePaymentAccountReadiness } from "@/lib/cuentas-cobro/paymentAccountReadiness";
 import {
   CuentaCobro,
   type CuentaCobroStatus,
@@ -337,6 +338,51 @@ export const cuentasCobroWorkflowService = {
           );
         }
         assertSignature(input.actor);
+
+        const paymentAccounts = await CuentaCobro.find({
+          userId: account.userId,
+          contratoId: account.contratoId,
+        })
+          .sort({ numero: 1 })
+          .exec();
+
+        const [activitiesDoc, contractDocuments, accountDocuments] =
+          await Promise.all([
+            CuentaCobroActividad.findOne({
+              contratoId: account.contratoId,
+              numeroCuenta: account.numero,
+            }).exec(),
+            CuentaCobroDocumento.find({
+              contratoId: account.contratoId,
+              scope: CUENTA_COBRO_DOCUMENT_SCOPE.CONTRATO,
+            })
+              .sort({ tipoDocumento: 1 })
+              .exec(),
+            CuentaCobroDocumento.find({
+              contratoId: account.contratoId,
+              numeroCuenta: account.numero,
+              scope: CUENTA_COBRO_DOCUMENT_SCOPE.CUENTA_COBRO,
+            })
+              .sort({ tipoDocumento: 1 })
+              .exec(),
+          ]);
+
+        const readiness = validatePaymentAccountReadiness({
+          paymentAccount: toPublicCuentaCobro(account),
+          paymentAccounts: paymentAccounts.map(toPublicCuentaCobro),
+          activitiesCount: activitiesDoc?.actividades?.length ?? 0,
+          accountDocuments: accountDocuments.map(toPublicCuentaCobroDocumento),
+          contractDocuments: contractDocuments.map(toPublicCuentaCobroDocumento),
+          declarations: toPublicCuentaCobro(account).declaracionesJuradas,
+        });
+
+        if (!readiness.ready) {
+          throw new PaymentAccountServiceError(
+            readiness.messages[0] ?? "La cuenta no cumple los requisitos para enviarse",
+            400,
+            PAYMENT_ACCOUNT_ERROR_CODES.WORKFLOW_INVALID_STATE
+          );
+        }
 
         const contractor = await loadContractor(account.userId);
         account.estado = resolveStateAfterContractorSubmit(

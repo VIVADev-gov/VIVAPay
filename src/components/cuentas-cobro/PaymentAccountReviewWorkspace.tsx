@@ -18,13 +18,24 @@ import {
 } from "@/hooks/api/useCuentasCobro";
 import { useProfileQuery } from "@/hooks/api/useProfile";
 import {
+  formatDocumentDisplayName,
+  getPaymentPhaseLabel,
+} from "@/lib/cuentas-cobro/paymentAccountReadiness";
+import { formatDeclarationsSummary } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
+import {
+  getPaymentDocumentRequirements,
+  resolvePaymentPhase,
+} from "@/lib/cuentas-cobro/paymentAccountRules";
+import {
   canDirectorSign,
   canJefeApproveSend,
   canReturnToContractor,
   canSupervisorForwardDirector,
   canSupervisorSendCad,
 } from "@/lib/cuentas-cobro/paymentAccountWorkflow";
+import { formatSeguridadSocialPlantillaSummary } from "@/lib/cuentas-cobro/seguridadSocialPlantilla";
 import { hasUserSignature } from "@/lib/profile/hasUserSignature";
+import type { PublicCuentaCobroDocumento } from "@/types/contratos";
 import { useAuthStore } from "@/store/auth/auth.store";
 import { useProfileStore } from "@/store/profile/profile.store";
 import { useUiStore } from "@/store/ui/ui-store";
@@ -43,6 +54,49 @@ type PaymentAccountReviewWorkspaceProps = {
   contractId: string;
   numero: number;
 };
+
+function ReviewDocumentCard({
+  document,
+  required,
+}: {
+  document: PublicCuentaCobroDocumento;
+  required?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm font-semibold text-foreground">
+          {formatDocumentDisplayName(document)}
+        </p>
+        {required ? (
+          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
+            Requerido
+          </span>
+        ) : null}
+      </div>
+      {document.metadata ? (
+        <p className="mt-2 text-xs font-semibold text-muted-foreground">
+          {formatSeguridadSocialPlantillaSummary(document.metadata)}
+        </p>
+      ) : null}
+      <div className="mt-2">
+        <FileLink
+          url={document.filePath}
+          displayName={formatDocumentDisplayName(document)}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ReviewDocumentPlaceholder({ label }: { label: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-destructive/30 bg-destructive/5 p-4">
+      <p className="text-sm font-semibold text-foreground">{label}</p>
+      <p className="mt-1 text-xs text-destructive">No adjuntado</p>
+    </div>
+  );
+}
 
 export default function PaymentAccountReviewWorkspace({
   role,
@@ -128,6 +182,16 @@ export default function PaymentAccountReviewWorkspace({
   const canJefeSend =
     role === USER_ROLES.JEFE && canJefeApproveSend(account);
 
+  const phase = resolvePaymentPhase(account, detail.paymentAccounts);
+  const phaseLabel = getPaymentPhaseLabel(account, detail.paymentAccounts);
+  const requirements = getPaymentDocumentRequirements(phase);
+  const contractRequirements = requirements.filter(
+    (requirement) => requirement.scope === "contract"
+  );
+  const accountRequirements = requirements.filter(
+    (requirement) => requirement.scope === "account"
+  );
+
   return (
     <section className="grid gap-6">
       <div className="flex flex-wrap gap-3">
@@ -194,6 +258,14 @@ export default function PaymentAccountReviewWorkspace({
             </p>
             <p className="mt-1 text-sm font-semibold text-foreground">
               {isDirectorSigned(account) ? "Firmada" : "Pendiente"}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-muted/30 p-3">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              Tipo de cuenta
+            </p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {phaseLabel}
             </p>
           </div>
         </div>
@@ -326,28 +398,115 @@ export default function PaymentAccountReviewWorkspace({
       </article>
 
       <article className="rounded-4xl border border-border/80 bg-card p-6 shadow-sm">
-        <h4 className="text-lg font-black text-foreground">Soportes del periodo</h4>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {detail.accountDocuments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin documentos de cuenta.</p>
-          ) : (
-            detail.accountDocuments.map((document) => (
-              <div
-                key={document.id}
-                className="rounded-2xl border border-border/70 bg-background/70 p-4"
-              >
-                <p className="text-sm font-semibold text-foreground">
-                  {document.originalName ?? document.tipoDocumento}
-                </p>
-                <div className="mt-2">
-                  <FileLink
-                    url={document.filePath}
-                    displayName={document.originalName ?? document.tipoDocumento}
+        <div className="mb-4 flex items-center gap-3">
+          <FileText className="h-5 w-5 text-primary" />
+          <div>
+            <h4 className="text-lg font-black text-foreground">
+              Declaraciones juradas
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              Manifestación bajo gravedad de juramento del contratista.
+            </p>
+          </div>
+        </div>
+        {account.declaracionesJuradas ? (
+          <p className="rounded-2xl border border-border/70 bg-background/70 p-4 text-sm font-semibold text-foreground">
+            {formatDeclarationsSummary(account.declaracionesJuradas)}
+          </p>
+        ) : (
+          <p className="text-sm text-destructive">Sin declaraciones registradas.</p>
+        )}
+      </article>
+
+      {contractRequirements.length > 0 ? (
+        <article className="rounded-4xl border border-border/80 bg-card p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-3">
+            <FileText className="h-5 w-5 text-primary" />
+            <div>
+              <h4 className="text-lg font-black text-foreground">
+                Documentos del contrato
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Requeridos en {phaseLabel.toLowerCase()}. Se reutilizan en el
+                contrato.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {contractRequirements.map((requirement) => {
+              const document = detail.contractDocuments.find(
+                (item) => item.tipoDocumento === requirement.tipoDocumento
+              );
+
+              return document ? (
+                <ReviewDocumentCard
+                  key={requirement.tipoDocumento}
+                  document={document}
+                  required={requirement.required}
+                />
+              ) : (
+                <ReviewDocumentPlaceholder
+                  key={requirement.tipoDocumento}
+                  label={requirement.label}
+                />
+              );
+            })}
+          </div>
+        </article>
+      ) : null}
+
+      <article className="rounded-4xl border border-border/80 bg-card p-6 shadow-sm">
+        <div className="mb-4 flex items-center gap-3">
+          <FileText className="h-5 w-5 text-primary" />
+          <div>
+            <h4 className="text-lg font-black text-foreground">
+              Documentos de la cuenta
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              Soportes adjuntos a la cuenta No. {account.numero}.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {accountRequirements.length > 0
+            ? accountRequirements.map((requirement) => {
+                const document = detail.accountDocuments.find(
+                  (item) => item.tipoDocumento === requirement.tipoDocumento
+                );
+
+                return document ? (
+                  <ReviewDocumentCard
+                    key={requirement.tipoDocumento}
+                    document={document}
+                    required={requirement.required}
                   />
-                </div>
-              </div>
-            ))
-          )}
+                ) : (
+                  <ReviewDocumentPlaceholder
+                    key={requirement.tipoDocumento}
+                    label={requirement.label}
+                  />
+                );
+              })
+            : null}
+
+          {detail.accountDocuments
+            .filter(
+              (document) =>
+                !accountRequirements.some(
+                  (requirement) =>
+                    requirement.tipoDocumento === document.tipoDocumento
+                )
+            )
+            .map((document) => (
+              <ReviewDocumentCard key={document.id} document={document} />
+            ))}
+
+          {detail.accountDocuments.length === 0 &&
+          accountRequirements.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Sin documentos de cuenta.
+            </p>
+          ) : null}
         </div>
       </article>
 

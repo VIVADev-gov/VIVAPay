@@ -30,6 +30,10 @@ import {
 } from "@/lib/cuentas-cobro/paymentAccountAccess";
 import { isDevPaymentAccountWindowSkipped } from "@/lib/cuentas-cobro/devPaymentAccountWindow";
 import {
+  validatePaymentAccountReadiness,
+  type PaymentAccountReadinessIssue,
+} from "@/lib/cuentas-cobro/paymentAccountReadiness";
+import {
   getNextActionablePaymentAccount,
   getPaymentDocumentRequirements,
   isPaymentAccountActionable,
@@ -80,6 +84,23 @@ function findDocument(
   tipoDocumento: string
 ) {
   return documents.find((document) => document.tipoDocumento === tipoDocumento);
+}
+
+function readinessIssueLabel(issue: PaymentAccountReadinessIssue) {
+  switch (issue) {
+    case "MISSING_ACTIVITIES":
+      return "Sin actividades";
+    case "MISSING_SEGURIDAD_SOCIAL":
+      return "Sin soporte SS";
+    case "MISSING_PLANTILLA":
+      return "Sin plantilla";
+    case "MISSING_DECLARATIONS":
+      return "Sin juramento";
+    case "MISSING_CONTRACT_DOCUMENT":
+      return "Faltan docs. contrato";
+    default:
+      return "Requisitos pendientes";
+  }
 }
 
 type WorkflowChipTone = "neutral" | "primary" | "destructive" | "success";
@@ -251,7 +272,8 @@ export default function PaymentAccountWorkspace({
   const readOnly = isPaymentAccountReadOnly(paymentAccount);
   const isActionable = isPaymentAccountActionable(paymentAccount, paymentAccounts);
   const nextActionable = getNextActionablePaymentAccount(paymentAccounts);
-  const canSubmit = canSubmitPaymentAccount(paymentAccount) && isActionable;
+  const canSubmitBase =
+    canSubmitPaymentAccount(paymentAccount) && isActionable && !readOnly;
   const windowOpen = isPaymentAccountSubmissionWindowOpen(paymentAccount);
   const devWindowSkipped = isDevPaymentAccountWindowSkipped();
   const phase = resolvePaymentPhase(paymentAccount, paymentAccounts);
@@ -291,6 +313,17 @@ export default function PaymentAccountWorkspace({
   const contractDocuments = documentsQuery.data?.contractDocuments ?? [];
   const accountDocuments = documentsQuery.data?.accountDocuments ?? [];
   const activities = activitiesQuery.data?.activities.actividades ?? [];
+  const declarations =
+    declarationsQuery.data?.declarations ?? savedDeclarations ?? null;
+  const readiness = validatePaymentAccountReadiness({
+    paymentAccount,
+    paymentAccounts,
+    activitiesCount: activities.length,
+    accountDocuments,
+    contractDocuments,
+    declarations,
+  });
+  const canSubmit = canSubmitBase && readiness.ready;
   const averageExecution =
     activities.length > 0
       ? Math.round(
@@ -373,6 +406,16 @@ export default function PaymentAccountWorkspace({
       showToast({
         message:
           "Debes subir tu firma en Perfil antes de enviar la cuenta de cobro.",
+        variant: "error",
+      });
+      return;
+    }
+
+    if (!readiness.ready) {
+      showToast({
+        message:
+          readiness.messages[0] ??
+          "Completa los requisitos antes de enviar la cuenta de cobro.",
         variant: "error",
       });
       return;
@@ -538,9 +581,21 @@ export default function PaymentAccountWorkspace({
                 title="Sube tu firma en Perfil para enviar"
               />
             ) : null}
+
+            {!readOnly && canSubmitBase && !readiness.ready
+              ? readiness.issues.map((issue) => (
+                  <WorkflowChip
+                    key={issue}
+                    icon={AlertCircle}
+                    label={readinessIssueLabel(issue)}
+                    tone="destructive"
+                    title={readiness.messages.join(" ")}
+                  />
+                ))
+              : null}
           </div>
 
-          {!readOnly && canSubmit ? (
+          {!readOnly && canSubmitBase ? (
             <ActionButton
               type="button"
               variant="primary"
@@ -548,6 +603,7 @@ export default function PaymentAccountWorkspace({
               label="Enviar cuenta"
               onClick={() => void handleSubmit()}
               loading={submitWorkflow.isPending}
+              disabled={!canSubmit}
               className="w-full shrink-0 sm:w-auto"
             />
           ) : null}
@@ -678,8 +734,8 @@ export default function PaymentAccountWorkspace({
               }
               declarationsSummary={
                 requirement.tipoDocumento === SEGURIDAD_SOCIAL_TIPO &&
-                savedDeclarations
-                  ? formatDeclarationsSummary(savedDeclarations)
+                declarations
+                  ? formatDeclarationsSummary(declarations)
                   : null
               }
             />
@@ -691,7 +747,7 @@ export default function PaymentAccountWorkspace({
         <PaymentAccountDeclarationsModal
           isOpen={isDeclarationsModalOpen}
           onClose={() => setIsDeclarationsModalOpen(false)}
-          initialDeclarations={savedDeclarations}
+          initialDeclarations={declarations}
           disabled={readOnly || !isActionable}
           loading={saveDeclarationsMutation.isPending || declarationsQuery.isLoading}
           onSave={async (declarations) => {

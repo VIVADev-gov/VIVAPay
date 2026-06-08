@@ -1,5 +1,6 @@
 import mongoose, { Schema, type Document, type Model, type Types } from "mongoose";
 import type { UserRole } from "@/constants/userRoles";
+import { parsePaymentAccountDeclarations } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
 
 export const CUENTA_COBRO_STATUS = {
   BORRADOR: "BORRADOR",
@@ -154,6 +155,9 @@ export function toPublicCuentaCobro(doc: ICuentaCobroDocument) {
     estado: doc.estado,
     valor: doc.valor ?? null,
     observaciones: doc.observaciones ?? null,
+    declaracionesJuradas: parsePaymentAccountDeclarations(
+      doc.declaracionesJuradas
+    ),
     directorFirmadoAt: toDateIso(doc.directorFirmadoAt),
     directorFirmadoPor: doc.directorFirmadoPor
       ? String(doc.directorFirmadoPor)
