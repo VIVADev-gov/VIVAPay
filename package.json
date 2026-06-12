@@ -12,6 +12,7 @@
     "@tanstack/react-query": "^5.101.0",
     "axios": "^1.17.0",
     "bcryptjs": "^3.0.3",
+    "exceljs": "^4.4.0",
     "framer-motion": "^12.40.0",
     "handlebars": "^4.7.9",
     "jsonwebtoken": "^9.0.3",

@@ -9,7 +9,9 @@ import type {
   CuentaCobroActivitiesResponse,
   CuentaCobroContractDocumentsResponse,
   CuentaCobroDeclarationsResponse,
+  CuentaCobroGfrFo11Response,
   CuentasCobroSummaryResponse,
+  GfrFo11Responses,
   PaymentAccountDeclarations,
   PaymentAccountReviewDetailResponse,
   PaymentAccountReviewListResponse,
@@ -35,6 +37,8 @@ export const cuentasCobroQueryKeys = {
     ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "activities"] as const,
   declarationsByAccount: (contractId: string, numeroCuenta: number) =>
     ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "declarations"] as const,
+  gfrFo11ByAccount: (contractId: string, numeroCuenta: number) =>
+    ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "gfr-fo-11"] as const,
   reviewList: ["cuentas-cobro", "revision"] as const,
   reviewDetail: (contractId: string, numeroCuenta: number) =>
     ["cuentas-cobro", "revision", contractId, numeroCuenta] as const,
@@ -157,6 +161,50 @@ export function useSaveCuentaCobroDeclarationsMutation(
           contractId,
           numeroCuenta
         ),
+      });
+    },
+  });
+}
+
+export function useCuentaCobroGfrFo11Query(
+  contractId: string,
+  numeroCuenta: number,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: cuentasCobroQueryKeys.gfrFo11ByAccount(contractId, numeroCuenta),
+    enabled: Boolean(contractId) && Number.isInteger(numeroCuenta) && enabled,
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<CuentaCobroGfrFo11Response>>(
+        `/api/cuentas-cobro/contrato/${contractId}/cuentas/${numeroCuenta}/gfr-fo-11`
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+  });
+}
+
+export function useSaveCuentaCobroGfrFo11Mutation(
+  contractId: string,
+  numeroCuenta: number
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (responses: GfrFo11Responses) => {
+      const { data } = await api.put<ApiResponse<CuentaCobroGfrFo11Response>>(
+        `/api/cuentas-cobro/contrato/${contractId}/cuentas/${numeroCuenta}/gfr-fo-11`,
+        responses
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: cuentasCobroQueryKeys.gfrFo11ByAccount(contractId, numeroCuenta),
+      });
+      queryClient.invalidateQueries({
+        queryKey: cuentasCobroQueryKeys.reviewDetail(contractId, numeroCuenta),
       });
     },
   });

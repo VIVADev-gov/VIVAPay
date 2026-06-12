@@ -1,0 +1,43 @@
+{{> header nombreEmpresa="VIVA" badge="Cuenta de cobro" titulo="Documentos de cuenta de cobro"}}
+
+<tr>
+  <td style="background-color:#ffffff; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0; padding:28px 36px 32px;">
+    <p style="font-family:'Inter',Arial,sans-serif; font-size:15px; font-weight:600; color:#0f172a; margin:0 0 10px 0;">
+      Cuenta de cobro No. {{accountNumber}} — <span style="color:#166534;">{{contractorName}}</span>
+    </p>
+    <p style="font-family:'Inter',Arial,sans-serif; font-size:14px; color:#64748b; line-height:1.7; margin:0 0 16px 0;">
+      Se adjuntan los documentos de la cuenta de cobro para el contrato
+      <strong style="color:#166534;">{{contractNumber}}</strong>
+      (formularios generados y soportes según corresponda).
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e2e8f0; border-radius:8px; margin-bottom:16px;">
+      <tr>
+        <td style="padding:12px 16px; border-bottom:1px solid #e2e8f0;">
+          <p style="font-family:'Inter',Arial,sans-serif; font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:#94a3b8; margin:0 0 4px 0;">Contratista</p>
+          <p style="font-family:'Inter',Arial,sans-serif; font-size:13px; font-weight:600; color:#1e293b; margin:0;">{{contractorName}}</p>
+        </td>
+        <td style="padding:12px 16px; border-bottom:1px solid #e2e8f0;">
+          <p style="font-family:'Inter',Arial,sans-serif; font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:#94a3b8; margin:0 0 4px 0;">Documento</p>
+          <p style="font-family:'Inter',Arial,sans-serif; font-size:13px; font-weight:600; color:#1e293b; margin:0;">{{contractorDocumentId}}</p>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding:12px 16px;">
+          <p style="font-family:'Inter',Arial,sans-serif; font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:#94a3b8; margin:0 0 4px 0;">Adjuntos ({{attachmentCount}})</p>
+          <ul style="font-family:'Inter',Arial,sans-serif; font-size:12px; color:#334155; margin:8px 0 0 18px; padding:0;">
+            {{#each attachmentNames}}
+            <li style="margin:4px 0;">{{this}}</li>
+            {{/each}}
+          </ul>
+        </td>
+      </tr>
+    </table>
+
+    <p style="font-family:'Inter',Arial,sans-serif; font-size:12px; color:#94a3b8; line-height:1.6; margin:0;">
+      Este correo fue generado automáticamente por el módulo de cuentas de cobro VIVA.
+    </p>
+  </td>
+</tr>
+
+{{> footer nombreEmpresa="VIVA"}}

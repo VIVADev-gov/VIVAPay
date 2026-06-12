@@ -22,10 +22,13 @@ import {
   getPaymentPhaseLabel,
 } from "@/lib/cuentas-cobro/paymentAccountReadiness";
 import { formatDeclarationsSummary } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
+import { formatGfrFo11Summary } from "@/lib/cuentas-cobro/gfrFo11Responses";
 import {
   getPaymentDocumentRequirements,
+  includesGfrFo11,
   resolvePaymentPhase,
 } from "@/lib/cuentas-cobro/paymentAccountRules";
+import { isDevSendCadStateSkipped } from "@/lib/cuentas-cobro/devSendCadState";
 import {
   canDirectorSign,
   canJefeApproveSend,
@@ -181,6 +184,7 @@ export default function PaymentAccountReviewWorkspace({
     role === USER_ROLES.SUPERVISOR && canSupervisorSendCad(account);
   const canJefeSend =
     role === USER_ROLES.JEFE && canJefeApproveSend(account);
+  const devSendCadStateSkipped = isDevSendCadStateSkipped();
 
   const phase = resolvePaymentPhase(account, detail.paymentAccounts);
   const phaseLabel = getPaymentPhaseLabel(account, detail.paymentAccounts);
@@ -369,6 +373,15 @@ export default function PaymentAccountReviewWorkspace({
               Falta firma del director para enviar al CAD
             </span>
           ) : null}
+
+          {devSendCadStateSkipped ? (
+            <span
+              className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700"
+              title="DEV_SKIP_SEND_CAD_STATE está activo"
+            >
+              Envío CAD sin cambio de estado (dev)
+            </span>
+          ) : null}
         </div>
       </article>
 
@@ -417,6 +430,31 @@ export default function PaymentAccountReviewWorkspace({
           <p className="text-sm text-destructive">Sin declaraciones registradas.</p>
         )}
       </article>
+
+      {includesGfrFo11(phase) ? (
+        <article className="rounded-4xl border border-border/80 bg-card p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-3">
+            <FileText className="h-5 w-5 text-primary" />
+            <div>
+              <h4 className="text-lg font-black text-foreground">
+                Certificado GFR-FO-11
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Responsable de IVA — primera cuenta de cobro.
+              </p>
+            </div>
+          </div>
+          {account.gfrFo11 ? (
+            <p className="rounded-2xl border border-border/70 bg-background/70 p-4 text-sm font-semibold text-foreground">
+              {formatGfrFo11Summary(account.gfrFo11)}
+            </p>
+          ) : (
+            <p className="text-sm text-destructive">
+              Sin certificado GFR-FO-11 registrado.
+            </p>
+          )}
+        </article>
+      ) : null}
 
       {contractRequirements.length > 0 ? (
         <article className="rounded-4xl border border-border/80 bg-card p-6 shadow-sm">

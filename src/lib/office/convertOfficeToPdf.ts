@@ -5,7 +5,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-export type OfficeInputFormat = "docx" | "html";
+export type OfficeInputFormat = "docx" | "html" | "xlsx";
 
 export type ConvertResult =
     | { ok: true; pdf: Buffer }
@@ -38,14 +38,15 @@ function libreOfficeCandidates(): string[] {
 }
 
 /**
- * Convierte DOCX o HTML a PDF con LibreOffice headless.
+ * Convierte DOCX, XLSX o HTML a PDF con LibreOffice headless.
  */
 export function convertOfficeBufferToPdf(
     content: Buffer,
     format: OfficeInputFormat,
     baseName = "document"
 ): ConvertResult {
-    const ext = format === "docx" ? "docx" : "html";
+    const ext =
+        format === "docx" ? "docx" : format === "xlsx" ? "xlsx" : "html";
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "tramite-pdf-"));
     const inputPath = path.join(tmp, `${baseName}.${ext}`);
     const pdfPath = path.join(tmp, `${baseName}.pdf`);

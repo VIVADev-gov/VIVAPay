@@ -1,7 +1,9 @@
+import { parseGfrFo11Responses } from "@/lib/cuentas-cobro/gfrFo11Responses";
 import { parsePaymentAccountDeclarations } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
 import {
   getPaymentDocumentRequirements,
   getPaymentDocumentLabel,
+  includesGfrFo11,
   resolvePaymentPhase,
 } from "@/lib/cuentas-cobro/paymentAccountRules";
 import {
@@ -9,6 +11,7 @@ import {
   SEGURIDAD_SOCIAL_TIPO,
 } from "@/lib/cuentas-cobro/seguridadSocialPlantilla";
 import type {
+  GfrFo11Responses,
   PaymentAccountDeclarations,
   PublicCuentaCobro,
   PublicCuentaCobroDocumento,
@@ -19,6 +22,7 @@ export type PaymentAccountReadinessIssue =
   | "MISSING_SEGURIDAD_SOCIAL"
   | "MISSING_PLANTILLA"
   | "MISSING_DECLARATIONS"
+  | "MISSING_GFR_FO_11"
   | "MISSING_CONTRACT_DOCUMENT";
 
 export type PaymentAccountReadinessResult = {
@@ -35,6 +39,7 @@ export function validatePaymentAccountReadiness(input: {
   accountDocuments: PublicCuentaCobroDocumento[];
   contractDocuments: PublicCuentaCobroDocumento[];
   declarations: PaymentAccountDeclarations | null | undefined;
+  gfrFo11?: GfrFo11Responses | null | undefined;
 }): PaymentAccountReadinessResult {
   const issues: PaymentAccountReadinessIssue[] = [];
   const messages: string[] = [];
@@ -51,6 +56,13 @@ export function validatePaymentAccountReadiness(input: {
   if (!parsePaymentAccountDeclarations(input.declarations)) {
     issues.push("MISSING_DECLARATIONS");
     messages.push("Debes completar las declaraciones juradas.");
+  }
+
+  if (includesGfrFo11(phase) && !parseGfrFo11Responses(input.gfrFo11)) {
+    issues.push("MISSING_GFR_FO_11");
+    messages.push(
+      "Debes completar el certificado GFR-FO-11 (responsable de IVA)."
+    );
   }
 
   const seguridadSocial = input.accountDocuments.find(

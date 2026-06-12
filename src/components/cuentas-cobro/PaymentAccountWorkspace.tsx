@@ -5,6 +5,7 @@ import { useState } from "react";
 import ActionButton from "@/components/buttons/ActionButton";
 import PaymentAccountActivitiesModal from "@/components/cuentas-cobro/PaymentAccountActivitiesModal";
 import PaymentAccountDeclarationsModal from "@/components/cuentas-cobro/PaymentAccountDeclarationsModal";
+import PaymentAccountGfrFo11Modal from "@/components/cuentas-cobro/PaymentAccountGfrFo11Modal";
 import PaymentAccountSeguridadSocialModal from "@/components/cuentas-cobro/PaymentAccountSeguridadSocialModal";
 import FileLink from "@/components/files/FileLink";
 import FileUpload from "@/components/forms/FileUpload";
@@ -12,8 +13,10 @@ import {
   useCuentaCobroActivitiesQuery,
   useCuentaCobroDeclarationsQuery,
   useCuentaCobroDocumentsQuery,
+  useCuentaCobroGfrFo11Query,
   usePaymentAccountWorkflowMutation,
   useSaveCuentaCobroDeclarationsMutation,
+  useSaveCuentaCobroGfrFo11Mutation,
   useUploadContratoDocumentMutation,
   useUploadCuentaCobroDocumentMutation,
 } from "@/hooks/api/useCuentasCobro";
@@ -36,6 +39,7 @@ import {
 import {
   getNextActionablePaymentAccount,
   getPaymentDocumentRequirements,
+  includesGfrFo11,
   isPaymentAccountActionable,
   resolvePaymentPhase,
   type PaymentDocumentRequirement,
@@ -44,6 +48,7 @@ import {
   formatDeclarationsSummary,
   paymentAccountStoreKey,
 } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
+import { formatGfrFo11Summary } from "@/lib/cuentas-cobro/gfrFo11Responses";
 import {
   formatSeguridadSocialPlantillaSummary,
   SEGURIDAD_SOCIAL_TIPO,
@@ -96,6 +101,8 @@ function readinessIssueLabel(issue: PaymentAccountReadinessIssue) {
       return "Sin plantilla";
     case "MISSING_DECLARATIONS":
       return "Sin juramento";
+    case "MISSING_GFR_FO_11":
+      return "Sin GFR-FO-11";
     case "MISSING_CONTRACT_DOCUMENT":
       return "Faltan docs. contrato";
     default:
@@ -260,6 +267,7 @@ export default function PaymentAccountWorkspace({
   const [seguridadSocialRequirement, setSeguridadSocialRequirement] =
     useState<PaymentDocumentRequirement | null>(null);
   const [isDeclarationsModalOpen, setIsDeclarationsModalOpen] = useState(false);
+  const [isGfrFo11ModalOpen, setIsGfrFo11ModalOpen] = useState(false);
   useProfileQuery();
   const showToast = useUiStore((s) => s.showToast);
   const authUser = useAuthStore((s) => s.user);
@@ -277,6 +285,7 @@ export default function PaymentAccountWorkspace({
   const windowOpen = isPaymentAccountSubmissionWindowOpen(paymentAccount);
   const devWindowSkipped = isDevPaymentAccountWindowSkipped();
   const phase = resolvePaymentPhase(paymentAccount, paymentAccounts);
+  const requiresGfrFo11 = includesGfrFo11(phase);
   const requirements = getPaymentDocumentRequirements(phase);
   const contractRequirements = requirements.filter(
     (requirement) => requirement.scope === "contract"
@@ -293,6 +302,15 @@ export default function PaymentAccountWorkspace({
     paymentAccount.numero
   );
   const saveDeclarationsMutation = useSaveCuentaCobroDeclarationsMutation(
+    contract.id,
+    paymentAccount.numero
+  );
+  const gfrFo11Query = useCuentaCobroGfrFo11Query(
+    contract.id,
+    paymentAccount.numero,
+    requiresGfrFo11
+  );
+  const saveGfrFo11Mutation = useSaveCuentaCobroGfrFo11Mutation(
     contract.id,
     paymentAccount.numero
   );
@@ -315,6 +333,9 @@ export default function PaymentAccountWorkspace({
   const activities = activitiesQuery.data?.activities.actividades ?? [];
   const declarations =
     declarationsQuery.data?.declarations ?? savedDeclarations ?? null;
+  const gfrFo11 =
+    gfrFo11Query.data?.responses ?? paymentAccount.gfrFo11 ?? null;
+  const gfrFo11Config = gfrFo11Query.data?.config ?? null;
   const readiness = validatePaymentAccountReadiness({
     paymentAccount,
     paymentAccounts,
@@ -322,6 +343,7 @@ export default function PaymentAccountWorkspace({
     accountDocuments,
     contractDocuments,
     declarations,
+    gfrFo11,
   });
   const canSubmit = canSubmitBase && readiness.ready;
   const averageExecution =
@@ -665,6 +687,42 @@ export default function PaymentAccountWorkspace({
         </div>
       </article>
 
+      {requiresGfrFo11 ? (
+        <article className="rounded-4xl border border-border/80 bg-linear-to-br from-card via-background to-ring/5 p-6 shadow-sm md:p-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                Certificado responsable de IVA
+              </p>
+              <h3 className="mt-2 text-xl font-black text-foreground">
+                GFR-FO-11
+              </h3>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                Requerido solo en la primera cuenta de cobro. Debes completarlo
+                antes de enviar la cuenta al flujo de revisión.
+              </p>
+              {gfrFo11 ? (
+                <p className="mt-3 rounded-2xl border border-border/70 bg-background/70 p-3 text-sm font-semibold text-foreground">
+                  {formatGfrFo11Summary(gfrFo11)}
+                </p>
+              ) : (
+                <p className="mt-3 text-sm font-semibold text-destructive">
+                  Pendiente de completar.
+                </p>
+              )}
+            </div>
+            <ActionButton
+              type="button"
+              variant="primary"
+              icon={ReceiptText}
+              label={gfrFo11 ? "Editar GFR-FO-11" : "Completar GFR-FO-11"}
+              onClick={() => setIsGfrFo11ModalOpen(true)}
+              disabled={readOnly || !isActionable}
+            />
+          </div>
+        </article>
+      ) : null}
+
       {contractRequirements.length > 0 ? (
         <article className="rounded-4xl border border-border/80 bg-linear-to-br from-card via-background to-muted/20 p-6 shadow-sm md:p-8">
           <div className="mb-5">
@@ -742,6 +800,35 @@ export default function PaymentAccountWorkspace({
           ))}
         </div>
       </article>
+
+      {isGfrFo11ModalOpen && gfrFo11Config ? (
+        <PaymentAccountGfrFo11Modal
+          isOpen={isGfrFo11ModalOpen}
+          onClose={() => setIsGfrFo11ModalOpen(false)}
+          initialResponses={gfrFo11}
+          config={gfrFo11Config}
+          disabled={readOnly || !isActionable}
+          loading={saveGfrFo11Mutation.isPending || gfrFo11Query.isLoading}
+          onSave={async (responses) => {
+            try {
+              await saveGfrFo11Mutation.mutateAsync(responses);
+              showToast({
+                message: "Certificado GFR-FO-11 guardado",
+                variant: "success",
+              });
+              setIsGfrFo11ModalOpen(false);
+            } catch (error) {
+              showToast({
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : "No se pudo guardar el certificado GFR-FO-11",
+                variant: "error",
+              });
+            }
+          }}
+        />
+      ) : null}
 
       {isDeclarationsModalOpen ? (
         <PaymentAccountDeclarationsModal

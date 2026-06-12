@@ -19,8 +19,12 @@ import {
   hasWorkflowSignature,
   resolveStateAfterContractorSubmit,
 } from "@/lib/cuentas-cobro/paymentAccountWorkflow";
+import { isDevSendCadStateSkipped } from "@/lib/cuentas-cobro/devSendCadState";
 import { isPaymentAccountSubmissionWindowOpen } from "@/lib/cuentas-cobro/paymentAccountAccess";
 import { validatePaymentAccountReadiness } from "@/lib/cuentas-cobro/paymentAccountReadiness";
+import { sendCadPackageEmail } from "@/lib/cuentas-cobro/sendCadPackageEmail";
+import { sendWorkflowNotificationEmail } from "@/lib/cuentas-cobro/sendWorkflowNotificationEmail";
+import logger from "@/lib/logger";
 import {
   CuentaCobro,
   type CuentaCobroStatus,
@@ -119,8 +123,20 @@ async function loadContractor(userId: Types.ObjectId | string) {
   return contractor;
 }
 
+function workflowActorLog(actor: WorkflowActor) {
+  return {
+    actorId: actor.id,
+    actorRole: actor.role,
+    organizationalUnitId: actor.organizationalUnitId,
+    organizationalUnitType: actor.organizationalUnitType,
+    subareaId: actor.subareaId ?? null,
+    hasSignature: hasWorkflowSignature(actor),
+  };
+}
+
 function assertSignature(actor: WorkflowActor) {
   if (!hasWorkflowSignature(actor)) {
+    logger.warn("[cuentas-cobro/workflow] Firma requerida", workflowActorLog(actor));
     throw new PaymentAccountServiceError(
       "Debes subir tu firma en Perfil antes de continuar",
       400,
@@ -152,7 +168,19 @@ async function assertReviewerAccess(
   account: ICuentaCobroDocument
 ) {
   const contractor = await loadContractor(account.userId);
-  if (!contractorMatchesReviewer(toContractorSnapshot(contractor), actor)) {
+  const contractorSnapshot = toContractorSnapshot(contractor);
+  if (!contractorMatchesReviewer(contractorSnapshot, actor)) {
+    logger.warn("[cuentas-cobro/workflow] Revisor sin permiso sobre la cuenta", {
+      actor: workflowActorLog(actor),
+      contractor: {
+        id: contractorSnapshot.id,
+        organizationalUnitId: contractorSnapshot.organizationalUnitId,
+        organizationalUnitType: contractorSnapshot.organizationalUnitType,
+        subareaId: contractorSnapshot.subareaId ?? null,
+      },
+      accountUserId: String(account.userId),
+      accountNumero: account.numero,
+    });
     throw new PaymentAccountServiceError(
       "No tienes permiso para gestionar esta cuenta",
       403,
@@ -310,11 +338,30 @@ export const cuentasCobroWorkflowService = {
     action: CuentaCobroWorkflowAction;
     mensaje?: string;
   }) {
-    await connectDB();
-    const account = await loadAccount(input.contractId, input.numero);
-    const estadoAnterior = account.estado;
+    const logContext = {
+      contractId: input.contractId,
+      numero: input.numero,
+      action: input.action,
+      actor: workflowActorLog(input.actor),
+    };
 
-    switch (input.action) {
+    logger.info("[cuentas-cobro/workflow] Inicio acción", logContext);
+
+    try {
+      await connectDB();
+      const account = await loadAccount(input.contractId, input.numero);
+      const estadoAnterior = account.estado;
+      let contractorForNotification: IUserDocument | null = null;
+      let estadoParaNotificacion: CuentaCobroStatus | null = null;
+
+      logger.info("[cuentas-cobro/workflow] Cuenta cargada", {
+        ...logContext,
+        estadoAnterior,
+        accountUserId: String(account.userId),
+        directorFirmadoAt: account.directorFirmadoAt ?? null,
+      });
+
+      switch (input.action) {
       case CUENTA_COBRO_WORKFLOW_ACTION.SUBMIT: {
         if (String(account.userId) !== input.actor.id) {
           throw new PaymentAccountServiceError(
@@ -374,9 +421,16 @@ export const cuentasCobroWorkflowService = {
           accountDocuments: accountDocuments.map(toPublicCuentaCobroDocumento),
           contractDocuments: contractDocuments.map(toPublicCuentaCobroDocumento),
           declarations: toPublicCuentaCobro(account).declaracionesJuradas,
+          gfrFo11: toPublicCuentaCobro(account).gfrFo11,
         });
 
         if (!readiness.ready) {
+          logger.warn("[cuentas-cobro/workflow] Cuenta no lista para envío", {
+            ...logContext,
+            readinessIssues: readiness.issues,
+            readinessMessages: readiness.messages,
+            missingContractDocuments: readiness.missingContractDocuments,
+          });
           throw new PaymentAccountServiceError(
             readiness.messages[0] ?? "La cuenta no cumple los requisitos para enviarse",
             400,
@@ -384,11 +438,13 @@ export const cuentasCobroWorkflowService = {
           );
         }
 
-        const contractor = await loadContractor(account.userId);
+        contractorForNotification = await loadContractor(account.userId);
         account.estado = resolveStateAfterContractorSubmit(
           {
-            organizationalUnitId: contractor.organizationalUnitId ?? "",
-            organizationalUnitType: contractor.organizationalUnitType ?? "",
+            organizationalUnitId:
+              contractorForNotification.organizationalUnitId ?? "",
+            organizationalUnitType:
+              contractorForNotification.organizationalUnitType ?? "",
           },
           account
         );
@@ -397,7 +453,7 @@ export const cuentasCobroWorkflowService = {
       }
 
       case CUENTA_COBRO_WORKFLOW_ACTION.FORWARD_DIRECTOR: {
-        await assertReviewerAccess(input.actor, account);
+        contractorForNotification = await assertReviewerAccess(input.actor, account);
         if (input.actor.role !== USER_ROLES.SUPERVISOR) {
           throw new PaymentAccountServiceError(
             "Solo el supervisor puede enviar al director",
@@ -437,7 +493,7 @@ export const cuentasCobroWorkflowService = {
           input.actor.role === USER_ROLES.SUPERVISOR ||
           input.actor.role === USER_ROLES.JEFE
         ) {
-          await assertReviewerAccess(input.actor, account);
+          contractorForNotification = await assertReviewerAccess(input.actor, account);
         } else {
           throw new PaymentAccountServiceError(
             "No tienes permiso para devolver esta cuenta",
@@ -453,7 +509,7 @@ export const cuentasCobroWorkflowService = {
       }
 
       case CUENTA_COBRO_WORKFLOW_ACTION.DIRECTOR_SIGN: {
-        await assertReviewerAccess(input.actor, account);
+        contractorForNotification = await assertReviewerAccess(input.actor, account);
         if (input.actor.role !== USER_ROLES.DIRECTOR) {
           throw new PaymentAccountServiceError(
             "Solo el director puede firmar la cuenta",
@@ -476,7 +532,7 @@ export const cuentasCobroWorkflowService = {
       }
 
       case CUENTA_COBRO_WORKFLOW_ACTION.SEND_CAD: {
-        await assertReviewerAccess(input.actor, account);
+        contractorForNotification = await assertReviewerAccess(input.actor, account);
         if (input.actor.role !== USER_ROLES.SUPERVISOR) {
           throw new PaymentAccountServiceError(
             "Solo el supervisor puede enviar al CAD",
@@ -492,14 +548,18 @@ export const cuentasCobroWorkflowService = {
           );
         }
         assertSignature(input.actor);
-        account.enviadaCadAt = new Date();
-        account.enviadaCadPor = new Types.ObjectId(input.actor.id);
-        account.estado = "ENVIADA_CAD";
+        if (isDevSendCadStateSkipped()) {
+          estadoParaNotificacion = "ENVIADA_CAD";
+        } else {
+          account.enviadaCadAt = new Date();
+          account.enviadaCadPor = new Types.ObjectId(input.actor.id);
+          account.estado = "ENVIADA_CAD";
+        }
         break;
       }
 
       case CUENTA_COBRO_WORKFLOW_ACTION.JEFE_APPROVE_SEND: {
-        await assertReviewerAccess(input.actor, account);
+        contractorForNotification = await assertReviewerAccess(input.actor, account);
         if (input.actor.role !== USER_ROLES.JEFE) {
           throw new PaymentAccountServiceError(
             "Solo el jefe puede aprobar y enviar al CAD",
@@ -515,11 +575,15 @@ export const cuentasCobroWorkflowService = {
           );
         }
         assertSignature(input.actor);
-        account.jefeFirmadoAt = new Date();
-        account.jefeFirmadoPor = new Types.ObjectId(input.actor.id);
-        account.enviadaCadAt = new Date();
-        account.enviadaCadPor = new Types.ObjectId(input.actor.id);
-        account.estado = "ENVIADA_CAD";
+        if (isDevSendCadStateSkipped()) {
+          estadoParaNotificacion = "ENVIADA_CAD";
+        } else {
+          account.jefeFirmadoAt = new Date();
+          account.jefeFirmadoPor = new Types.ObjectId(input.actor.id);
+          account.enviadaCadAt = new Date();
+          account.enviadaCadPor = new Types.ObjectId(input.actor.id);
+          account.estado = "ENVIADA_CAD";
+        }
         break;
       }
 
@@ -531,8 +595,74 @@ export const cuentasCobroWorkflowService = {
         );
     }
 
-    await account.save();
-    return { paymentAccount: toPublicCuentaCobro(account) };
+      await account.save();
+
+      logger.info("[cuentas-cobro/workflow] Acción completada", {
+        ...logContext,
+        estadoAnterior,
+        estadoNuevo: account.estado,
+        estadoParaNotificacion: estadoParaNotificacion ?? null,
+      });
+
+      if (contractorForNotification) {
+      const contract = await Contrato.findById(input.contractId)
+        .select("numeroContrato")
+        .exec();
+      const contractorSnapshot = toContractorSnapshot(contractorForNotification);
+      const estadoNotificacion = estadoParaNotificacion ?? account.estado;
+      const isCadDelivery =
+        estadoNotificacion === "ENVIADA_CAD" || account.estado === "ENVIADA_CAD";
+
+      if (isCadDelivery) {
+        void sendCadPackageEmail({
+          userId: String(account.userId),
+          contractId: input.contractId,
+          accountNumber: account.numero,
+        }).catch((error) => {
+          logger.error("[cuentas-cobro/workflow] envío CAD", {
+            message: error instanceof Error ? error.message : String(error),
+          });
+        });
+      } else {
+        void sendWorkflowNotificationEmail({
+          contractId: input.contractId,
+          accountNumber: account.numero,
+          contractNumber: contract?.numeroContrato ?? input.contractId,
+          estadoNuevo: estadoNotificacion,
+          contractor: {
+            name: contractorSnapshot.name,
+            email: contractorSnapshot.email,
+            organizationalUnitId: contractorSnapshot.organizationalUnitId,
+            organizationalUnitType: contractorSnapshot.organizationalUnitType,
+            subareaId: contractorSnapshot.subareaId,
+          },
+          mensaje: input.mensaje,
+        }).catch((error) => {
+          logger.error("[cuentas-cobro/workflow] notificación", {
+            message: error instanceof Error ? error.message : String(error),
+          });
+        });
+      }
+      }
+
+      return { paymentAccount: toPublicCuentaCobro(account) };
+    } catch (error) {
+      if (error instanceof PaymentAccountServiceError) {
+        logger.warn("[cuentas-cobro/workflow] Acción rechazada", {
+          ...logContext,
+          message: error.message,
+          statusCode: error.statusCode,
+          code: error.code,
+        });
+      } else {
+        logger.error("[cuentas-cobro/workflow] Error inesperado", {
+          ...logContext,
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+      }
+      throw error;
+    }
   },
 
   toWorkflowActor,

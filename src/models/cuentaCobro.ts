@@ -1,5 +1,6 @@
 import mongoose, { Schema, type Document, type Model, type Types } from "mongoose";
 import type { UserRole } from "@/constants/userRoles";
+import { parseGfrFo11Responses } from "@/lib/cuentas-cobro/gfrFo11Responses";
 import { parsePaymentAccountDeclarations } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
 
 export const CUENTA_COBRO_STATUS = {
@@ -26,6 +27,21 @@ export type ICuentaCobroDeclaracionesJuradas = {
   rutActualizado: boolean;
 };
 
+export type ICuentaCobroGfrFo11 = {
+  ingresosAnioAnterior: number;
+  ingresosAnioActual: number;
+  multiplesEstablecimientos: boolean;
+  establecimientoDesarrolloActividad: boolean;
+  usuarioAduanero: boolean;
+  contratosServiciosAnioAnterior: number;
+  contratosServiciosAnioActual: number;
+  contratosEstadoAnioAnterior: number;
+  contratosEstadoAnioActual: number;
+  consignacionesAnioAnterior: number;
+  consignacionesAnioActual: number;
+  regimenSimple: boolean;
+};
+
 export type ICuentaCobroDevolucion = {
   deRol: UserRole;
   deUserId: Types.ObjectId;
@@ -48,6 +64,7 @@ export interface ICuentaCobro {
   valor?: number;
   observaciones?: string;
   declaracionesJuradas?: ICuentaCobroDeclaracionesJuradas | null;
+  gfrFo11?: ICuentaCobroGfrFo11 | null;
   directorFirmadoAt?: Date | null;
   directorFirmadoPor?: Types.ObjectId | null;
   jefeFirmadoAt?: Date | null;
@@ -105,6 +122,20 @@ const cuentaCobroSchema = new Schema<ICuentaCobroDocument>(
       contratoMultiplesTrabajadores: { type: Boolean },
       rutActualizado: { type: Boolean },
     },
+    gfrFo11: {
+      ingresosAnioAnterior: { type: Number, min: 0 },
+      ingresosAnioActual: { type: Number, min: 0 },
+      multiplesEstablecimientos: { type: Boolean },
+      establecimientoDesarrolloActividad: { type: Boolean },
+      usuarioAduanero: { type: Boolean },
+      contratosServiciosAnioAnterior: { type: Number, min: 0 },
+      contratosServiciosAnioActual: { type: Number, min: 0 },
+      contratosEstadoAnioAnterior: { type: Number, min: 0 },
+      contratosEstadoAnioActual: { type: Number, min: 0 },
+      consignacionesAnioAnterior: { type: Number, min: 0 },
+      consignacionesAnioActual: { type: Number, min: 0 },
+      regimenSimple: { type: Boolean },
+    },
     directorFirmadoAt: { type: Date, default: null },
     directorFirmadoPor: {
       type: Schema.Types.ObjectId,
@@ -158,6 +189,7 @@ export function toPublicCuentaCobro(doc: ICuentaCobroDocument) {
     declaracionesJuradas: parsePaymentAccountDeclarations(
       doc.declaracionesJuradas
     ),
+    gfrFo11: parseGfrFo11Responses(doc.gfrFo11),
     directorFirmadoAt: toDateIso(doc.directorFirmadoAt),
     directorFirmadoPor: doc.directorFirmadoPor
       ? String(doc.directorFirmadoPor)

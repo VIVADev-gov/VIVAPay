@@ -24,16 +24,30 @@ type RouteContext = {
 };
 
 export async function POST(request: NextRequest, context: RouteContext) {
+  const { contratoId, numero } = await context.params;
+  const accountNumber = Number(numero);
+
   try {
     const { user } = await requireApiAuth(request);
-    const { contratoId, numero } = await context.params;
-    const accountNumber = Number(numero);
 
     if (!Number.isInteger(accountNumber)) {
+      logger.warn("[cuentas-cobro/workflow] Número de cuenta inválido", {
+        contratoId,
+        numero,
+      });
       return errorResponse("Número de cuenta inválido", 400);
     }
 
     const body = workflowBodySchema.parse(await request.json());
+
+    logger.info("[cuentas-cobro/workflow] POST recibido", {
+      contratoId,
+      accountNumber,
+      action: body.action,
+      userId: String(user._id),
+      userRole: user.role,
+    });
+
     const result = await cuentasCobroWorkflowService.runAction({
       actor: cuentasCobroWorkflowService.toWorkflowActor(user),
       contractId: contratoId,
@@ -45,16 +59,39 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return successResponse("Flujo actualizado correctamente", result);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      logger.warn("[cuentas-cobro/workflow] Body inválido", {
+        contratoId,
+        accountNumber,
+        issues: error.issues,
+      });
       return errorResponse(error.issues[0]?.message ?? "Datos inválidos", 400);
     }
     if (error instanceof ApiAuthError) {
+      logger.warn("[cuentas-cobro/workflow] Auth error", {
+        contratoId,
+        accountNumber,
+        message: error.message,
+        code: error.code,
+      });
       return errorResponse(error.message, error.statusCode, error.code);
     }
     if (error instanceof PaymentAccountServiceError) {
+      logger.warn("[cuentas-cobro/workflow] Respuesta de error", {
+        contratoId,
+        accountNumber,
+        message: error.message,
+        statusCode: error.statusCode,
+        code: error.code,
+      });
       return errorResponse(error.message, error.statusCode, error.code);
     }
 
-    logger.error("[cuentas-cobro/workflow]", error);
+    logger.error("[cuentas-cobro/workflow] Error no controlado", {
+      contratoId,
+      accountNumber,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return errorResponse("Error al actualizar el flujo de la cuenta", 500);
   }
 }

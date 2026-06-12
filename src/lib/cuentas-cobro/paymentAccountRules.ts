@@ -87,3 +87,7 @@ export function getPaymentDocumentLabel(tipoDocumento: string) {
   );
   return match?.label ?? tipoDocumento;
 }
+
+export function includesGfrFo11(phase: PaymentPhase) {
+  return phase === "PRIMERA" || phase === "UNICA";
+}

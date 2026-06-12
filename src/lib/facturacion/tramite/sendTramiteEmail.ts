@@ -1,14 +1,8 @@
 import "server-only";
 
+import { getEmailCad } from "@/lib/email/getEmailCad";
 import { sendEmail } from "@/lib/email/send";
 import type { TramiteAttachment, TramiteSendResult } from "./types";
-
-function getFacturacionCadEmail(): string | null {
-    const raw =
-        process.env.FACTURACION_CAD_EMAIL?.trim() ||
-        process.env.FACTURACION_CAT_EMAIL?.trim();
-    return raw || null;
-}
 
 export interface SendTramiteEmailInput {
     proveedor: string;
@@ -18,11 +12,11 @@ export interface SendTramiteEmailInput {
 }
 
 export async function sendTramiteEmail(input: SendTramiteEmailInput): Promise<TramiteSendResult> {
-    const dest = getFacturacionCadEmail();
+    const dest = getEmailCad();
     if (!dest) {
         return {
             success: false,
-            error: "FACTURACION_CAD_EMAIL no está configurado en el servidor",
+            error: "EMAIL_CAD no está configurado en el servidor",
         };
     }
 

@@ -1,0 +1,16 @@
+import { GFR_FO_16_CELLS } from "../cellMaps/gfrFo16.cells";
+import type { CellValues, FormPackageContext } from "../types";
+
+export function buildGfrFo16Data(ctx: FormPackageContext): CellValues {
+  const { contract, contractor, paymentAccount } = ctx;
+
+  return {
+    [GFR_FO_16_CELLS.contratista]: contractor.name,
+    [GFR_FO_16_CELLS.documentoContratista]: contractor.documentId,
+    [GFR_FO_16_CELLS.numeroContrato]: contract.numeroContrato,
+    [GFR_FO_16_CELLS.numeroDisponibilidad]: contract.numeroDisponibilidad,
+    [GFR_FO_16_CELLS.numeroCompromiso]: contract.numeroCompromiso,
+    [GFR_FO_16_CELLS.numeroCuentaCobro]: paymentAccount.numero,
+    [GFR_FO_16_CELLS.valorPago]: paymentAccount.valor ?? 0,
+  };
+}

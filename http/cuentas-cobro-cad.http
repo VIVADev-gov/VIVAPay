@@ -1,0 +1,178 @@
+# Cuentas de cobro — envío al CAD y generación de formularios
+#
+# Requisitos:
+#   - Servidor local: npm run dev (http://localhost:3000)
+#   - Rellenar variables @contratoId, @numeroCuenta y credenciales desde MongoDB
+#   - LibreOffice instalado (LIBREOFFICE_BIN en .env.local) para generar PDFs
+#   - EMAIL_CAD configurado en .env.local para envío de correos
+#   - DEV_SKIP_SEND_CAD_STATE=true para repetir send_cad sin cambiar estado (solo dev)
+#
+# Query MongoDB para obtener datos:
+#
+#   const cuenta = db.cuentas_cobro.findOne({
+#     estado: "PENDIENTE_ENVIO_CAD",
+#     directorFirmadoAt: { $ne: null }
+#   })
+#   const contratista = db.users.findOne({ _id: cuenta.userId })
+#   const supervisor = db.users.findOne({
+#     role: "SUPERVISOR",
+#     status: "ACTIVE",
+#     organizationalUnitId: contratista.organizationalUnitId,
+#     organizationalUnitType: contratista.organizationalUnitType,
+#     subareaId: contratista.subareaId ?? null
+#   })
+#
+#   // contratoId  = cuenta.contratoId
+#   // numeroCuenta = cuenta.numero
+#   // contratistaEmail = contratista.email
+#   // supervisorEmail  = supervisor.email (debe tener signaturePath)
+
+@baseUrl = http://localhost:3000/api
+
+# --- Sacar de MongoDB ---
+@contratoId = 6a274d24f5a2ed1de9106ff5
+@numeroCuenta = 1
+
+@supervisorEmail = dev@viva.gov.co
+@supervisorPassword = dev123
+
+@contratistaEmail = dev@viva.gov.co
+@contratistaPassword = dev123
+
+# Opcional: forzar destino de correos en desarrollo (variable en .env.local)
+# @emailOverride = cordobav444@viva.gov.co
+
+###############################################################################
+# 1. Login supervisor (acción send_cad)
+###############################################################################
+
+# @name loginSupervisor
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{supervisorEmail}}",
+  "password": "{{supervisorPassword}}"
+}
+
+###
+@supervisorToken = {{loginSupervisor.response.body.data.token}}
+
+###############################################################################
+# 2. Workflow — enviar cuenta al CAD
+#    Requisitos BD: estado=PENDIENTE_ENVIO_CAD, directorFirmadoAt != null,
+#    supervisor con firma y misma unidad org que el contratista.
+#    Dispara notificación por correo a EMAIL_CAD.
+###############################################################################
+
+### Enviar al CAD (supervisor)
+POST {{baseUrl}}/cuentas-cobro/contrato/{{contratoId}}/cuentas/{{numeroCuenta}}/workflow
+Authorization: Bearer {{supervisorToken}}
+Content-Type: application/json
+
+{
+  "action": "send_cad"
+}
+
+###############################################################################
+# Alternativa: jefe aprueba y envía al CAD (si estado = PENDIENTE_JEFE)
+###############################################################################
+
+# @name loginJefe
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "jefe@viva.gov.co",
+  "password": "REEMPLAZAR_PASSWORD"
+}
+
+###
+@jefeToken = {{loginJefe.response.body.data.token}}
+
+### Jefe firma y envía al CAD
+POST {{baseUrl}}/cuentas-cobro/contrato/{{contratoId}}/cuentas/{{numeroCuenta}}/workflow
+Authorization: Bearer {{jefeToken}}
+Content-Type: application/json
+
+{
+  "action": "jefe_approve_send"
+}
+
+###############################################################################
+# 3. Login contratista (generación de formularios PDF)
+#    El token debe ser del userId dueño del contrato/cuenta.
+###############################################################################
+
+# @name loginContratista
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "{{contratistaEmail}}",
+  "password": "{{contratistaPassword}}"
+}
+
+###
+@contratistaToken = {{loginContratista.response.body.data.token}}
+
+###############################################################################
+# 4. Formularios — solo generar (GFR-FO-11, GFR-FO-16, GFR-FO-17)
+###############################################################################
+
+### Generar formularios sin enviar correo
+POST {{baseUrl}}/cuentas-cobro/contrato/{{contratoId}}/cuentas/{{numeroCuenta}}/formularios
+Authorization: Bearer {{contratistaToken}}
+Content-Type: application/json
+
+{}
+
+###############################################################################
+# 5. Formularios — generar y enviar PDFs al CAD (EMAIL_CAD)
+###############################################################################
+
+### Generar y enviar al buzón EMAIL_CAD (.env.local)
+POST {{baseUrl}}/cuentas-cobro/contrato/{{contratoId}}/cuentas/{{numeroCuenta}}/formularios
+Authorization: Bearer {{contratistaToken}}
+Content-Type: application/json
+
+{
+  "sendEmail": true
+}
+
+### Generar y enviar a un correo explícito
+POST {{baseUrl}}/cuentas-cobro/contrato/{{contratoId}}/cuentas/{{numeroCuenta}}/formularios
+Authorization: Bearer {{contratistaToken}}
+Content-Type: application/json
+
+{
+  "sendEmail": true,
+  "to": "cordobav444@viva.gov.co"
+}
+
+###############################################################################
+# Dev — superusuario local (solo si DEV_SUPER_USER_ENABLED=true)
+# El contratista debe estar en la misma unidad org por defecto del dev user.
+###############################################################################
+
+# @name loginDevSupervisor
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "dev@viva.gov.co",
+  "password": "dev123",
+  "devRole": "SUPERVISOR"
+}
+
+###
+@devSupervisorToken = {{loginDevSupervisor.response.body.data.token}}
+
+### send_cad con dev superusuario
+POST {{baseUrl}}/cuentas-cobro/contrato/{{contratoId}}/cuentas/{{numeroCuenta}}/workflow
+Authorization: Bearer {{devSupervisorToken}}
+Content-Type: application/json
+
+{
+  "action": "send_cad"
+}

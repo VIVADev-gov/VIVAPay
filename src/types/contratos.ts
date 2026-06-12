@@ -115,6 +115,7 @@ export type PublicCuentaCobro = {
   valor: number | null;
   observaciones: string | null;
   declaracionesJuradas?: PaymentAccountDeclarations | null;
+  gfrFo11?: GfrFo11Responses | null;
   directorFirmadoAt?: string | null;
   directorFirmadoPor?: string | null;
   jefeFirmadoAt?: string | null;
@@ -256,4 +257,32 @@ export type PaymentAccountDeclarations = {
 
 export type CuentaCobroDeclarationsResponse = {
   declarations: PaymentAccountDeclarations | null;
+};
+
+export type GfrFo11Responses = {
+  ingresosAnioAnterior: number;
+  ingresosAnioActual: number;
+  multiplesEstablecimientos: boolean;
+  establecimientoDesarrolloActividad: boolean;
+  usuarioAduanero: boolean;
+  contratosServiciosAnioAnterior: number;
+  contratosServiciosAnioActual: number;
+  contratosEstadoAnioAnterior: number;
+  contratosEstadoAnioActual: number;
+  consignacionesAnioAnterior: number;
+  consignacionesAnioActual: number;
+  regimenSimple: boolean;
+};
+
+export type GfrFo11ConfigMeta = {
+  uvtAnioAnterior: number;
+  uvtAnioActual: number;
+  anioAnterior: number;
+  anioActual: number;
+  uvtThreshold: number;
+};
+
+export type CuentaCobroGfrFo11Response = {
+  responses: GfrFo11Responses | null;
+  config: GfrFo11ConfigMeta;
 };
