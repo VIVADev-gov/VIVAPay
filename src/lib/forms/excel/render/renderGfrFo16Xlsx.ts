@@ -11,8 +11,8 @@ import { FORM_TEMPLATES } from "../formTemplates";
 import type { FormPackageContext } from "../types";
 
 const GFR_FO_16_SIGNATURE_ANCHOR = {
-  tl: { col: 0.4, row: 25.1 },
-  br: { col: 2.6, row: 26.7 },
+  tl: { col: 0.7, row: 23.7 },
+  br: { col: 2.1, row: 25.5 },
 } as const;
 
 function resolveImageExtension(
