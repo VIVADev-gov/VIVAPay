@@ -1,8 +1,10 @@
 import "server-only";
 
 import { Types } from "mongoose";
+import { ORGANIZACION_TIPO } from "@/constants/organizacionViva";
 import { parseGfrFo11Responses } from "@/lib/cuentas-cobro/gfrFo11Responses";
 import { parsePaymentAccountDeclarations } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
+import { resolveFormOrdenador } from "@/lib/cuentas-cobro/resolveFormOrdenador";
 import { resolveFormReviewer } from "@/lib/cuentas-cobro/resolveFormReviewer";
 import {
   parseSeguridadSocialPlantillaMetadata,
@@ -107,11 +109,25 @@ export async function buildFormPackageContext(
     throw new Error("No se encontró el contrato o la cuenta de cobro");
   }
 
-  const reviewer = await resolveFormReviewer({
+  const contractorOrg = {
     organizationalUnitId: contractor.organizationalUnitId ?? "",
     organizationalUnitType: contractor.organizationalUnitType ?? "",
     subareaId: contractor.subareaId ?? null,
-  });
+  };
+
+  const [reviewer, ordenador] = await Promise.all([
+    resolveFormReviewer(contractorOrg),
+    resolveFormOrdenador(
+      contractorOrg,
+      contractor.organizationalUnitType === ORGANIZACION_TIPO.JEFATURA
+        ? account.jefeFirmadoPor
+          ? String(account.jefeFirmadoPor)
+          : null
+        : account.directorFirmadoPor
+          ? String(account.directorFirmadoPor)
+          : null
+    ),
+  ]);
 
   const seguridadSocialDocument = documents.find(
     (document) => document.tipoDocumento === SEGURIDAD_SOCIAL_TIPO
@@ -121,6 +137,7 @@ export async function buildFormPackageContext(
     contract: toContractSnapshot(contract),
     contractor: toContractorSnapshot(contractor),
     reviewer,
+    ordenador,
     paymentAccount: toPaymentAccountSnapshot(account),
     paymentAccounts: paymentAccounts.map(toPaymentAccountSnapshot),
     activities: (activitiesDoc?.actividades ?? []).map((activity) => ({

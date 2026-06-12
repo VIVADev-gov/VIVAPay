@@ -10,6 +10,10 @@ export async function renderGfrFo16Xlsx(ctx: FormPackageContext) {
   return fillXlsxTemplate(
     template.file,
     template.sheet,
-    buildGfrFo16Data(ctx)
+    buildGfrFo16Data(ctx),
+    {
+      trimRowsAfter: 35,
+      printArea: "A1:I35",
+    }
   );
 }

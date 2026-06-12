@@ -1,3 +1,4 @@
+import type { FormOrdenador } from "@/lib/cuentas-cobro/resolveFormOrdenador";
 import type { FormReviewer } from "@/lib/cuentas-cobro/resolveFormReviewer";
 import type { SeguridadSocialPlantillaMetadata } from "@/lib/cuentas-cobro/seguridadSocialPlantilla";
 import type {
@@ -60,6 +61,7 @@ export type FormPackageContext = {
   contract: FormContractSnapshot;
   contractor: FormContractorSnapshot;
   reviewer: FormReviewer;
+  ordenador: FormOrdenador;
   paymentAccount: FormPaymentAccountSnapshot;
   paymentAccounts: FormPaymentAccountSnapshot[];
   activities: FormActivityItem[];
