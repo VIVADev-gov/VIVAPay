@@ -4,10 +4,40 @@ import ExcelJS from "exceljs";
 import path from "path";
 import type { CellValues } from "./types";
 
+export type FillXlsxImageExtension = "png" | "jpeg" | "gif";
+
+export type FillXlsxImageAnchor = {
+  absolutePath: string;
+  extension: FillXlsxImageExtension;
+  tl: { col: number; row: number };
+  br: { col: number; row: number };
+};
+
+export type FillXlsxPageSetup = {
+  fitToPage?: boolean;
+  fitToWidth?: number;
+  fitToHeight?: number;
+  orientation?: "portrait" | "landscape";
+};
+
 export type FillXlsxOptions = {
   trimRowsAfter?: number;
   printArea?: string;
+  pageSetup?: FillXlsxPageSetup;
+  images?: FillXlsxImageAnchor[];
+  removeOtherSheets?: boolean;
 };
+
+function removeWorksheetsExcept(
+  workbook: ExcelJS.Workbook,
+  keepSheet: ExcelJS.Worksheet
+) {
+  for (const worksheet of [...workbook.worksheets]) {
+    if (worksheet.id !== keepSheet.id) {
+      workbook.removeWorksheet(worksheet.id);
+    }
+  }
+}
 
 function resolveWorksheet(workbook: ExcelJS.Workbook, sheetName: string) {
   const exact = workbook.getWorksheet(sheetName);
@@ -17,6 +47,24 @@ function resolveWorksheet(workbook: ExcelJS.Workbook, sheetName: string) {
   return workbook.worksheets.find(
     (sheet) => sheet.name.trim().toLowerCase() === normalized
   );
+}
+
+function applyPageSetup(sheet: ExcelJS.Worksheet, pageSetup: FillXlsxPageSetup) {
+  if (pageSetup.fitToPage != null) {
+    sheet.pageSetup.fitToPage = pageSetup.fitToPage;
+  }
+  if (pageSetup.fitToWidth != null) {
+    sheet.pageSetup.fitToWidth = pageSetup.fitToWidth;
+  }
+  if (pageSetup.fitToHeight != null) {
+    sheet.pageSetup.fitToHeight = pageSetup.fitToHeight;
+  }
+  if (pageSetup.orientation) {
+    sheet.pageSetup.orientation = pageSetup.orientation;
+  }
+  if (pageSetup.fitToPage) {
+    sheet.pageSetup.scale = 100;
+  }
 }
 
 export async function fillXlsxTemplate(
@@ -31,6 +79,10 @@ export async function fillXlsxTemplate(
   const sheet = resolveWorksheet(workbook, sheetName);
   if (!sheet) {
     throw new Error(`Hoja no encontrada en ${templateRelPath}: ${sheetName}`);
+  }
+
+  if (options?.removeOtherSheets) {
+    removeWorksheetsExcept(workbook, sheet);
   }
 
   for (const [cellRef, value] of Object.entries(values)) {
@@ -53,6 +105,22 @@ export async function fillXlsxTemplate(
 
   if (options?.printArea) {
     sheet.pageSetup.printArea = options.printArea;
+  }
+
+  if (options?.pageSetup) {
+    applyPageSetup(sheet, options.pageSetup);
+  }
+
+  for (const image of options?.images ?? []) {
+    const imageId = workbook.addImage({
+      filename: image.absolutePath,
+      extension: image.extension,
+    });
+    sheet.addImage(imageId, {
+      tl: image.tl,
+      br: image.br,
+      editAs: "oneCell",
+    });
   }
 
   const arrayBuffer = await workbook.xlsx.writeBuffer();

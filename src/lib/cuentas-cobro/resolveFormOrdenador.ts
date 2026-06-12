@@ -19,7 +19,26 @@ export type FormOrdenador = {
   documentId: string;
   role: string;
   organizationalUnitName: string;
+  signaturePath: string | null;
 };
+
+function toFormOrdenador(user: {
+  _id: unknown;
+  name: string;
+  documentId: string;
+  role: string;
+  organizationalUnitName?: string | null;
+  signaturePath?: string | null;
+}): FormOrdenador {
+  return {
+    id: String(user._id),
+    name: user.name,
+    documentId: user.documentId,
+    role: user.role,
+    organizationalUnitName: user.organizationalUnitName ?? "",
+    signaturePath: user.signaturePath?.trim() || null,
+  };
+}
 
 async function findActiveOrdenador(contractor: FormOrdenadorContractor) {
   if (contractor.organizationalUnitType === ORGANIZACION_TIPO.JEFATURA) {
@@ -29,7 +48,7 @@ async function findActiveOrdenador(contractor: FormOrdenadorContractor) {
       organizationalUnitType: ORGANIZACION_TIPO.JEFATURA,
       status: USER_STATUS.ACTIVE,
     })
-      .select("_id name documentId role organizationalUnitName")
+      .select("_id name documentId role organizationalUnitName signaturePath")
       .exec();
   }
 
@@ -40,7 +59,7 @@ async function findActiveOrdenador(contractor: FormOrdenadorContractor) {
     subareaId: contractor.subareaId ?? null,
     status: USER_STATUS.ACTIVE,
   })
-    .select("_id name documentId role organizationalUnitName")
+    .select("_id name documentId role organizationalUnitName signaturePath")
     .exec();
 }
 
@@ -52,16 +71,10 @@ export async function resolveFormOrdenador(
 
   if (signedUserId && Types.ObjectId.isValid(signedUserId)) {
     const signedUser = await User.findById(signedUserId)
-      .select("_id name documentId role organizationalUnitName")
+      .select("_id name documentId role organizationalUnitName signaturePath")
       .exec();
     if (signedUser) {
-      return {
-        id: String(signedUser._id),
-        name: signedUser.name,
-        documentId: signedUser.documentId,
-        role: signedUser.role,
-        organizationalUnitName: signedUser.organizationalUnitName ?? "",
-      };
+      return toFormOrdenador(signedUser);
     }
   }
 
@@ -76,11 +89,5 @@ export async function resolveFormOrdenador(
     );
   }
 
-  return {
-    id: String(ordenador._id),
-    name: ordenador.name,
-    documentId: ordenador.documentId,
-    role: ordenador.role,
-    organizationalUnitName: ordenador.organizationalUnitName ?? "",
-  };
+  return toFormOrdenador(ordenador);
 }
