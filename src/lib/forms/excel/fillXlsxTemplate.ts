@@ -18,6 +18,7 @@ export type FillXlsxPageSetup = {
   fitToWidth?: number;
   fitToHeight?: number;
   orientation?: "portrait" | "landscape";
+  scale?: number;
 };
 
 export type FillXlsxOptions = {
@@ -26,7 +27,47 @@ export type FillXlsxOptions = {
   pageSetup?: FillXlsxPageSetup;
   images?: FillXlsxImageAnchor[];
   removeOtherSheets?: boolean;
+  clearColumnsAfter?: string;
+  resetDimensions?: { lastRow: number; lastCol: number };
 };
+
+function columnLetterToNumber(letter: string): number {
+  const normalized = letter.trim().toUpperCase();
+  let column = 0;
+  for (let index = 0; index < normalized.length; index++) {
+    column = column * 26 + (normalized.charCodeAt(index) - 64);
+  }
+  return column;
+}
+
+function clearColumnsAfterLetter(
+  sheet: ExcelJS.Worksheet,
+  afterColumn: string,
+  lastRow: number
+) {
+  const startColumn = columnLetterToNumber(afterColumn) + 1;
+  const maxColumn = Math.max(sheet.columnCount, 80);
+  for (let rowNumber = 1; rowNumber <= lastRow; rowNumber++) {
+    const row = sheet.getRow(rowNumber);
+    for (let columnNumber = startColumn; columnNumber <= maxColumn; columnNumber++) {
+      row.getCell(columnNumber).value = null;
+    }
+  }
+}
+
+function resetSheetDimensions(
+  sheet: ExcelJS.Worksheet,
+  dimensions: { lastRow: number; lastCol: number }
+) {
+  if (sheet.dimensions) {
+    sheet.dimensions.model = {
+      top: 1,
+      left: 1,
+      bottom: dimensions.lastRow,
+      right: dimensions.lastCol,
+    };
+  }
+}
 
 function removeWorksheetsExcept(
   workbook: ExcelJS.Workbook,
@@ -62,7 +103,9 @@ function applyPageSetup(sheet: ExcelJS.Worksheet, pageSetup: FillXlsxPageSetup) 
   if (pageSetup.orientation) {
     sheet.pageSetup.orientation = pageSetup.orientation;
   }
-  if (pageSetup.fitToPage) {
+  if (pageSetup.scale != null) {
+    sheet.pageSetup.scale = pageSetup.scale;
+  } else if (pageSetup.fitToPage) {
     sheet.pageSetup.scale = 100;
   }
 }
@@ -101,6 +144,15 @@ export async function fillXlsxTemplate(
     if (rowsToRemove > 0) {
       sheet.spliceRows(options.trimRowsAfter + 1, rowsToRemove);
     }
+  }
+
+  if (options?.clearColumnsAfter) {
+    const lastRow = options.trimRowsAfter ?? sheet.rowCount;
+    clearColumnsAfterLetter(sheet, options.clearColumnsAfter, lastRow);
+  }
+
+  if (options?.resetDimensions) {
+    resetSheetDimensions(sheet, options.resetDimensions);
   }
 
   if (options?.printArea) {
