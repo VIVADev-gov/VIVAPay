@@ -15,6 +15,7 @@ const workflowBodySchema = z.object({
     CUENTA_COBRO_WORKFLOW_ACTION.DIRECTOR_SIGN,
     CUENTA_COBRO_WORKFLOW_ACTION.SEND_CAD,
     CUENTA_COBRO_WORKFLOW_ACTION.JEFE_APPROVE_SEND,
+    CUENTA_COBRO_WORKFLOW_ACTION.MARK_PAID,
   ]),
   mensaje: z.string().trim().optional(),
 });

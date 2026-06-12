@@ -89,6 +89,10 @@ export function canJefeApproveSend(account: WorkflowAccount) {
   return account.estado === "PENDIENTE_JEFE";
 }
 
+export function canMarkPaid(account: WorkflowAccount) {
+  return account.estado === "ENVIADA_CAD";
+}
+
 export function canReturnToContractor(
   account: WorkflowAccount,
   role: UserRole

@@ -18,6 +18,7 @@ export type FormReviewer = {
   documentId: string;
   role: UserRole;
   organizationalUnitName: string;
+  signaturePath: string | null;
 };
 
 function resolveReviewerRole(contractor: FormReviewerContractor): UserRole {
@@ -50,7 +51,7 @@ export async function resolveFormReviewer(
         };
 
   const reviewer = await User.findOne(query)
-    .select("_id name documentId role organizationalUnitName")
+    .select("_id name documentId role organizationalUnitName signaturePath")
     .exec();
 
   if (!reviewer) {
@@ -66,5 +67,6 @@ export async function resolveFormReviewer(
     documentId: reviewer.documentId,
     role: reviewer.role,
     organizationalUnitName: reviewer.organizationalUnitName ?? "",
+    signaturePath: reviewer.signaturePath?.trim() || null,
   };
 }

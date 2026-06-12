@@ -45,6 +45,7 @@ export type FormContractorSnapshot = {
   organizationalUnitType: string;
   organizationalUnitId: string;
   subareaId?: string | null;
+  signaturePath: string | null;
 };
 
 export type FormPaymentAccountSnapshot = {
@@ -53,6 +54,8 @@ export type FormPaymentAccountSnapshot = {
   periodoInicio: Date | null;
   periodoFin: Date | null;
   valor: number | null;
+  enviadaCadAt: Date | null;
+  fechaPago: Date | null;
   declaracionesJuradas: PaymentAccountDeclarations | null;
   gfrFo11: GfrFo11Responses | null;
 };

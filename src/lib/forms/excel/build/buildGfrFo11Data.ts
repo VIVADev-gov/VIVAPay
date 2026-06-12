@@ -20,7 +20,7 @@ export function buildGfrFo11Data(ctx: FormPackageContext): CellValues {
   const { day, month, year } = splitDateParts(signatureDate);
 
   const values: CellValues = {
-    [GFR_FO_11_CELLS.nombre]: contractor.name,
+    [GFR_FO_11_CELLS.nombre]: contractor.name.toUpperCase(),
     [GFR_FO_11_CELLS.documento]: contractor.documentId,
     [GFR_FO_11_CELLS.numeroContrato]: contract.numeroContrato,
     [GFR_FO_11_CELLS.diaFirma]: day,

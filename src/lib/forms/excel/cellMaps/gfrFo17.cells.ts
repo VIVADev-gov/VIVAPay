@@ -32,6 +32,16 @@ export const GFR_FO_17_CELLS = {
   conceptoActual: "G44",
   centroCostoActual: "H44",
   valorActual: "J44",
+  cuentaActualTotal: "J50",
+  historialTotalHonorarios: "F59",
+  historialTotalGastos: "G59",
+  historialTotalIva: "H59",
+  valorContractual: "F60",
+  valorContractualGastos: "G60",
+  valorContractualIva: "H60",
+  saldoContractualHonorarios: "F61",
+  saldoContractualGastos: "G61",
+  saldoContractualIva: "H61",
   declaracion383Si: "D67",
   declaracion383No: "F67",
   declaracionRutSi: "D71",
@@ -46,3 +56,15 @@ export const GFR_FO_17_CELLS = {
 } as const;
 
 export const GFR_FO_17_HISTORIAL_START_ROW = 53;
+export const GFR_FO_17_HISTORIAL_MAX_ROWS = 6;
+
+export const GFR_FO_17_SIGNATURE_ANCHORS = {
+  contratista: {
+    tl: { col: 1.0, row: 122.9 },
+    ext: { width: 220, height: 40 },
+  },
+  supervisor: {
+    tl: { col: 1.0, row: 134.9 },
+    ext: { width: 220, height: 40 },
+  },
+} as const;

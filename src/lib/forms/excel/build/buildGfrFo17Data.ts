@@ -1,25 +1,96 @@
 import { formatCurrencyInWords } from "@/utils/numberToWords";
 import {
   GFR_FO_17_CELLS,
+  GFR_FO_17_HISTORIAL_MAX_ROWS,
   GFR_FO_17_HISTORIAL_START_ROW,
 } from "../cellMaps/gfrFo17.cells";
-import type { CellValues, FormPackageContext } from "../types";
+import type {
+  CellValues,
+  FormPackageContext,
+  FormPaymentAccountSnapshot,
+} from "../types";
 import {
   applyDeclarationCells,
   formatPlazoMeses,
   parseIsoDate,
 } from "./formExcelHelpers";
 
-function appendHistorialRows(
-  values: CellValues,
-  ctx: FormPackageContext
-) {
-  const sorted = [...ctx.paymentAccounts].sort((a, b) => a.numero - b.numero);
-  sorted.forEach((account, index) => {
+function appendHistorialRows(values: CellValues, ctx: FormPackageContext) {
+  const currentNumero = ctx.paymentAccount.numero;
+  const valorContrato = ctx.contract.valorInicialContrato;
+  const sorted = [...ctx.paymentAccounts]
+    .filter((account) => account.numero <= currentNumero)
+    .sort((a, b) => a.numero - b.numero);
+
+  const totalHonorarios = sorted.reduce(
+    (sum, account) => sum + (account.valor ?? 0),
+    0
+  );
+
+  let honorariosAcum = 0;
+
+  for (let index = 0; index < GFR_FO_17_HISTORIAL_MAX_ROWS; index++) {
     const row = GFR_FO_17_HISTORIAL_START_ROW + index;
-    values[`C${row}`] = account.numero;
-    values[`H${row}`] = account.valor ?? 0;
-  });
+    const account = sorted[index];
+
+    if (!account) {
+      values[`C${row}`] = "";
+      values[`E${row}`] = "";
+      values[`F${row}`] = "";
+      values[`G${row}`] = "";
+      values[`H${row}`] = "";
+      values[`I${row}`] = "";
+      continue;
+    }
+
+    honorariosAcum += account.valor ?? 0;
+    fillHistorialRow(
+      values,
+      row,
+      account,
+      currentNumero,
+      valorContrato,
+      honorariosAcum
+    );
+  }
+
+  const saldoContractual = valorContrato - totalHonorarios;
+
+  values[GFR_FO_17_CELLS.historialTotalHonorarios] = totalHonorarios;
+  values[GFR_FO_17_CELLS.historialTotalGastos] = 0;
+  values[GFR_FO_17_CELLS.historialTotalIva] = totalHonorarios;
+  values[GFR_FO_17_CELLS.valorContractual] = valorContrato;
+  values[GFR_FO_17_CELLS.valorContractualGastos] = 0;
+  values[GFR_FO_17_CELLS.valorContractualIva] = valorContrato;
+  values[GFR_FO_17_CELLS.saldoContractualHonorarios] = saldoContractual;
+  values[GFR_FO_17_CELLS.saldoContractualGastos] = 0;
+  values[GFR_FO_17_CELLS.saldoContractualIva] = saldoContractual;
+}
+
+function fillHistorialRow(
+  values: CellValues,
+  row: number,
+  account: FormPaymentAccountSnapshot,
+  currentNumero: number,
+  valorContrato: number,
+  honorariosAcum: number
+) {
+  const honorario = account.valor ?? 0;
+  const saldo = valorContrato - honorariosAcum;
+  const isCurrent = account.numero === currentNumero;
+
+  if (isCurrent) {
+    values[`C${row}`] = "";
+    values[`E${row}`] = "";
+  } else {
+    values[`C${row}`] = account.enviadaCadAt ?? "";
+    values[`E${row}`] = account.fechaPago ?? "";
+  }
+
+  values[`F${row}`] = honorario;
+  values[`G${row}`] = "";
+  values[`H${row}`] = honorario;
+  values[`I${row}`] = saldo;
 }
 
 function appendActivityRows(values: CellValues, ctx: FormPackageContext) {
@@ -45,12 +116,12 @@ export function buildGfrFo17Data(ctx: FormPackageContext): CellValues {
     .reduce((sum, account) => sum + (account.valor ?? 0), 0);
 
   const values: CellValues = {
-    [GFR_FO_17_CELLS.contratista]: contractor.name,
+    [GFR_FO_17_CELLS.contratista]: contractor.name.toUpperCase(),
     [GFR_FO_17_CELLS.tipoDocumento]: "CC",
     [GFR_FO_17_CELLS.documentoContratista]: contractor.documentId,
     [GFR_FO_17_CELLS.numeroContrato]: contract.numeroContrato,
     [GFR_FO_17_CELLS.dependenciaContratante]: contractor.organizationalUnitName,
-    [GFR_FO_17_CELLS.nombreSupervisor]: reviewer.name,
+    [GFR_FO_17_CELLS.nombreSupervisor]: reviewer.name.toUpperCase(),
     [GFR_FO_17_CELLS.documentoSupervisor]: reviewer.documentId,
     [GFR_FO_17_CELLS.objeto]: contract.objeto,
     [GFR_FO_17_CELLS.plazoMeses]: formatPlazoMeses(contract.plazoMeses),
@@ -76,6 +147,7 @@ export function buildGfrFo17Data(ctx: FormPackageContext): CellValues {
     [GFR_FO_17_CELLS.conceptoActual]: contract.concepto,
     [GFR_FO_17_CELLS.centroCostoActual]: process.env.GFR_FO_17_CENTRO_COSTO ?? "",
     [GFR_FO_17_CELLS.valorActual]: valor,
+    [GFR_FO_17_CELLS.cuentaActualTotal]: valor,
     [GFR_FO_17_CELLS.porcentajeEjecucionFinanciera]:
       contract.valorInicialContrato > 0
         ? totalPagado / contract.valorInicialContrato

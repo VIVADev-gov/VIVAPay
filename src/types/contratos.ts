@@ -122,6 +122,7 @@ export type PublicCuentaCobro = {
   jefeFirmadoPor?: string | null;
   enviadaCadAt?: string | null;
   enviadaCadPor?: string | null;
+  fechaPago?: string | null;
   devoluciones?: PublicCuentaCobroDevolucion[];
   createdAt?: string | null;
   updatedAt?: string | null;

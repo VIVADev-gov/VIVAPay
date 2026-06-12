@@ -71,6 +71,7 @@ export interface ICuentaCobro {
   jefeFirmadoPor?: Types.ObjectId | null;
   enviadaCadAt?: Date | null;
   enviadaCadPor?: Types.ObjectId | null;
+  fechaPago?: Date | null;
   devoluciones?: ICuentaCobroDevolucion[];
   createdAt?: Date;
   updatedAt?: Date;
@@ -154,6 +155,7 @@ const cuentaCobroSchema = new Schema<ICuentaCobroDocument>(
       ref: "User",
       default: null,
     },
+    fechaPago: { type: Date, default: null },
     devoluciones: { type: [devolucionSchema], default: [] },
   },
   { timestamps: true, collection: "cuentas_cobro" }
@@ -198,6 +200,7 @@ export function toPublicCuentaCobro(doc: ICuentaCobroDocument) {
     jefeFirmadoPor: doc.jefeFirmadoPor ? String(doc.jefeFirmadoPor) : null,
     enviadaCadAt: toDateIso(doc.enviadaCadAt),
     enviadaCadPor: doc.enviadaCadPor ? String(doc.enviadaCadPor) : null,
+    fechaPago: toDateIso(doc.fechaPago),
     devoluciones: (doc.devoluciones ?? []).map((item, index) => ({
       id: String((item as { _id?: Types.ObjectId })._id ?? index),
       deRol: item.deRol,

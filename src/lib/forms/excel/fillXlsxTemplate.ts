@@ -6,11 +6,24 @@ import type { CellValues } from "./types";
 
 export type FillXlsxImageExtension = "png" | "jpeg" | "gif";
 
+export type FillXlsxImageEditAs = "oneCell" | "absolute" | "twoCell";
+
 export type FillXlsxImageAnchor = {
   absolutePath: string;
   extension: FillXlsxImageExtension;
   tl: { col: number; row: number };
-  br: { col: number; row: number };
+  br?: { col: number; row: number };
+  ext?: { width: number; height: number };
+  editAs?: FillXlsxImageEditAs;
+};
+
+export type FillXlsxPageMargins = {
+  left?: number;
+  right?: number;
+  top?: number;
+  bottom?: number;
+  header?: number;
+  footer?: number;
 };
 
 export type FillXlsxPageSetup = {
@@ -19,6 +32,9 @@ export type FillXlsxPageSetup = {
   fitToHeight?: number;
   orientation?: "portrait" | "landscape";
   scale?: number;
+  horizontalCentered?: boolean;
+  verticalCentered?: boolean;
+  margins?: FillXlsxPageMargins;
 };
 
 export type FillXlsxOptions = {
@@ -108,6 +124,18 @@ function applyPageSetup(sheet: ExcelJS.Worksheet, pageSetup: FillXlsxPageSetup) 
   } else if (pageSetup.fitToPage) {
     sheet.pageSetup.scale = 100;
   }
+  if (pageSetup.horizontalCentered != null) {
+    sheet.pageSetup.horizontalCentered = pageSetup.horizontalCentered;
+  }
+  if (pageSetup.verticalCentered != null) {
+    sheet.pageSetup.verticalCentered = pageSetup.verticalCentered;
+  }
+  if (pageSetup.margins) {
+    sheet.pageSetup.margins = {
+      ...sheet.pageSetup.margins,
+      ...pageSetup.margins,
+    };
+  }
 }
 
 export async function fillXlsxTemplate(
@@ -168,11 +196,21 @@ export async function fillXlsxTemplate(
       filename: image.absolutePath,
       extension: image.extension,
     });
-    sheet.addImage(imageId, {
+    const anchor: {
+      tl: { col: number; row: number };
+      br?: { col: number; row: number };
+      ext?: { width: number; height: number };
+      editAs?: FillXlsxImageEditAs;
+    } = {
       tl: image.tl,
-      br: image.br,
-      editAs: "oneCell",
-    });
+      editAs: image.editAs ?? "oneCell",
+    };
+    if (image.ext) {
+      anchor.ext = image.ext;
+    } else if (image.br) {
+      anchor.br = image.br;
+    }
+    sheet.addImage(imageId, anchor);
   }
 
   const arrayBuffer = await workbook.xlsx.writeBuffer();

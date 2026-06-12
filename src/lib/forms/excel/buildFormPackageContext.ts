@@ -39,6 +39,8 @@ function toPaymentAccountSnapshot(
     periodoInicio: parseIsoDate(account.periodoInicio),
     periodoFin: parseIsoDate(account.periodoFin),
     valor: account.valor ?? null,
+    enviadaCadAt: parseIsoDate(account.enviadaCadAt),
+    fechaPago: parseIsoDate(account.fechaPago),
     declaracionesJuradas: parsePaymentAccountDeclarations(
       account.declaracionesJuradas
     ),
@@ -163,5 +165,6 @@ function toContractorSnapshot(contractor: IUserDocument) {
     organizationalUnitType: contractor.organizationalUnitType ?? "",
     organizationalUnitId: contractor.organizationalUnitId ?? "",
     subareaId: contractor.subareaId ?? null,
+    signaturePath: contractor.signaturePath?.trim() || null,
   };
 }

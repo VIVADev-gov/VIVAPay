@@ -12,6 +12,7 @@ import {
   canContractorSubmit,
   canDirectorSign,
   canJefeApproveSend,
+  canMarkPaid,
   canReturnToContractor,
   canSupervisorForwardDirector,
   canSupervisorSendCad,
@@ -584,6 +585,27 @@ export const cuentasCobroWorkflowService = {
           account.enviadaCadPor = new Types.ObjectId(input.actor.id);
           account.estado = "ENVIADA_CAD";
         }
+        break;
+      }
+
+      case CUENTA_COBRO_WORKFLOW_ACTION.MARK_PAID: {
+        contractorForNotification = await assertReviewerAccess(input.actor, account);
+        if (input.actor.role !== USER_ROLES.SUPERVISOR) {
+          throw new PaymentAccountServiceError(
+            "Solo el supervisor puede marcar la cuenta como pagada",
+            403,
+            PAYMENT_ACCOUNT_ERROR_CODES.WORKFLOW_FORBIDDEN
+          );
+        }
+        if (!canMarkPaid(account)) {
+          throw new PaymentAccountServiceError(
+            "La cuenta debe estar enviada al CAD para marcarla como pagada",
+            400,
+            PAYMENT_ACCOUNT_ERROR_CODES.WORKFLOW_INVALID_STATE
+          );
+        }
+        account.estado = "APROBADA";
+        account.fechaPago = new Date();
         break;
       }
 

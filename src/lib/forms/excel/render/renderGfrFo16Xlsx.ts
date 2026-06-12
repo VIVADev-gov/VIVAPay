@@ -1,13 +1,9 @@
 import "server-only";
 
-import path from "path";
-import { resolveReadableUploadAbsolutePath } from "@/lib/uploadsStorage";
 import { buildGfrFo16Data } from "../build/buildGfrFo16Data";
-import {
-  fillXlsxTemplate,
-  type FillXlsxImageExtension,
-} from "../fillXlsxTemplate";
+import { fillXlsxTemplate } from "../fillXlsxTemplate";
 import { FORM_TEMPLATES } from "../formTemplates";
+import { resolveFormSignatureImage } from "../resolveFormSignatureImage";
 import type { FormPackageContext } from "../types";
 
 const GFR_FO_16_SIGNATURE_ANCHOR = {
@@ -15,40 +11,15 @@ const GFR_FO_16_SIGNATURE_ANCHOR = {
   br: { col: 2.1, row: 25.5 },
 } as const;
 
-function resolveImageExtension(
-  absolutePath: string
-): FillXlsxImageExtension | null {
-  const ext = path.extname(absolutePath).toLowerCase();
-  if (ext === ".png") return "png";
-  if (ext === ".jpg" || ext === ".jpeg") return "jpeg";
-  if (ext === ".gif") return "gif";
-  return null;
-}
-
 export async function renderGfrFo16Xlsx(ctx: FormPackageContext) {
   const { ordenador } = ctx;
 
-  if (!ordenador.signaturePath) {
-    throw new Error(
-      "El ordenador del gasto no tiene firma registrada en Perfil"
-    );
-  }
-
-  const signatureAbsolutePath = await resolveReadableUploadAbsolutePath(
-    ordenador.signaturePath
+  const signature = await resolveFormSignatureImage(
+    ordenador.signaturePath,
+    "El ordenador del gasto no tiene firma registrada en Perfil",
+    "No se encontró el archivo de firma del ordenador del gasto",
+    "El archivo de firma del ordenador debe ser PNG, JPEG o GIF"
   );
-  if (!signatureAbsolutePath) {
-    throw new Error(
-      "No se encontró el archivo de firma del ordenador del gasto"
-    );
-  }
-
-  const extension = resolveImageExtension(signatureAbsolutePath);
-  if (!extension) {
-    throw new Error(
-      "El archivo de firma del ordenador debe ser PNG, JPEG o GIF"
-    );
-  }
 
   const template = FORM_TEMPLATES.GFR_FO_16;
   return fillXlsxTemplate(
@@ -67,8 +38,7 @@ export async function renderGfrFo16Xlsx(ctx: FormPackageContext) {
       },
       images: [
         {
-          absolutePath: signatureAbsolutePath,
-          extension,
+          ...signature,
           tl: { ...GFR_FO_16_SIGNATURE_ANCHOR.tl },
           br: { ...GFR_FO_16_SIGNATURE_ANCHOR.br },
         },
