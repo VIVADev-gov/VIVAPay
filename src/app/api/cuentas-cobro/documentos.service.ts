@@ -168,8 +168,16 @@ export const cuentasCobroDocumentosService = {
     const numeroContrato = current.numeroContrato ?? contract.numeroContrato;
     const tipoDocumento = normalizeTipoDocumento(input.tipoDocumento);
 
+    if (!input.file) {
+      throw new PaymentAccountServiceError(
+        "Debes adjuntar un archivo PDF",
+        400
+      );
+    }
+
+    const file = input.file;
     const saved = await saveContratoDocumento(
-      input.file,
+      file,
       numeroContrato,
       tipoDocumento
     );
@@ -195,9 +203,9 @@ export const cuentasCobroDocumentosService = {
         tipoDocumento,
         scope: CUENTA_COBRO_DOCUMENT_SCOPE.CONTRATO,
         filePath: saved.filePath,
-        originalName: input.file.name,
-        size: input.file.size,
-        mimeType: input.file.type,
+        originalName: file.name,
+        size: file.size,
+        mimeType: file.type,
         required: input.required ?? false,
         generated: false,
       },

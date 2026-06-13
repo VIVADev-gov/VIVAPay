@@ -75,8 +75,11 @@ function resetSheetDimensions(
   sheet: ExcelJS.Worksheet,
   dimensions: { lastRow: number; lastCol: number }
 ) {
-  if (sheet.dimensions) {
-    sheet.dimensions.model = {
+  const sheetDimensions = sheet.dimensions as
+    | (ExcelJS.Range & { model?: { top: number; left: number; bottom: number; right: number } })
+    | undefined;
+  if (sheetDimensions?.model) {
+    sheetDimensions.model = {
       top: 1,
       left: 1,
       bottom: dimensions.lastRow,
@@ -131,9 +134,21 @@ function applyPageSetup(sheet: ExcelJS.Worksheet, pageSetup: FillXlsxPageSetup) 
     sheet.pageSetup.verticalCentered = pageSetup.verticalCentered;
   }
   if (pageSetup.margins) {
+    const current = sheet.pageSetup.margins ?? {
+      left: 0.7,
+      right: 0.7,
+      top: 0.75,
+      bottom: 0.75,
+      header: 0.3,
+      footer: 0.3,
+    };
     sheet.pageSetup.margins = {
-      ...sheet.pageSetup.margins,
-      ...pageSetup.margins,
+      left: pageSetup.margins.left ?? current.left,
+      right: pageSetup.margins.right ?? current.right,
+      top: pageSetup.margins.top ?? current.top,
+      bottom: pageSetup.margins.bottom ?? current.bottom,
+      header: pageSetup.margins.header ?? current.header,
+      footer: pageSetup.margins.footer ?? current.footer,
     };
   }
 }
@@ -196,21 +211,26 @@ export async function fillXlsxTemplate(
       filename: image.absolutePath,
       extension: image.extension,
     });
-    const anchor: {
-      tl: { col: number; row: number };
-      br?: { col: number; row: number };
-      ext?: { width: number; height: number };
-      editAs?: FillXlsxImageEditAs;
-    } = {
-      tl: image.tl,
-      editAs: image.editAs ?? "oneCell",
-    };
+    const editAs = image.editAs ?? (image.br ? "twoCell" : "oneCell");
     if (image.ext) {
-      anchor.ext = image.ext;
+      sheet.addImage(
+        imageId,
+        {
+          tl: image.tl,
+          ext: image.ext,
+          editAs,
+        } as unknown as ExcelJS.ImagePosition
+      );
     } else if (image.br) {
-      anchor.br = image.br;
+      sheet.addImage(
+        imageId,
+        {
+          tl: image.tl,
+          br: image.br,
+          editAs,
+        } as unknown as ExcelJS.ImageRange
+      );
     }
-    sheet.addImage(imageId, anchor);
   }
 
   const arrayBuffer = await workbook.xlsx.writeBuffer();

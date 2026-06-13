@@ -30,5 +30,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "src/components/pdf/**",
+    "src/lib/pdf/**",
+    "src/lib/gdpFo02/**",
+    "src/lib/facturacion/**"
+  ]
 }
