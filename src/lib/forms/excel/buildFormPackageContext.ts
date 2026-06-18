@@ -3,6 +3,7 @@ import "server-only";
 import { Types } from "mongoose";
 import { ORGANIZACION_TIPO } from "@/constants/organizacionViva";
 import { parseGfrFo11Responses } from "@/lib/cuentas-cobro/gfrFo11Responses";
+import { parsePaymentAccountReembolsables } from "@/lib/cuentas-cobro/paymentAccountReembolsables";
 import { parsePaymentAccountDeclarations } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
 import { resolveFormOrdenador } from "@/lib/cuentas-cobro/resolveFormOrdenador";
 import { resolveFormReviewer } from "@/lib/cuentas-cobro/resolveFormReviewer";
@@ -45,6 +46,7 @@ function toPaymentAccountSnapshot(
       account.declaracionesJuradas
     ),
     gfrFo11: parseGfrFo11Responses(account.gfrFo11),
+    reembolsables: parsePaymentAccountReembolsables(account.reembolsables),
   };
 }
 
@@ -68,6 +70,9 @@ function toContractSnapshot(contract: IContratoDocument): FormContractSnapshot {
       current.numeroDisponibilidad ?? contract.numeroDisponibilidad,
     numeroCompromiso: current.numeroCompromiso ?? contract.numeroCompromiso,
     totalRecursosComprometidos: current.totalRecursosComprometidos ?? 0,
+    tieneReembolsables: contract.tieneReembolsables === true,
+    rubroRembolsable: contract.rubroRembolsable?.trim() || null,
+    conceptoRembolsable: contract.conceptoRembolsable?.trim() || null,
   };
 }
 

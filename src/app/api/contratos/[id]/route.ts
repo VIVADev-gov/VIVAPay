@@ -1,1 +1,1 @@
-export { GET } from "./contrato-detail.controller";
+export { GET, PATCH } from "./contrato-detail.controller";

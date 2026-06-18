@@ -14,6 +14,7 @@ import {
 } from "@/hooks/api/useCuentasCobro";
 import { useProfileQuery } from "@/hooks/api/useProfile";
 import { isDevSendCadStateSkipped } from "@/lib/cuentas-cobro/devSendCadState";
+import { contractRequiresReembolsables } from "@/lib/cuentas-cobro/paymentAccountReembolsables";
 import { getPaymentPhaseLabel } from "@/lib/cuentas-cobro/paymentAccountReadiness";
 import {
   getPaymentDocumentRequirements,
@@ -167,6 +168,8 @@ export default function PaymentAccountReviewWorkspace({
           activities={detail.activities}
           phaseLabel={phaseLabel}
           showGfrFo11={includesGfrFo11(phase)}
+          showReembolsables={contractRequiresReembolsables(contract)}
+          reembolsablesContract={contract}
           contractRequirements={contractRequirements}
           accountRequirements={accountRequirements}
           contractDocuments={detail.contractDocuments}

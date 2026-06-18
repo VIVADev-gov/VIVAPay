@@ -6,6 +6,7 @@ import ActionButton from "@/components/buttons/ActionButton";
 import PaymentAccountActivitiesModal from "@/components/cuentas-cobro/PaymentAccountActivitiesModal";
 import PaymentAccountDeclarationsModal from "@/components/cuentas-cobro/PaymentAccountDeclarationsModal";
 import PaymentAccountGfrFo11Modal from "@/components/cuentas-cobro/PaymentAccountGfrFo11Modal";
+import PaymentAccountReembolsablesModal from "@/components/cuentas-cobro/PaymentAccountReembolsablesModal";
 import PaymentAccountSeguridadSocialModal from "@/components/cuentas-cobro/PaymentAccountSeguridadSocialModal";
 import FileLink from "@/components/files/FileLink";
 import FileUpload from "@/components/forms/FileUpload";
@@ -14,9 +15,11 @@ import {
   useCuentaCobroDeclarationsQuery,
   useCuentaCobroDocumentsQuery,
   useCuentaCobroGfrFo11Query,
+  useCuentaCobroReembolsablesQuery,
   usePaymentAccountWorkflowMutation,
   useSaveCuentaCobroDeclarationsMutation,
   useSaveCuentaCobroGfrFo11Mutation,
+  useSaveCuentaCobroReembolsablesMutation,
   useUploadContratoDocumentMutation,
   useUploadCuentaCobroDocumentMutation,
 } from "@/hooks/api/useCuentasCobro";
@@ -50,6 +53,12 @@ import {
 } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
 import { formatGfrFo11Summary } from "@/lib/cuentas-cobro/gfrFo11Responses";
 import {
+  contractRequiresReembolsables,
+  formatReembolsablesContractSummary,
+  formatReembolsablesSummary,
+  isReembolsablesComplete,
+} from "@/lib/cuentas-cobro/paymentAccountReembolsables";
+import {
   formatSeguridadSocialPlantillaSummary,
   SEGURIDAD_SOCIAL_TIPO,
 } from "@/lib/cuentas-cobro/seguridadSocialPlantilla";
@@ -75,6 +84,7 @@ import {
   PenLine,
   ReceiptText,
   Send,
+  Wallet,
 } from "lucide-react";
 import { useUiStore } from "@/store/ui/ui-store";
 
@@ -268,6 +278,7 @@ export default function PaymentAccountWorkspace({
     useState<PaymentDocumentRequirement | null>(null);
   const [isDeclarationsModalOpen, setIsDeclarationsModalOpen] = useState(false);
   const [isGfrFo11ModalOpen, setIsGfrFo11ModalOpen] = useState(false);
+  const [isReembolsablesModalOpen, setIsReembolsablesModalOpen] = useState(false);
   useProfileQuery();
   const showToast = useUiStore((s) => s.showToast);
   const authUser = useAuthStore((s) => s.user);
@@ -286,6 +297,7 @@ export default function PaymentAccountWorkspace({
   const devWindowSkipped = isDevPaymentAccountWindowSkipped();
   const phase = resolvePaymentPhase(paymentAccount, paymentAccounts);
   const requiresGfrFo11 = includesGfrFo11(phase);
+  const requiresReembolsables = contractRequiresReembolsables(contract);
   const requirements = getPaymentDocumentRequirements(phase);
   const contractRequirements = requirements.filter(
     (requirement) => requirement.scope === "contract"
@@ -314,6 +326,15 @@ export default function PaymentAccountWorkspace({
     contract.id,
     paymentAccount.numero
   );
+  const reembolsablesQuery = useCuentaCobroReembolsablesQuery(
+    contract.id,
+    paymentAccount.numero,
+    requiresReembolsables || isReembolsablesModalOpen
+  );
+  const saveReembolsablesMutation = useSaveCuentaCobroReembolsablesMutation(
+    contract.id,
+    paymentAccount.numero
+  );
   const activitiesQuery = useCuentaCobroActivitiesQuery(
     contract.id,
     paymentAccount.numero
@@ -336,6 +357,10 @@ export default function PaymentAccountWorkspace({
   const gfrFo11 =
     gfrFo11Query.data?.responses ?? paymentAccount.gfrFo11 ?? null;
   const gfrFo11Config = gfrFo11Query.data?.config ?? null;
+  const reembolsables =
+    reembolsablesQuery.data?.responses ?? paymentAccount.reembolsables ?? null;
+  const reembolsablesPrefills = reembolsablesQuery.data?.prefills ?? null;
+  const reembolsablesCompleted = isReembolsablesComplete(reembolsables);
   const readiness = validatePaymentAccountReadiness({
     paymentAccount,
     paymentAccounts,
@@ -687,6 +712,52 @@ export default function PaymentAccountWorkspace({
         </div>
       </article>
 
+      {requiresReembolsables ? (
+        <article className="rounded-4xl border border-border/80 bg-linear-to-br from-card via-background to-ring/5 p-6 shadow-sm md:p-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                Gastos reembolsables
+              </p>
+              <h3 className="mt-2 text-xl font-black text-foreground">
+                Reembolsables
+              </h3>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                Este contrato incluye rubro y concepto reembolsables. Debes
+                completar el formulario en cada cuenta de cobro.
+              </p>
+              <p className="mt-3 rounded-2xl border border-border/70 bg-background/70 p-3 text-sm font-semibold text-foreground">
+                {formatReembolsablesContractSummary(contract)}
+              </p>
+              {reembolsablesCompleted ? (
+                <p className="mt-3 rounded-2xl border border-border/70 bg-background/70 p-3 text-sm font-semibold text-foreground">
+                  {formatReembolsablesSummary(reembolsables)}
+                </p>
+              ) : (
+                <p className="mt-3 text-sm font-semibold text-destructive">
+                  Pendiente de completar.
+                </p>
+              )}
+            </div>
+            <ActionButton
+              type="button"
+              variant="primary"
+              icon={Wallet}
+              label={
+                reembolsablesCompleted
+                  ? "Editar reembolsables"
+                  : "Completar reembolsables"
+              }
+              onClick={() => {
+                setIsReembolsablesModalOpen(true);
+                void reembolsablesQuery.refetch();
+              }}
+              disabled={readOnly || !isActionable}
+            />
+          </div>
+        </article>
+      ) : null}
+
       {requiresGfrFo11 ? (
         <article className="rounded-4xl border border-border/80 bg-linear-to-br from-card via-background to-ring/5 p-6 shadow-sm md:p-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -823,6 +894,41 @@ export default function PaymentAccountWorkspace({
                   error instanceof Error
                     ? error.message
                     : "No se pudo guardar el certificado GFR-FO-11",
+                variant: "error",
+              });
+            }
+          }}
+        />
+      ) : null}
+
+      {isReembolsablesModalOpen ? (
+        <PaymentAccountReembolsablesModal
+          isOpen={isReembolsablesModalOpen}
+          onClose={() => setIsReembolsablesModalOpen(false)}
+          prefills={reembolsablesPrefills}
+          prefillsLoading={reembolsablesQuery.isLoading}
+          prefillsError={
+            reembolsablesQuery.error instanceof Error
+              ? reembolsablesQuery.error.message
+              : null
+          }
+          initialResponses={reembolsables}
+          disabled={readOnly || !isActionable}
+          loading={saveReembolsablesMutation.isPending}
+          onSave={async (responses) => {
+            try {
+              await saveReembolsablesMutation.mutateAsync(responses);
+              showToast({
+                message: "Reembolsables guardados",
+                variant: "success",
+              });
+              setIsReembolsablesModalOpen(false);
+            } catch (error) {
+              showToast({
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : "No se pudieron guardar los reembolsables",
                 variant: "error",
               });
             }

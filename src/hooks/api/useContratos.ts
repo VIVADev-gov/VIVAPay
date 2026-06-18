@@ -9,6 +9,7 @@ import type {
   ContratosResponse,
   CreateContratoBody,
   CreateContratoResponse,
+  UpdateContratoBody,
 } from "@/types/contratos";
 import { cuentasCobroQueryKeys } from "./useCuentasCobro";
 
@@ -72,7 +73,10 @@ export function useContratoDetailQuery(id: string) {
     queryKey: contratosQueryKeys.detail(id),
     enabled: Boolean(id),
     queryFn: async () => {
-      setDetailLoading(true);
+      const hasCurrentDetail = useContratosStore.getState().detail?.contract.id === id;
+      if (!hasCurrentDetail) {
+        setDetailLoading(true);
+      }
       setDetailError(null);
       try {
         const { data } = await api.get<ApiResponse<ContratoDetailResponse>>(
@@ -85,10 +89,14 @@ export function useContratoDetailQuery(id: string) {
         const message =
           error instanceof Error ? error.message : "Error al cargar contrato";
         setDetailError(message);
-        setContratoDetail(null);
+        if (!hasCurrentDetail) {
+          setContratoDetail(null);
+        }
         throw error;
       } finally {
-        setDetailLoading(false);
+        if (!hasCurrentDetail) {
+          setDetailLoading(false);
+        }
       }
     },
   });
@@ -117,7 +125,9 @@ export function useCreateContratoMutation() {
 
 export function useRegenerateContratoPaymentAccountsMutation(contractId: string) {
   const queryClient = useQueryClient();
-  const setContratoDetail = useContratosStore((s) => s.setContratoDetail);
+  const applyContratoDetailUpdate = useContratosStore(
+    (s) => s.applyContratoDetailUpdate
+  );
 
   return useMutation({
     mutationFn: async () => {
@@ -128,11 +138,33 @@ export function useRegenerateContratoPaymentAccountsMutation(contractId: string)
       return data.data;
     },
     onSuccess: (data) => {
-      setContratoDetail(data);
+      applyContratoDetailUpdate(data);
+      queryClient.setQueryData(contratosQueryKeys.detail(contractId), data);
       queryClient.invalidateQueries({ queryKey: contratosQueryKeys.all });
-      queryClient.invalidateQueries({
-        queryKey: contratosQueryKeys.detail(contractId),
-      });
+      queryClient.invalidateQueries({ queryKey: cuentasCobroQueryKeys.summary });
+    },
+  });
+}
+
+export function useUpdateContratoMutation(contractId: string) {
+  const queryClient = useQueryClient();
+  const applyContratoDetailUpdate = useContratosStore(
+    (s) => s.applyContratoDetailUpdate
+  );
+
+  return useMutation({
+    mutationFn: async (body: UpdateContratoBody) => {
+      const { data } = await api.patch<ApiResponse<ContratoDetailResponse>>(
+        `/api/contratos/${contractId}`,
+        body
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+    onSuccess: (data) => {
+      applyContratoDetailUpdate(data);
+      queryClient.setQueryData(contratosQueryKeys.detail(contractId), data);
+      queryClient.invalidateQueries({ queryKey: contratosQueryKeys.all });
       queryClient.invalidateQueries({ queryKey: cuentasCobroQueryKeys.summary });
     },
   });

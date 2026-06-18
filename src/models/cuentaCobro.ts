@@ -2,6 +2,10 @@ import mongoose, { Schema, type Document, type Model, type Types } from "mongoos
 import type { UserRole } from "@/constants/userRoles";
 import { parseGfrFo11Responses } from "@/lib/cuentas-cobro/gfrFo11Responses";
 import { parsePaymentAccountDeclarations } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
+import {
+  parsePaymentAccountReembolsables,
+  type PaymentAccountReembolsables,
+} from "@/lib/cuentas-cobro/paymentAccountReembolsables";
 
 export const CUENTA_COBRO_STATUS = {
   BORRADOR: "BORRADOR",
@@ -51,6 +55,8 @@ export type ICuentaCobroDevolucion = {
   estadoNuevo: CuentaCobroStatus;
 };
 
+export type ICuentaCobroReembolsables = PaymentAccountReembolsables | null;
+
 export interface ICuentaCobro {
   userId: Types.ObjectId;
   contratoId: Types.ObjectId;
@@ -65,6 +71,7 @@ export interface ICuentaCobro {
   observaciones?: string;
   declaracionesJuradas?: ICuentaCobroDeclaracionesJuradas | null;
   gfrFo11?: ICuentaCobroGfrFo11 | null;
+  reembolsables?: ICuentaCobroReembolsables;
   directorFirmadoAt?: Date | null;
   directorFirmadoPor?: Types.ObjectId | null;
   jefeFirmadoAt?: Date | null;
@@ -137,6 +144,7 @@ const cuentaCobroSchema = new Schema<ICuentaCobroDocument>(
       consignacionesAnioActual: { type: Number, min: 0 },
       regimenSimple: { type: Boolean },
     },
+    reembolsables: { type: Schema.Types.Mixed, default: null },
     directorFirmadoAt: { type: Date, default: null },
     directorFirmadoPor: {
       type: Schema.Types.ObjectId,
@@ -192,6 +200,7 @@ export function toPublicCuentaCobro(doc: ICuentaCobroDocument) {
       doc.declaracionesJuradas
     ),
     gfrFo11: parseGfrFo11Responses(doc.gfrFo11),
+    reembolsables: parsePaymentAccountReembolsables(doc.reembolsables),
     directorFirmadoAt: toDateIso(doc.directorFirmadoAt),
     directorFirmadoPor: doc.directorFirmadoPor
       ? String(doc.directorFirmadoPor)

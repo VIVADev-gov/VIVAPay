@@ -1,5 +1,10 @@
 export type ContractModificationType = "ADICION" | "PRORROGA" | "SUSPENSION";
 
+export type ContractRubroAdicional = {
+  rubro: string;
+  concepto: string;
+};
+
 export type PublicContractSnapshot = {
   numeroContrato?: string;
   objeto?: string;
@@ -25,6 +30,21 @@ export type PublicContractModification = PublicContractSnapshot & {
   fechaRegistro?: string | null;
 };
 
+export type PublicContractFieldChange = {
+  campo: string;
+  etiqueta: string;
+  valorAnterior: string | null;
+  valorNuevo: string | null;
+};
+
+export type PublicContractEditHistoryEntry = {
+  id: string;
+  fecha: string | null;
+  userId: string;
+  userName: string;
+  cambios: PublicContractFieldChange[];
+};
+
 export type PublicContrato = PublicContractSnapshot & {
   id: string;
   userId: string;
@@ -42,7 +62,12 @@ export type PublicContrato = PublicContractSnapshot & {
   valorInicialContrato: number;
   numeroDisponibilidad: string;
   numeroCompromiso: string;
+  tieneReembolsables: boolean;
+  rubroRembolsable: string | null;
+  conceptoRembolsable: string | null;
+  rubrosAdicionales: ContractRubroAdicional[];
   modificaciones: PublicContractModification[];
+  historialEdiciones: PublicContractEditHistoryEntry[];
   vigente: boolean;
   actual: PublicContractSnapshot;
   paymentAccountCount?: number;
@@ -52,7 +77,7 @@ export type PublicContrato = PublicContractSnapshot & {
   updatedAt?: string | null;
 };
 
-export type CreateContratoBody = {
+export type ContratoFormBody = {
   numeroContrato: string;
   objeto: string;
   plazoMeses: number;
@@ -67,14 +92,25 @@ export type CreateContratoBody = {
   valorInicialContrato: number;
   numeroDisponibilidad: string;
   numeroCompromiso: string;
+  tieneReembolsables: boolean;
+  rubroRembolsable?: string;
+  conceptoRembolsable?: string;
+  rubrosAdicionales?: ContractRubroAdicional[];
+};
+
+export type CreateContratoBody = ContratoFormBody & {
   submittedPaymentAccountsCount?: number;
 };
+
+export type UpdateContratoBody = ContratoFormBody;
 
 export type CreateContratoResponse = {
   contract: PublicContrato;
   paymentAccountsGenerated: number;
   paymentAccountsRegularized?: number;
 };
+
+export type PaymentAccountReembolsables = import("@/lib/cuentas-cobro/paymentAccountReembolsables").PaymentAccountReembolsables;
 
 export type CuentaCobroStatus =
   | "BORRADOR"
@@ -116,6 +152,7 @@ export type PublicCuentaCobro = {
   observaciones: string | null;
   declaracionesJuradas?: PaymentAccountDeclarations | null;
   gfrFo11?: GfrFo11Responses | null;
+  reembolsables?: PaymentAccountReembolsables | null;
   directorFirmadoAt?: string | null;
   directorFirmadoPor?: string | null;
   jefeFirmadoAt?: string | null;
@@ -287,3 +324,9 @@ export type CuentaCobroGfrFo11Response = {
   responses: GfrFo11Responses | null;
   config: GfrFo11ConfigMeta;
 };
+
+export type {
+  CuentaCobroReembolsablesResponse,
+  EncargoComision,
+  ReembolsablesPrefills,
+} from "@/lib/cuentas-cobro/paymentAccountReembolsables";

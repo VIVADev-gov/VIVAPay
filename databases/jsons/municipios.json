@@ -1,0 +1,22 @@
+[
+  { "nombre": "Medellín", "value": "medellin", "subregion": { "$oid": "507f1f77bcf86cd799439011" }, "status": "activo" },
+  { "nombre": "Envigado", "value": "envigado", "subregion": { "$oid": "507f1f77bcf86cd799439011" }, "status": "activo" },
+  { "nombre": "Sabaneta", "value": "sabaneta", "subregion": { "$oid": "507f1f77bcf86cd799439011" }, "status": "activo" },
+  { "nombre": "Itagüí", "value": "itagui", "subregion": { "$oid": "507f1f77bcf86cd799439011" }, "status": "activo" },
+  { "nombre": "Bello", "value": "bello", "subregion": { "$oid": "507f1f77bcf86cd799439011" }, "status": "activo" },
+  { "nombre": "La Estrella", "value": "la_estrella", "subregion": { "$oid": "507f1f77bcf86cd799439011" }, "status": "activo" },
+  { "nombre": "Caldas", "value": "caldas", "subregion": { "$oid": "507f1f77bcf86cd799439011" }, "status": "activo" },
+  { "nombre": "Copacabana", "value": "copacabana", "subregion": { "$oid": "507f1f77bcf86cd799439011" }, "status": "activo" },
+  { "nombre": "Girardota", "value": "girardota", "subregion": { "$oid": "507f1f77bcf86cd799439011" }, "status": "activo" },
+  { "nombre": "Barbosa", "value": "barbosa", "subregion": { "$oid": "507f1f77bcf86cd799439011" }, "status": "activo" },
+  { "nombre": "Rionegro", "value": "rionegro", "subregion": { "$oid": "507f1f77bcf86cd799439012" }, "status": "activo" },
+  { "nombre": "Marinilla", "value": "marinilla", "subregion": { "$oid": "507f1f77bcf86cd799439012" }, "status": "activo" },
+  { "nombre": "El Santuario", "value": "el_santuario", "subregion": { "$oid": "507f1f77bcf86cd799439012" }, "status": "activo" },
+  { "nombre": "La Unión", "value": "la_union", "subregion": { "$oid": "507f1f77bcf86cd799439012" }, "status": "activo" },
+  { "nombre": "Carmen de Viboral", "value": "carmen_de_viboral", "subregion": { "$oid": "507f1f77bcf86cd799439012" }, "status": "activo" },
+  { "nombre": "Santuario", "value": "santuario", "subregion": { "$oid": "507f1f77bcf86cd799439012" }, "status": "activo" },
+  { "nombre": "Apartadó", "value": "apartado", "subregion": { "$oid": "507f1f77bcf86cd799439016" }, "status": "activo" },
+  { "nombre": "Turbo", "value": "turbo", "subregion": { "$oid": "507f1f77bcf86cd799439016" }, "status": "activo" },
+  { "nombre": "Carepa", "value": "carepa", "subregion": { "$oid": "507f1f77bcf86cd799439016" }, "status": "activo" },
+  { "nombre": "Necoclí", "value": "necocli", "subregion": { "$oid": "507f1f77bcf86cd799439016" }, "status": "activo" }
+]

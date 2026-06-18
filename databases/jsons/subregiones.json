@@ -1,0 +1,56 @@
+[
+  {
+    "_id": { "$oid": "507f1f77bcf86cd799439011" },
+    "nombre": "Valle de Aburrá",
+    "value": "valle_de_aburra",
+    "status": "activo"
+  },
+  {
+    "_id": { "$oid": "507f1f77bcf86cd799439012" },
+    "nombre": "Oriente",
+    "value": "oriente",
+    "status": "activo"
+  },
+  {
+    "_id": { "$oid": "507f1f77bcf86cd799439013" },
+    "nombre": "Occidente",
+    "value": "occidente",
+    "status": "activo"
+  },
+  {
+    "_id": { "$oid": "507f1f77bcf86cd799439014" },
+    "nombre": "Norte",
+    "value": "norte",
+    "status": "activo"
+  },
+  {
+    "_id": { "$oid": "507f1f77bcf86cd799439015" },
+    "nombre": "Suroeste",
+    "value": "suroeste",
+    "status": "activo"
+  },
+  {
+    "_id": { "$oid": "507f1f77bcf86cd799439016" },
+    "nombre": "Urabá",
+    "value": "uraba",
+    "status": "activo"
+  },
+  {
+    "_id": { "$oid": "507f1f77bcf86cd799439017" },
+    "nombre": "Bajo Cauca",
+    "value": "bajo_cauca",
+    "status": "activo"
+  },
+  {
+    "_id": { "$oid": "507f1f77bcf86cd799439018" },
+    "nombre": "Nordeste",
+    "value": "nordeste",
+    "status": "activo"
+  },
+  {
+    "_id": { "$oid": "507f1f77bcf86cd799439019" },
+    "nombre": "Magdalena Medio",
+    "value": "magdalena_medio",
+    "status": "activo"
+  }
+]

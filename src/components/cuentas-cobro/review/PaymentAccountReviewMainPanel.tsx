@@ -7,14 +7,20 @@ import {
 } from "@/components/cuentas-cobro/review/ReviewDocumentCards";
 import { formatDeclarationsSummary } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
 import { formatGfrFo11Summary } from "@/lib/cuentas-cobro/gfrFo11Responses";
+import {
+  formatReembolsablesContractSummary,
+  formatReembolsablesSummary,
+  isReembolsablesComplete,
+} from "@/lib/cuentas-cobro/paymentAccountReembolsables";
 import type { PaymentDocumentRequirement } from "@/lib/cuentas-cobro/paymentAccountRules";
 import type {
+  PublicContrato,
   PublicCuentaCobro,
   PublicCuentaCobroActividadItem,
   PublicCuentaCobroDocumento,
 } from "@/types/contratos";
 import { formatDate } from "@/utils/formatters";
-import { FileText, ListChecks } from "lucide-react";
+import { FileText, ListChecks, Wallet } from "lucide-react";
 
 type ReviewTab = "revision" | "documentos";
 
@@ -23,6 +29,11 @@ type PaymentAccountReviewMainPanelProps = {
   activities: PublicCuentaCobroActividadItem[];
   phaseLabel: string;
   showGfrFo11: boolean;
+  showReembolsables?: boolean;
+  reembolsablesContract?: Pick<
+    PublicContrato,
+    "rubroRembolsable" | "conceptoRembolsable"
+  >;
   contractRequirements: PaymentDocumentRequirement[];
   accountRequirements: PaymentDocumentRequirement[];
   contractDocuments: PublicCuentaCobroDocumento[];
@@ -131,6 +142,8 @@ export default function PaymentAccountReviewMainPanel({
   activities,
   phaseLabel,
   showGfrFo11,
+  showReembolsables = false,
+  reembolsablesContract,
   contractRequirements,
   accountRequirements,
   contractDocuments,
@@ -224,6 +237,46 @@ export default function PaymentAccountReviewMainPanel({
                 ) : (
                   <p className="text-sm text-destructive">
                     Sin certificado GFR-FO-11 registrado.
+                  </p>
+                )}
+              </SectionBlock>
+            ) : null}
+
+            {showReembolsables && reembolsablesContract ? (
+              <SectionBlock
+                title="Reembolsables"
+                description="Encargos de comisión GTH-FO-52."
+                icon={Wallet}
+              >
+                <p className="rounded-2xl border border-border/60 bg-muted/30 p-4 text-sm font-semibold leading-6 text-foreground md:p-5">
+                  {formatReembolsablesContractSummary(reembolsablesContract)}
+                </p>
+                {isReembolsablesComplete(account.reembolsables) ? (
+                  <div className="mt-3 space-y-3">
+                    <p className="rounded-2xl border border-border/60 bg-muted/30 p-4 text-sm font-semibold leading-6 text-foreground md:p-5">
+                      {formatReembolsablesSummary(account.reembolsables)}
+                    </p>
+                    <ul className="space-y-2">
+                      {account.reembolsables?.encargos.map((encargo) => (
+                        <li
+                          key={encargo.id}
+                          className="rounded-2xl border border-border/60 bg-background/70 p-4 text-sm leading-6 text-foreground"
+                        >
+                          <span className="font-semibold">
+                            {encargo.municipioNombre}
+                          </span>{" "}
+                          · {encargo.subregionNombre} ·{" "}
+                          {formatDate(encargo.fechaSalida)} –{" "}
+                          {formatDate(encargo.fechaRegreso)} ·{" "}
+                          {encargo.pernocta ? "Con pernocta" : "Sin pernocta"} ·{" "}
+                          {encargo.tipoTransporte}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-destructive">
+                    El contratista aún no ha completado los reembolsables.
                   </p>
                 )}
               </SectionBlock>

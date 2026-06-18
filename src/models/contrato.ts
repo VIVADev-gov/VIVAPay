@@ -33,9 +33,33 @@ export interface IContractModification extends IContractSnapshot {
   fechaRegistro?: Date;
 }
 
+export interface IContractFieldChange {
+  campo: string;
+  etiqueta: string;
+  valorAnterior: string | null;
+  valorNuevo: string | null;
+}
+
+export interface IContractEditHistoryEntry {
+  fecha: Date;
+  userId: Types.ObjectId;
+  userName: string;
+  cambios: IContractFieldChange[];
+}
+
+export interface IContractRubroAdicional {
+  rubro: string;
+  concepto: string;
+}
+
 export interface IContrato extends Required<Omit<IContractSnapshot, "totalRecursosComprometidos">> {
   userId: Types.ObjectId;
+  tieneReembolsables: boolean;
+  rubroRembolsable?: string;
+  conceptoRembolsable?: string;
+  rubrosAdicionales: IContractRubroAdicional[];
   modificaciones: IContractModification[];
+  historialEdiciones: IContractEditHistoryEntry[];
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -74,6 +98,34 @@ const contractModificationSchema = new Schema<IContractModification>(
   { _id: true }
 );
 
+const contractFieldChangeSchema = new Schema<IContractFieldChange>(
+  {
+    campo: { type: String, required: true, trim: true },
+    etiqueta: { type: String, required: true, trim: true },
+    valorAnterior: { type: String, default: null },
+    valorNuevo: { type: String, default: null },
+  },
+  { _id: false }
+);
+
+const contractRubroAdicionalSchema = new Schema<IContractRubroAdicional>(
+  {
+    rubro: { type: String, required: true, trim: true },
+    concepto: { type: String, required: true, trim: true },
+  },
+  { _id: false }
+);
+
+const contractEditHistorySchema = new Schema<IContractEditHistoryEntry>(
+  {
+    fecha: { type: Date, default: Date.now },
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    userName: { type: String, required: true, trim: true },
+    cambios: { type: [contractFieldChangeSchema], default: [] },
+  },
+  { _id: true }
+);
+
 const contratoSchema = new Schema<IContratoDocument>(
   {
     userId: {
@@ -96,15 +148,26 @@ const contratoSchema = new Schema<IContratoDocument>(
     valorInicialContrato: { type: Number, required: true, min: 0 },
     numeroDisponibilidad: { type: String, required: true, trim: true },
     numeroCompromiso: { type: String, required: true, trim: true },
+    tieneReembolsables: { type: Boolean, default: false },
+    rubroRembolsable: { type: String, trim: true },
+    conceptoRembolsable: { type: String, trim: true },
+    rubrosAdicionales: {
+      type: [contractRubroAdicionalSchema],
+      default: [],
+    },
     modificaciones: { type: [contractModificationSchema], default: [] },
+    historialEdiciones: { type: [contractEditHistorySchema], default: [] },
   },
   { timestamps: true, collection: "contratos" }
 );
 
 contratoSchema.index({ userId: 1, numeroContrato: 1 }, { unique: true });
 
+if (mongoose.models.Contrato) {
+  delete mongoose.models.Contrato;
+}
+
 export const Contrato: Model<IContratoDocument> =
-  mongoose.models.Contrato ??
   mongoose.model<IContratoDocument>("Contrato", contratoSchema);
 
 function toDateIso(value?: Date | null) {
@@ -183,6 +246,13 @@ export function toPublicContrato(doc: IContratoDocument) {
     valorInicialContrato: doc.valorInicialContrato,
     numeroDisponibilidad: doc.numeroDisponibilidad,
     numeroCompromiso: doc.numeroCompromiso,
+    tieneReembolsables: doc.tieneReembolsables ?? false,
+    rubroRembolsable: doc.rubroRembolsable ?? null,
+    conceptoRembolsable: doc.conceptoRembolsable ?? null,
+    rubrosAdicionales: (doc.rubrosAdicionales ?? []).map((item) => ({
+      rubro: item.rubro,
+      concepto: item.concepto,
+    })),
     modificaciones: doc.modificaciones.map((modification) => ({
       id: String((modification as IContractModification & { _id?: Types.ObjectId })._id),
       tipo: modification.tipo,
@@ -203,6 +273,20 @@ export function toPublicContrato(doc: IContratoDocument) {
       numeroDisponibilidad: modification.numeroDisponibilidad,
       numeroCompromiso: modification.numeroCompromiso,
       totalRecursosComprometidos: modification.totalRecursosComprometidos,
+    })),
+    historialEdiciones: (doc.historialEdiciones ?? []).map((entry) => ({
+      id: String(
+        (entry as IContractEditHistoryEntry & { _id?: Types.ObjectId })._id
+      ),
+      fecha: toDateIso(entry.fecha),
+      userId: String(entry.userId),
+      userName: entry.userName,
+      cambios: (entry.cambios ?? []).map((change) => ({
+        campo: change.campo,
+        etiqueta: change.etiqueta,
+        valorAnterior: change.valorAnterior,
+        valorNuevo: change.valorNuevo,
+      })),
     })),
     vigente,
     actual: {

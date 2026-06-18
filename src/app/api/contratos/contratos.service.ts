@@ -17,7 +17,14 @@ import {
 } from "@/models/contrato";
 import { parseDateOnlyToUtcNoon } from "@/utils/date";
 import type { CreateContractBodyDto } from "./dto/create-contract.dto";
+import type { UpdateContractBodyDto } from "./dto/update-contract.dto";
 import { CONTRACT_ERROR_CODES, ContractServiceError } from "./contratos.errors";
+import {
+  buildContractEditChanges,
+  buildContractUpdatePayload,
+  hasBlockedFieldChanges,
+} from "@/lib/contratos/contractEditDiff";
+import { normalizeRubrosAdicionales } from "@/lib/contratos/contractRubrosAdicionales";
 
 function getContractEndDate(contrato: IContratoDocument) {
   return getCurrentContractSnapshot(contrato).fechaFinal ?? contrato.fechaFinal;
@@ -155,6 +162,8 @@ export const contratosService = {
       );
     }
 
+    const rpc = dto.rpc.trim();
+
     const contrato = await Contrato.create({
       userId,
       numeroContrato: dto.numeroContrato.trim(),
@@ -166,12 +175,21 @@ export const contratosService = {
       rubro: dto.rubro.trim(),
       cdp: dto.cdp.trim(),
       valorCdp: dto.valorCdp,
-      rpc: dto.rpc.trim(),
+      rpc,
       valorRpc: dto.valorRpc,
       valorInicialContrato: dto.valorInicialContrato,
-      numeroDisponibilidad: dto.numeroDisponibilidad.trim(),
-      numeroCompromiso: dto.numeroCompromiso.trim(),
+      numeroDisponibilidad: dto.numeroDisponibilidad?.trim() || rpc,
+      numeroCompromiso: dto.numeroCompromiso?.trim() || rpc,
+      tieneReembolsables: dto.tieneReembolsables ?? false,
+      rubroRembolsable: dto.tieneReembolsables
+        ? dto.rubroRembolsable?.trim() || undefined
+        : undefined,
+      conceptoRembolsable: dto.tieneReembolsables
+        ? dto.conceptoRembolsable?.trim() || undefined
+        : undefined,
+      rubrosAdicionales: normalizeRubrosAdicionales(dto.rubrosAdicionales),
       modificaciones: [],
+      historialEdiciones: [],
     });
 
     const generated = await generatePaymentAccountsForContract({
@@ -250,6 +268,135 @@ export const contratosService = {
 
     const contract = enrichContractWithPaymentStats(
       toPublicContrato(contrato),
+      cuentasCobro
+    );
+
+    return {
+      contract,
+      paymentAccounts: cuentasCobro.map(toPublicCuentaCobro),
+    };
+  },
+
+  async update(
+    userId: string,
+    userName: string,
+    contractId: string,
+    dto: UpdateContractBodyDto
+  ) {
+    await connectDB();
+
+    if (!Types.ObjectId.isValid(contractId)) {
+      throw new ContractServiceError(
+        "Contrato no encontrado",
+        404,
+        CONTRACT_ERROR_CODES.CONTRACT_NOT_FOUND
+      );
+    }
+
+    const contrato = await Contrato.findOne({ _id: contractId, userId }).exec();
+
+    if (!contrato) {
+      throw new ContractServiceError(
+        "Contrato no encontrado",
+        404,
+        CONTRACT_ERROR_CODES.CONTRACT_NOT_FOUND
+      );
+    }
+
+    const fechaActaInicio = parseDateOnlyToUtcNoon(dto.fechaActaInicio);
+    const fechaFinal = parseDateOnlyToUtcNoon(dto.fechaFinal);
+
+    if (!fechaActaInicio || !fechaFinal) {
+      throw new ContractServiceError(
+        "Las fechas del contrato no son válidas",
+        400,
+        CONTRACT_ERROR_CODES.INVALID_CONTRACT_DATES
+      );
+    }
+
+    if (fechaFinal < fechaActaInicio) {
+      throw new ContractServiceError(
+        "La fecha final debe ser posterior a la fecha de acta de inicio",
+        400,
+        CONTRACT_ERROR_CODES.INVALID_CONTRACT_DATES
+      );
+    }
+
+    const paymentAccountCount = await CuentaCobro.countDocuments({
+      contratoId: contrato._id,
+    }).exec();
+
+    if (paymentAccountCount > 0 && hasBlockedFieldChanges(contrato, dto)) {
+      throw new ContractServiceError(
+        "No puedes modificar fechas, plazo o valor inicial porque ya existen cuentas de cobro generadas",
+        409,
+        CONTRACT_ERROR_CODES.PAYMENT_ACCOUNTS_BLOCK_EDIT
+      );
+    }
+
+    const trimmedNumero = dto.numeroContrato.trim();
+    if (trimmedNumero !== contrato.numeroContrato) {
+      const existing = await Contrato.findOne({
+        userId,
+        numeroContrato: trimmedNumero,
+        _id: { $ne: contrato._id },
+      }).exec();
+
+      if (existing) {
+        throw new ContractServiceError(
+          "Ya existe un contrato con este número",
+          409,
+          CONTRACT_ERROR_CODES.CONTRACT_ALREADY_EXISTS
+        );
+      }
+    }
+
+    const cambios = buildContractEditChanges(contrato, dto);
+
+    if (cambios.length === 0) {
+      throw new ContractServiceError(
+        "No hay cambios para guardar",
+        400,
+        CONTRACT_ERROR_CODES.NO_CHANGES
+      );
+    }
+
+    const updatePayload = buildContractUpdatePayload(dto);
+    const historyEntry = {
+      fecha: new Date(),
+      userId: new Types.ObjectId(userId),
+      userName: userName?.trim() || "Usuario",
+      cambios,
+    };
+
+    await Contrato.updateOne(
+      { _id: contrato._id, userId },
+      {
+        $set: updatePayload,
+        $push: { historialEdiciones: historyEntry },
+      },
+      { runValidators: true }
+    );
+
+    const updatedContrato = await Contrato.findById(contrato._id).exec();
+
+    if (!updatedContrato) {
+      throw new ContractServiceError(
+        "Contrato no encontrado",
+        404,
+        CONTRACT_ERROR_CODES.CONTRACT_NOT_FOUND
+      );
+    }
+
+    const cuentasCobro = await CuentaCobro.find({
+      userId,
+      contratoId: updatedContrato._id,
+    })
+      .sort({ numero: 1 })
+      .exec();
+
+    const contract = enrichContractWithPaymentStats(
+      toPublicContrato(updatedContrato),
       cuentasCobro
     );
 

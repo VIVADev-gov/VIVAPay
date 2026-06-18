@@ -1,12 +1,14 @@
 "use client";
 
-import { ArrowUpRight, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { ArrowUpRight, Pencil, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import ActionButton from "@/components/buttons/ActionButton";
 import FileLink from "@/components/files/FileLink";
 import PaymentAccountsTable from "@/components/cuentas-cobro/PaymentAccountsTable";
 import ContractDetailPanel from "@/components/contratos/ContractDetailPanel";
+import ContractEditModal from "@/components/contratos/ContractEditModal";
 import ContractHero from "@/components/contratos/ContractHero";
 import RoleDashboardLayout from "@/components/layouts/RoleDashboardLayout";
 import { USER_ROLES } from "@/constants/userRoles";
@@ -31,6 +33,7 @@ import { formatDate } from "@/utils/formatters";
 export default function ContractDetailPage() {
   const params = useParams<{ id: string }>();
   const contractId = params.id;
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const detailQuery = useContratoDetailQuery(contractId);
   const regenerateMutation =
     useRegenerateContratoPaymentAccountsMutation(contractId);
@@ -123,7 +126,25 @@ export default function ContractDetailPage() {
           </section>
         ) : contract ? (
           <>
-            <ContractDetailPanel contract={contract} />
+            <div className="flex justify-end">
+              <ActionButton
+                type="button"
+                variant="outline"
+                label="Editar contrato"
+                icon={Pencil}
+                onClick={() => setIsEditOpen(true)}
+                className="w-full md:w-auto"
+              />
+            </div>
+
+            <ContractDetailPanel />
+
+            <ContractEditModal
+              isOpen={isEditOpen}
+              onClose={() => setIsEditOpen(false)}
+              contractId={contractId}
+              paymentAccounts={paymentAccounts}
+            />
 
             <section className="rounded-4xl border border-border bg-background/70 p-6 shadow-sm">
               <div className="mb-5">
@@ -191,6 +212,7 @@ export default function ContractDetailPage() {
                 loading={isLoadingDetail}
                 onRefresh={() => detailQuery.refetch()}
                 highlightNumero={highlightNumero}
+                contractRequiresReembolsables={contract.tieneReembolsables}
               />
             </section>
           </>

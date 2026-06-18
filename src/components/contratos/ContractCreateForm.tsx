@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import ActionButton from "@/components/buttons/ActionButton";
+import ContractRubrosFields, {
+  contractRubrosFromForm,
+} from "@/components/contratos/ContractRubrosFields";
 import CurrencyFormField from "@/components/forms/CurrencyFormField";
 import FileUpload from "@/components/forms/FileUpload";
 import FormField from "@/components/forms/FormField";
@@ -11,6 +14,7 @@ import api from "@/lib/axiosInstance";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { validateContractCreationAgainstVigente } from "@/lib/contratos/contractCreationValidation";
 import { formatContractFormErrors } from "@/lib/contratos/formatContractFormErrors";
+import { validateRubrosAdicionalesErrors } from "@/lib/contratos/contractRubrosAdicionales";
 import { buildPaymentAccountPreviews } from "@/lib/cuentas-cobro/paymentAccountPreview";
 import { useContratosStore } from "@/store/contratos/contratos.store";
 import { useUiStore } from "@/store/ui/ui-store";
@@ -33,6 +37,10 @@ const initialForm: CreateContratoBody = {
   valorInicialContrato: 0,
   numeroDisponibilidad: "",
   numeroCompromiso: "",
+  tieneReembolsables: false,
+  rubroRembolsable: "",
+  conceptoRembolsable: "",
+  rubrosAdicionales: [],
   submittedPaymentAccountsCount: 0,
 };
 
@@ -174,6 +182,20 @@ export default function ContractCreateForm({
     if (!form.valorInicialContrato || form.valorInicialContrato <= 0) {
       next.valorInicialContrato = "Debe ser mayor a 0";
     }
+    if (!form.rubro.trim()) next.rubro = "Requerido";
+    if (!form.concepto.trim()) next.concepto = "Requerido";
+    Object.assign(
+      next,
+      validateRubrosAdicionalesErrors(form.rubrosAdicionales ?? [])
+    );
+    if (form.tieneReembolsables) {
+      if (!form.rubroRembolsable?.trim()) {
+        next.rubroRembolsable = "Requerido";
+      }
+      if (!form.conceptoRembolsable?.trim()) {
+        next.conceptoRembolsable = "Requerido";
+      }
+    }
     if (
       form.submittedPaymentAccountsCount != null &&
       form.submittedPaymentAccountsCount < 0
@@ -267,20 +289,34 @@ export default function ContractCreateForm({
     }
 
     try {
+      const rubrosPayload = contractRubrosFromForm({
+        rubro: form.rubro,
+        concepto: form.concepto,
+        rubrosAdicionales: form.rubrosAdicionales ?? [],
+      });
+
       const result = await createMutation.mutateAsync({
         ...form,
         numeroContrato: form.numeroContrato.trim(),
         objeto: form.objeto.trim(),
-        concepto: form.concepto.trim(),
-        rubro: form.rubro.trim(),
+        concepto: rubrosPayload.concepto,
+        rubro: rubrosPayload.rubro,
+        rubrosAdicionales: rubrosPayload.rubrosAdicionales,
         cdp: form.cdp.trim(),
         rpc: form.rpc.trim(),
-        numeroDisponibilidad: form.numeroDisponibilidad.trim(),
-        numeroCompromiso: form.numeroCompromiso.trim(),
+        numeroDisponibilidad: form.rpc.trim(),
+        numeroCompromiso: form.rpc.trim(),
         plazoMeses: Number(form.plazoMeses),
         valorCdp: Number(form.valorCdp),
         valorRpc: Number(form.valorRpc),
         valorInicialContrato: Number(form.valorInicialContrato),
+        tieneReembolsables: form.tieneReembolsables,
+        rubroRembolsable: form.tieneReembolsables
+          ? form.rubroRembolsable?.trim()
+          : undefined,
+        conceptoRembolsable: form.tieneReembolsables
+          ? form.conceptoRembolsable?.trim()
+          : undefined,
         submittedPaymentAccountsCount: Number(
           form.submittedPaymentAccountsCount ?? 0
         ),
@@ -326,6 +362,90 @@ export default function ContractCreateForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         <FormField
+          label="Objeto"
+          name="objeto"
+          type="textarea"
+          rows={3}
+          value={form.objeto}
+          onChange={handleChange}
+          required
+          className="md:col-span-2"
+          helperText={errors.objeto}
+        />
+      </div>
+
+      <ContractRubrosFields
+        value={{
+          rubro: form.rubro,
+          concepto: form.concepto,
+          rubrosAdicionales: form.rubrosAdicionales ?? [],
+        }}
+        errors={errors}
+        onChange={({ rubro, concepto, rubrosAdicionales }) => {
+          setForm((current) => ({
+            ...current,
+            rubro,
+            concepto,
+            rubrosAdicionales,
+          }));
+          setErrors((current) => ({
+            ...current,
+            rubro: "",
+            concepto: "",
+            ...Object.fromEntries(
+              Object.keys(current)
+                .filter((key) => key.startsWith("rubrosAdicionales."))
+                .map((key) => [key, ""])
+            ),
+          }));
+        }}
+      />
+
+      {/* Reembolsables deshabilitado temporalmente
+      <section className="rounded-3xl border border-border/80 bg-muted/20 p-5">
+        <ToggleSwitch
+          label="¿Tiene reembolsables?"
+          description="Indica si el contrato incluye rubro y concepto reembolsables."
+          value={form.tieneReembolsables}
+          onChange={(value) => {
+            setForm((current) => ({
+              ...current,
+              tieneReembolsables: value,
+              rubroRembolsable: value ? current.rubroRembolsable : "",
+              conceptoRembolsable: value ? current.conceptoRembolsable : "",
+            }));
+            setErrors((current) => ({
+              ...current,
+              rubroRembolsable: "",
+              conceptoRembolsable: "",
+            }));
+          }}
+        />
+        {form.tieneReembolsables ? (
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <FormField
+              label="Rubro reembolsable"
+              name="rubroRembolsable"
+              value={form.rubroRembolsable ?? ""}
+              onChange={handleChange}
+              required
+              helperText={errors.rubroRembolsable}
+            />
+            <FormField
+              label="Concepto reembolsable"
+              name="conceptoRembolsable"
+              value={form.conceptoRembolsable ?? ""}
+              onChange={handleChange}
+              required
+              helperText={errors.conceptoRembolsable}
+            />
+          </div>
+        ) : null}
+      </section>
+      */}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <FormField
           label="No. del contrato"
           name="numeroContrato"
           value={form.numeroContrato}
@@ -361,54 +481,29 @@ export default function ContractCreateForm({
           helperText={plazoHelperText}
         />
         <FormField
-          label="Concepto"
-          name="concepto"
-          value={form.concepto}
-          onChange={handleChange}
-          required
-          className="md:col-span-2"
-        />
-        <FormField
-          label="Objeto"
-          name="objeto"
-          type="textarea"
-          rows={3}
-          value={form.objeto}
-          onChange={handleChange}
-          required
-          className="md:col-span-2"
-          helperText={errors.objeto}
-        />
-        <FormField
-          label="Rubro"
-          name="rubro"
-          value={form.rubro}
-          onChange={handleChange}
-          required
-        />
-        <FormField
-          label="CDP"
+          label="Certificado de disponibilidad presupuestal (CDP)"
           name="cdp"
           value={form.cdp}
           onChange={handleChange}
           required
         />
         <CurrencyFormField
-          label="Valor CDP"
+          label="Valor certificado de disponibilidad presupuestal (CDP)"
           name="valorCdp"
           value={form.valorCdp}
           onChange={handleCurrencyChange}
           required
         />
         <FormField
-          label="RPC"
+          label="Registro presupuestal del compromiso (RCP)"
           name="rpc"
           value={form.rpc}
           onChange={handleChange}
           required
+          helperText="Este número se usará también como No. de disponibilidad y No. de compromiso."
         />
         <CurrencyFormField
-          label="Valor RPC"
+          label="Valor registro presupuestal del compromiso (RCP)"
           name="valorRpc"
           value={form.valorRpc}
           onChange={handleCurrencyChange}
@@ -422,20 +517,6 @@ export default function ContractCreateForm({
           required
           helperText={errors.valorInicialContrato}
           invalid={Boolean(errors.valorInicialContrato)}
-        />
-        <FormField
-          label="No. disponibilidad"
-          name="numeroDisponibilidad"
-          value={form.numeroDisponibilidad}
-          onChange={handleChange}
-          required
-        />
-        <FormField
-          label="No. compromiso"
-          name="numeroCompromiso"
-          value={form.numeroCompromiso}
-          onChange={handleChange}
-          required
         />
       </div>
 
@@ -489,7 +570,7 @@ export default function ContractCreateForm({
             Documentos del contrato
           </p>
           <h3 className="mt-2 text-lg font-black text-foreground">
-            Archivos reutilizables
+            Archivos contractuales
           </h3>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
             Estos PDFs se guardan en la carpeta del contrato y se reutilizan en

@@ -5,6 +5,7 @@ import type {
   GfrFo11Responses,
   PaymentAccountDeclarations,
 } from "@/types/contratos";
+import type { PaymentAccountReembolsables } from "@/lib/cuentas-cobro/paymentAccountReembolsables";
 
 export type FormActivityItem = {
   actividad: string;
@@ -35,6 +36,9 @@ export type FormContractSnapshot = {
   numeroDisponibilidad: string;
   numeroCompromiso: string;
   totalRecursosComprometidos: number;
+  tieneReembolsables: boolean;
+  rubroRembolsable: string | null;
+  conceptoRembolsable: string | null;
 };
 
 export type FormContractorSnapshot = {
@@ -58,6 +62,7 @@ export type FormPaymentAccountSnapshot = {
   fechaPago: Date | null;
   declaracionesJuradas: PaymentAccountDeclarations | null;
   gfrFo11: GfrFo11Responses | null;
+  reembolsables: PaymentAccountReembolsables | null;
 };
 
 export type FormPackageContext = {

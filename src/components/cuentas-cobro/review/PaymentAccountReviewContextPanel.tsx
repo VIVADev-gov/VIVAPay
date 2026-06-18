@@ -15,12 +15,12 @@ type PaymentAccountReviewContextPanelProps = {
 };
 
 const budgetRows = [
-  ["Concepto", "concepto"],
-  ["Rubro", "rubro"],
-  ["CDP", "cdp"],
-  ["Valor CDP", "valorCdp"],
-  ["RPC", "rpc"],
-  ["Valor RPC", "valorRpc"],
+  ["Concepto principal", "concepto"],
+  ["Rubro principal", "rubro"],
+  ["Certificado de disponibilidad presupuestal (CDP)", "cdp"],
+  ["Valor certificado de disponibilidad presupuestal (CDP)", "valorCdp"],
+  ["Registro presupuestal del compromiso (RCP)", "rpc"],
+  ["Valor registro presupuestal del compromiso (RCP)", "valorRpc"],
   ["No. disponibilidad", "numeroDisponibilidad"],
   ["No. compromiso", "numeroCompromiso"],
 ] as const;

@@ -10,9 +10,11 @@ import type {
   CuentaCobroContractDocumentsResponse,
   CuentaCobroDeclarationsResponse,
   CuentaCobroGfrFo11Response,
+  CuentaCobroReembolsablesResponse,
   CuentasCobroSummaryResponse,
   GfrFo11Responses,
   PaymentAccountDeclarations,
+  PaymentAccountReembolsables,
   PaymentAccountReviewDetailResponse,
   PaymentAccountReviewListResponse,
   PublicCuentaCobro,
@@ -39,6 +41,8 @@ export const cuentasCobroQueryKeys = {
     ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "declarations"] as const,
   gfrFo11ByAccount: (contractId: string, numeroCuenta: number) =>
     ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "gfr-fo-11"] as const,
+  reembolsablesByAccount: (contractId: string, numeroCuenta: number) =>
+    ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "reembolsables"] as const,
   reviewList: ["cuentas-cobro", "revision"] as const,
   reviewDetail: (contractId: string, numeroCuenta: number) =>
     ["cuentas-cobro", "revision", contractId, numeroCuenta] as const,
@@ -202,6 +206,53 @@ export function useSaveCuentaCobroGfrFo11Mutation(
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: cuentasCobroQueryKeys.gfrFo11ByAccount(contractId, numeroCuenta),
+      });
+      queryClient.invalidateQueries({
+        queryKey: cuentasCobroQueryKeys.reviewDetail(contractId, numeroCuenta),
+      });
+    },
+  });
+}
+
+export function useCuentaCobroReembolsablesQuery(
+  contractId: string,
+  numeroCuenta: number,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: cuentasCobroQueryKeys.reembolsablesByAccount(contractId, numeroCuenta),
+    enabled: Boolean(contractId) && Number.isInteger(numeroCuenta) && enabled,
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<CuentaCobroReembolsablesResponse>>(
+        `/api/cuentas-cobro/contrato/${contractId}/cuentas/${numeroCuenta}/reembolsables`
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+  });
+}
+
+export function useSaveCuentaCobroReembolsablesMutation(
+  contractId: string,
+  numeroCuenta: number
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (responses: PaymentAccountReembolsables) => {
+      const { data } = await api.put<ApiResponse<CuentaCobroReembolsablesResponse>>(
+        `/api/cuentas-cobro/contrato/${contractId}/cuentas/${numeroCuenta}/reembolsables`,
+        responses
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: cuentasCobroQueryKeys.reembolsablesByAccount(
+          contractId,
+          numeroCuenta
+        ),
       });
       queryClient.invalidateQueries({
         queryKey: cuentasCobroQueryKeys.reviewDetail(contractId, numeroCuenta),

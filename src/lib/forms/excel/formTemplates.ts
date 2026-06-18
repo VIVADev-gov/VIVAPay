@@ -14,4 +14,9 @@ export const FORM_TEMPLATES = {
     sheet: "GFR-FO-11",
     code: "GFR-FO-11",
   },
+  GTH_FO_52: {
+    file: "public/forms/4.1.xlsx",
+    sheet: "GTH-FO-52 V.05",
+    code: "GTH-FO-52",
+  },
 } as const;

@@ -4,15 +4,19 @@ const CONTRACT_FORM_FIELD_LABELS: Record<string, string> = {
   fechaActaInicio: "Fecha acta de inicio",
   fechaFinal: "Fecha final",
   plazoMeses: "Plazo (meses)",
-  concepto: "Concepto",
-  rubro: "Rubro",
-  cdp: "CDP",
-  valorCdp: "Valor CDP",
-  rpc: "RPC",
-  valorRpc: "Valor RPC",
+  concepto: "Concepto principal",
+  rubro: "Rubro principal",
+  cdp: "Certificado de disponibilidad presupuestal (CDP)",
+  valorCdp: "Valor certificado de disponibilidad presupuestal (CDP)",
+  rpc: "Registro presupuestal del compromiso (RCP)",
+  valorRpc: "Valor registro presupuestal del compromiso (RCP)",
   valorInicialContrato: "Valor inicial del contrato",
   numeroDisponibilidad: "Número de disponibilidad",
   numeroCompromiso: "Número de compromiso",
+  tieneReembolsables: "¿Tiene reembolsables?",
+  rubroRembolsable: "Rubro reembolsable",
+  conceptoRembolsable: "Concepto reembolsable",
+  rubrosAdicionales: "Rubros adicionales",
   submittedPaymentAccountsCount: "Cuentas enviadas previamente",
   document_CONTRATO: "Contrato (PDF)",
   document_ACTA_INICIO: "Acta de inicio (PDF)",
@@ -23,6 +27,16 @@ const CONTRACT_FORM_FIELD_LABELS: Record<string, string> = {
 };
 
 export function getContractFormFieldLabel(fieldKey: string) {
+  if (fieldKey.startsWith("rubrosAdicionales.")) {
+    const [, indexValue, field] = fieldKey.split(".");
+    const index = Number(indexValue);
+    if (!Number.isNaN(index)) {
+      return field === "rubro"
+        ? `Rubro adicional ${index + 1}`
+        : `Concepto adicional ${index + 1}`;
+    }
+  }
+
   return CONTRACT_FORM_FIELD_LABELS[fieldKey] ?? fieldKey;
 }
 

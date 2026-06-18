@@ -5,6 +5,8 @@ import {
   resolvePaymentPhase,
 } from "@/lib/cuentas-cobro/paymentAccountRules";
 import { parseGfrFo11Responses } from "@/lib/cuentas-cobro/gfrFo11Responses";
+import { isReembolsablesComplete } from "@/lib/cuentas-cobro/paymentAccountReembolsables";
+import { renderGthFo52DocxBuffer } from "@/lib/forms/gthFo52/renderGthFo52Docx";
 import { convertOfficeBufferToPdf } from "@/lib/office/convertOfficeToPdf";
 import type { PublicCuentaCobro } from "@/types/contratos";
 import { buildFormPackageContext } from "./buildFormPackageContext";
@@ -12,6 +14,7 @@ import { FORM_TEMPLATES } from "./formTemplates";
 import { renderGfrFo11Xlsx } from "./render/renderGfrFo11Xlsx";
 import { renderGfrFo16Xlsx } from "./render/renderGfrFo16Xlsx";
 import { renderGfrFo17Xlsx } from "./render/renderGfrFo17Xlsx";
+import { renderGthFo52Xlsx } from "./render/renderGthFo52Xlsx";
 import type { FormPdfAttachment } from "./types";
 
 export type FormPackageResult =
@@ -52,6 +55,30 @@ async function xlsxToPdf(
   };
 }
 
+async function docxToPdf(
+  buffer: Buffer,
+  code: string,
+  filename: string
+): Promise<FormPdfAttachment> {
+  const result = convertOfficeBufferToPdf(
+    buffer,
+    "docx",
+    sanitizeFilenamePart(code).toLowerCase()
+  );
+  if (!result.ok) {
+    const detail = result.detail ? `: ${result.detail}` : "";
+    throw new Error(
+      `No se pudo convertir ${code} a PDF (LibreOffice requerido)${detail}`
+    );
+  }
+
+  return {
+    code,
+    filename: sanitizeFilenamePart(filename),
+    buffer: result.pdf,
+  };
+}
+
 export async function buildFormPackage(
   userId: string,
   contractId: string,
@@ -67,6 +94,7 @@ export async function buildFormPackage(
       )
     );
     const shouldIncludeGfrFo11 = includesGfrFo11(phase);
+    const shouldIncludeGthFo52 = ctx.contract.tieneReembolsables === true;
 
     if (shouldIncludeGfrFo11 && !parseGfrFo11Responses(ctx.paymentAccount.gfrFo11)) {
       return {
@@ -75,10 +103,25 @@ export async function buildFormPackage(
       };
     }
 
-    const [gfrFo16, gfrFo17, gfrFo11] = await Promise.all([
+    if (
+      shouldIncludeGthFo52 &&
+      !isReembolsablesComplete(ctx.paymentAccount.reembolsables)
+    ) {
+      return {
+        success: false,
+        error: "Debes completar los reembolsables antes de generar el paquete",
+      };
+    }
+
+    const reembolsables = ctx.paymentAccount.reembolsables;
+
+    const [gfrFo16, gfrFo17, gfrFo11, gthFo52Xlsx] = await Promise.all([
       renderGfrFo16Xlsx(ctx),
       renderGfrFo17Xlsx(ctx),
       shouldIncludeGfrFo11 ? renderGfrFo11Xlsx(ctx) : Promise.resolve(null),
+      shouldIncludeGthFo52 && reembolsables
+        ? renderGthFo52Xlsx(ctx)
+        : Promise.resolve(null),
     ]);
 
     const attachmentPromises = [
@@ -100,6 +143,21 @@ export async function buildFormPackage(
           gfrFo11,
           FORM_TEMPLATES.GFR_FO_11.code,
           `${FORM_TEMPLATES.GFR_FO_11.code}-${suffix}.pdf`
+        )
+      );
+    }
+
+    if (shouldIncludeGthFo52 && gthFo52Xlsx && reembolsables) {
+      attachmentPromises.push(
+        xlsxToPdf(
+          gthFo52Xlsx,
+          `${FORM_TEMPLATES.GTH_FO_52.code}-XLSX`,
+          `${FORM_TEMPLATES.GTH_FO_52.code}-${suffix}.pdf`
+        ),
+        docxToPdf(
+          renderGthFo52DocxBuffer(ctx, reembolsables),
+          `${FORM_TEMPLATES.GTH_FO_52.code}-DOCX`,
+          `${FORM_TEMPLATES.GTH_FO_52.code}-certificacion-${suffix}.pdf`
         )
       );
     }

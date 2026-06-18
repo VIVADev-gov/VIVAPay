@@ -20,6 +20,7 @@ type PaymentAccountsTableProps = {
   loading?: boolean;
   onRefresh?: () => void;
   highlightNumero?: number | null;
+  contractRequiresReembolsables?: boolean;
 };
 
 export default function PaymentAccountsTable({
@@ -28,6 +29,7 @@ export default function PaymentAccountsTable({
   loading = false,
   onRefresh,
   highlightNumero = null,
+  contractRequiresReembolsables = false,
 }: PaymentAccountsTableProps) {
   const columns: DataTableColumnConfig<PublicCuentaCobro>[] = [
     {
@@ -56,6 +58,11 @@ export default function PaymentAccountsTable({
       body: (row) => (
         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
           {row.estado}
+          {contractRequiresReembolsables ? (
+            <span className="ml-2 rounded-full bg-ring/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ring">
+              Reembolsables
+            </span>
+          ) : null}
         </span>
       ),
     },
@@ -113,6 +120,11 @@ export default function PaymentAccountsTable({
               <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                 {paymentAccount.estado}
               </span>
+              {contractRequiresReembolsables ? (
+                <span className="rounded-full bg-ring/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-ring">
+                  Reembolsables
+                </span>
+              ) : null}
             </div>
 
             <h4 className="text-base font-black text-foreground">
