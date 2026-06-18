@@ -1,8 +1,8 @@
-// validation.ts - Utilidades para validación con Zod
 import { z } from "zod";
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse } from "./httpHerlper";
 import logger from "./logger";
+import { formatZodErrorMessage } from "./validation/formatZodErrorMessage";
 
 /**
  * Valida el body de una request usando un esquema Zod
@@ -20,11 +20,7 @@ export async function validateRequest<T>(
         return { success: true, data: validatedData };
     } catch (error) {
         if (error instanceof z.ZodError) {
-            const errorMessages = error.issues.map((err) => {
-                const path = err.path.join(".");
-                return `${path ? `${path}: ` : ""}${err.message}`;
-            });
-            const message = `Error de validación: ${errorMessages.join(", ")}`;
+            const message = formatZodErrorMessage(error);
             logger.warn("[Validation] Error de validación:", error.issues);
             return {
                 success: false,
@@ -59,11 +55,7 @@ export function validateQuery<T>(
         return { success: true, data: validatedData };
     } catch (error) {
         if (error instanceof z.ZodError) {
-            const errorMessages = error.issues.map((err) => {
-                const path = err.path.join(".");
-                return `${path ? `${path}: ` : ""}${err.message}`;
-            });
-            const message = `Error de validación: ${errorMessages.join(", ")}`;
+            const message = formatZodErrorMessage(error);
             logger.warn("[Validation] Error de validación en query:", error.issues);
             return {
                 success: false,

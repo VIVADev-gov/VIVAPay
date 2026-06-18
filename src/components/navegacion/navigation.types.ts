@@ -2,7 +2,7 @@ import type { ReactElement, ReactNode } from "react";
 
 export type NavBadgeVariant = "default" | "notification" | "success" | "warning";
 
-export type NavMenuItemIcon = ReactElement<{ className?: string; size?: number }>;
+export type NavMenuItemIcon = ReactElement<{ className?: string; size?: number | string }>;
 
 export interface NavMenuItem {
   id: string;

@@ -7,11 +7,11 @@ import FormField from "@/components/forms/FormField";
 import Logo from "@/components/logo/Logo";
 import { AUTH_ERROR_CODES } from "@/app/api/auth/_shared/auth.errors";
 import {
-  ORGANIZACION_TIPO,
   getOrganizacionLabelPorRol,
   getUnidadOrganizacional,
   getUnidadesPermitidasPorRol,
   unidadPermitidaParaRol,
+  unidadRequiereSubarea,
 } from "@/constants/organizacionViva";
 import { USER_ROLE_OPTIONS, USER_ROLES, type UserRole } from "@/constants/userRoles";
 import { useLoginMutation, useRegisterMutation } from "@/hooks/api/useAuth";
@@ -20,6 +20,7 @@ import { isDevSuperUserLoginUiEnabled } from "@/lib/auth/devSuperUser.client";
 import { getDashboardPathForRole } from "@/lib/auth/roles";
 import { useAuthStore } from "@/store/auth/auth.store";
 import { useUiStore } from "@/store/ui/ui-store";
+import { sanitizeRegisterField } from "@/utils/inputSanitizers";
 
 export type AuthFormMode = "login" | "register";
 
@@ -82,11 +83,12 @@ export default function AuthForm({ mode }: AuthFormProps) {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    const sanitizedValue = sanitizeRegisterField(name, value);
     setRegisterForm((prev) => {
       if (name === "role") {
         return {
           ...prev,
-          role: value,
+          role: sanitizedValue,
           organizationalUnitId: "",
           subareaId: "",
         };
@@ -94,11 +96,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
       if (name === "organizationalUnitId") {
         return {
           ...prev,
-          organizationalUnitId: value,
+          organizationalUnitId: sanitizedValue,
           subareaId: "",
         };
       }
-      return { ...prev, [name]: value };
+      return { ...prev, [name]: sanitizedValue };
     });
   };
 
@@ -118,14 +120,16 @@ export default function AuthForm({ mode }: AuthFormProps) {
     registerForm.organizationalUnitId
   );
   const subareaOptions =
-    selectedOrganizationalUnit?.tipo === ORGANIZACION_TIPO.DIRECCION
+    selectedOrganizationalUnit &&
+    unidadRequiereSubarea(selectedOrganizationalUnit.id)
       ? (selectedOrganizationalUnit.subareas ?? []).map((subarea) => ({
           value: subarea.id,
           label: subarea.name,
         }))
       : [];
-  const requiresSubarea =
-    selectedOrganizationalUnit?.tipo === ORGANIZACION_TIPO.DIRECCION;
+  const requiresSubarea = selectedOrganizationalUnit
+    ? unidadRequiereSubarea(selectedOrganizationalUnit.id)
+    : false;
 
   const handleLoginChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -364,6 +368,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
               value={registerForm.phone}
               onChange={handleRegisterChange}
               placeholder="Ej. 3001234567"
+              inputMode="tel"
               required
               floatingLabel
             />

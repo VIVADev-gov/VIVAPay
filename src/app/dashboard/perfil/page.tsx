@@ -7,10 +7,10 @@ import FormField from "@/components/forms/FormField";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import EmptyState from "@/components/ui/EmptyState";
 import {
-  ORGANIZACION_TIPO,
   getOrganizacionLabelPorRol,
   getUnidadOrganizacional,
   getUnidadesPermitidasPorRol,
+  unidadRequiereSubarea,
 } from "@/constants/organizacionViva";
 import ProfileSignatureSection from "@/components/profile/ProfileSignatureSection";
 import { USER_ROLES } from "@/constants/userRoles";
@@ -18,6 +18,7 @@ import { normalizeUserRole } from "@/lib/auth/roles";
 import { useProfileQuery, useUpdateProfileMutation } from "@/hooks/api/useProfile";
 import { useProfileStore } from "@/store/profile/profile.store";
 import { useUiStore } from "@/store/ui/ui-store";
+import { sanitizeProfileField } from "@/utils/inputSanitizers";
 
 export default function PerfilPage() {
   const profileQuery = useProfileQuery();
@@ -50,14 +51,16 @@ export default function PerfilPage() {
     form.organizationalUnitId
   );
   const subareaOptions =
-    selectedOrganizationalUnit?.tipo === ORGANIZACION_TIPO.DIRECCION
+    selectedOrganizationalUnit &&
+    unidadRequiereSubarea(selectedOrganizationalUnit.id)
       ? (selectedOrganizationalUnit.subareas ?? []).map((subarea) => ({
           value: subarea.id,
           label: subarea.name,
         }))
       : [];
-  const requiresSubarea =
-    selectedOrganizationalUnit?.tipo === ORGANIZACION_TIPO.DIRECCION;
+  const requiresSubarea = selectedOrganizationalUnit
+    ? unidadRequiereSubarea(selectedOrganizationalUnit.id)
+    : false;
 
   const handleChange = (
     event: React.ChangeEvent<
@@ -65,11 +68,12 @@ export default function PerfilPage() {
     >
   ) => {
     const { name, value } = event.target;
+    const sanitizedValue = sanitizeProfileField(name, value);
     if (name === "organizationalUnitId") {
-      setProfileForm({ organizationalUnitId: value, subareaId: "" });
+      setProfileForm({ organizationalUnitId: sanitizedValue, subareaId: "" });
       return;
     }
-    setProfileForm({ [name]: value });
+    setProfileForm({ [name]: sanitizedValue });
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -166,6 +170,7 @@ export default function PerfilPage() {
                 type="tel"
                 value={form.phone}
                 onChange={handleChange}
+                inputMode="tel"
                 required
               />
               <FormField

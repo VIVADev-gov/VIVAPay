@@ -22,12 +22,25 @@ export type UnidadOrganizacional = {
 
 export const UNIDADES_ORGANIZACIONALES: UnidadOrganizacional[] = [
   {
-    id: "dir-negocios",
-    name: "Dirección de Negocios",
+    id: "dir-admin-financiera",
+    name: "Dirección Administrativa y Financiera",
     tipo: ORGANIZACION_TIPO.DIRECCION,
     subareas: [
-      { id: "proc-contratos", name: "Proceso de contratos" },
-      { id: "proc-cartera", name: "Proceso de cartera" },
+      { id: "proc-gestion-financiera", name: "Gestión Financiera" },
+      { id: "proc-gestion-bienes-servicios", name: "Gestión de Bienes y Servicios" },
+      { id: "proc-gestion-documental", name: "Gestión Documental" },
+      {
+        id: "proc-gestion-informacion-tecnologia",
+        name: "Gestión de Información y Tecnología",
+      },
+    ],
+  },
+  {
+    id: "dir-control-interno",
+    name: "Dirección de Control Interno",
+    tipo: ORGANIZACION_TIPO.DIRECCION,
+    subareas: [
+      { id: "proc-evaluacion-independiente", name: "Evaluación Independiente" },
     ],
   },
   {
@@ -35,38 +48,77 @@ export const UNIDADES_ORGANIZACIONALES: UnidadOrganizacional[] = [
     name: "Dirección de Planeación",
     tipo: ORGANIZACION_TIPO.DIRECCION,
     subareas: [
-      { id: "proc-proyectos", name: "Proceso de proyectos" },
-      { id: "proc-seguimiento", name: "Proceso de seguimiento" },
+      { id: "proc-planeacion-estrategica", name: "Planeación Estratégica" },
+      { id: "proc-gestion-organizacional", name: "Gestión Organizacional" },
     ],
   },
   {
-    id: "dir-vivienda",
+    id: "dir-proyectos",
+    name: "Dirección de Proyectos",
+    tipo: ORGANIZACION_TIPO.DIRECCION,
+    subareas: [{ id: "proc-gestion-proyectos", name: "Gestión de Proyectos" }],
+  },
+  {
+    id: "dir-vivienda-habitat",
     name: "Dirección de Vivienda y Hábitat",
     tipo: ORGANIZACION_TIPO.DIRECCION,
     subareas: [
-      { id: "proc-ejecucion", name: "Proceso de ejecución" },
-      { id: "proc-interventoria", name: "Proceso de interventoría" },
+      {
+        id: "proc-gestion-vivienda-habitat",
+        name: "Gestión de Vivienda y Hábitat",
+      },
+      { id: "proc-gestion-sociocultural", name: "Gestión Sociocultural" },
     ],
   },
   {
-    id: "jef-juridica",
-    name: "Jefatura Jurídica",
-    tipo: ORGANIZACION_TIPO.JEFATURA,
+    id: "dir-juridica-control-disciplinario",
+    name: "Dirección Jurídica y de Control Interno Disciplinario",
+    tipo: ORGANIZACION_TIPO.DIRECCION,
+    subareas: [
+      {
+        id: "proc-gestion-juridica-contractual",
+        name: "Gestión Jurídica y Contractual",
+      },
+      {
+        id: "proc-control-interno-disciplinario",
+        name: "Control Interno Disciplinario",
+      },
+    ],
   },
   {
-    id: "jef-bienes-servicios",
-    name: "Jefatura de Bienes y Servicios",
+    id: "jef-comunicaciones",
+    name: "Jefatura de Comunicaciones",
     tipo: ORGANIZACION_TIPO.JEFATURA,
+    subareas: [
+      { id: "proc-gestion-comunicaciones", name: "Gestión de las Comunicaciones" },
+    ],
   },
   {
     id: "jef-talento-humano",
     name: "Jefatura de Talento Humano",
     tipo: ORGANIZACION_TIPO.JEFATURA,
+    subareas: [
+      { id: "proc-gestion-talento-humano", name: "Gestión del Talento Humano" },
+      {
+        id: "proc-seguridad-salud-trabajo",
+        name: "Seguridad y Salud en el Trabajo",
+      },
+    ],
   },
   {
-    id: "jef-proyectos",
-    name: "Jefatura de Proyectos",
+    id: "jef-titulacion",
+    name: "Jefatura de Titulación",
     tipo: ORGANIZACION_TIPO.JEFATURA,
+    subareas: [{ id: "proc-gestion-titulacion", name: "Gestión de Titulación" }],
+  },
+  {
+    id: "jef-unidad-negocios",
+    name: "Jefatura Unidad de Negocios",
+    tipo: ORGANIZACION_TIPO.JEFATURA,
+    subareas: [
+      { id: "proc-banco-materiales", name: "Banco de Materiales" },
+      { id: "proc-fondo-rotatorio-credito", name: "Fondo Rotatorio de Crédito" },
+    ],
   },
 ];
 
@@ -85,7 +137,7 @@ export function getSubareaOrganizacional(unidadId: string, subareaId: string) {
 
 export function unidadRequiereSubarea(unidadId: string) {
   const unidad = getUnidadOrganizacional(unidadId);
-  return unidad?.tipo === ORGANIZACION_TIPO.DIRECCION;
+  return (unidad?.subareas?.length ?? 0) > 0;
 }
 
 export function getUnidadesPermitidasPorRol(role: UserRole) {
@@ -173,7 +225,7 @@ export function validateOrganizacionParaRol(
     return {
       ok: false,
       path: "subareaId",
-      message: "Las jefaturas no requieren subárea o proceso",
+      message: "Esta unidad organizacional no requiere subárea o proceso",
     };
   }
 
@@ -185,10 +237,7 @@ export function formatOrganizacionDisplay(input: {
   organizationalUnitType: OrganizacionTipo;
   subareaName?: string | null;
 }) {
-  if (
-    input.organizationalUnitType === ORGANIZACION_TIPO.DIRECCION &&
-    input.subareaName
-  ) {
+  if (input.subareaName) {
     return `${input.organizationalUnitName} · ${input.subareaName}`;
   }
   return input.organizationalUnitName;

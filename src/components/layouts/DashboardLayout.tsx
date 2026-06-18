@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader } from "@/components/loaders/loader";
+import DashboardNavShell from "@/components/navegacion/DashboardNavShell";
 import { useAuthStore } from "@/store/auth/auth.store";
 import DashboardHeader, { NavSection } from "./DashboardHeader";
 
@@ -31,6 +32,7 @@ export default function DashboardLayout({
     const token = useAuthStore((s) => s.token);
     const user = useAuthStore((s) => s.user);
     const isHydrated = useAuthStore((s) => s.isHydrated);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     useEffect(() => {
         if (!isHydrated) return;
@@ -57,19 +59,28 @@ export default function DashboardLayout({
 
     return (
         <div className="min-h-screen bg-linear-to-br from-background via-muted/30 to-background">
-            <DashboardHeader
-                title={title}
-                showSearch={showSearch}
-                onSearchChange={onSearchChange}
-                navSections={navSections}
-                onSectionChange={onSectionChange}
-                activeSection={activeSection}
+            <DashboardNavShell
+                mobileMenuOpen={mobileMenuOpen}
+                onMobileMenuClose={() => setMobileMenuOpen(false)}
             />
-            <main className={`mx-auto w-full max-w-7xl px-4 py-6 md:px-6 lg:px-8 ${className}`}>
-                <div className="rounded-4xl border border-border/70 bg-card/80 p-5 md:p-8">
-                    {children}
-                </div>
-            </main>
+            <div className="flex min-h-screen flex-1 flex-col md:pl-[72px]">
+                <DashboardHeader
+                    title={title}
+                    showSearch={showSearch}
+                    onSearchChange={onSearchChange}
+                    navSections={navSections}
+                    onSectionChange={onSectionChange}
+                    activeSection={activeSection}
+                    onMenuToggle={() => setMobileMenuOpen(true)}
+                />
+                <main
+                    className={`mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 lg:px-8 ${className}`}
+                >
+                    <div className="rounded-4xl border border-border/70 bg-card/80 p-5 md:p-8">
+                        {children}
+                    </div>
+                </main>
+            </div>
         </div>
     );
 }

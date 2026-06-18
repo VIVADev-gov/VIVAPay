@@ -8,7 +8,9 @@ import FormField from "@/components/forms/FormField";
 import ToggleSwitch from "@/components/forms/ToggleSwitch";
 import { useCreateContratoMutation } from "@/hooks/api/useContratos";
 import api from "@/lib/axiosInstance";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { validateContractCreationAgainstVigente } from "@/lib/contratos/contractCreationValidation";
+import { formatContractFormErrors } from "@/lib/contratos/formatContractFormErrors";
 import { buildPaymentAccountPreviews } from "@/lib/cuentas-cobro/paymentAccountPreview";
 import { useContratosStore } from "@/store/contratos/contratos.store";
 import { useUiStore } from "@/store/ui/ui-store";
@@ -148,7 +150,7 @@ export default function ContractCreateForm({
     setErrors((current) => ({ ...current, [name]: "" }));
   };
 
-  const validateClient = () => {
+  const getClientValidationErrors = () => {
     const next: Record<string, string> = {};
     if (!form.numeroContrato.trim()) next.numeroContrato = "Requerido";
     if (!form.objeto.trim()) next.objeto = "Requerido";
@@ -213,8 +215,7 @@ export default function ContractCreateForm({
       }
     }
 
-    setErrors(next);
-    return Object.keys(next).length === 0;
+    return next;
   };
 
   const plazoHelperText =
@@ -255,7 +256,15 @@ export default function ContractCreateForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!validateClient()) return;
+    const clientErrors = getClientValidationErrors();
+    setErrors(clientErrors);
+    if (Object.keys(clientErrors).length > 0) {
+      showToast({
+        message: formatContractFormErrors(clientErrors),
+        variant: "warning",
+      });
+      return;
+    }
 
     try {
       const result = await createMutation.mutateAsync({
@@ -291,8 +300,7 @@ export default function ContractCreateForm({
       onSuccess?.();
     } catch (error) {
       showToast({
-        message:
-          error instanceof Error ? error.message : "No se pudo crear el contrato",
+        message: getApiErrorMessage(error, "No se pudo crear el contrato"),
         variant: "error",
       });
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Bell, Building2, ChevronDown, LogOut, Search, ShieldCheck } from "lucide-react";
+import { Bell, Building2, ChevronDown, LogOut, Menu, Search, ShieldCheck, UserRound } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/components/logo/Logo";
 import { useLogout } from "@/hooks/useLogout";
@@ -25,6 +25,7 @@ interface DashboardHeaderProps {
     navSections?: NavSection[];
     onSectionChange?: (sectionId: string) => void;
     activeSection?: string;
+    onMenuToggle?: () => void;
 }
 
 export default function DashboardHeader({
@@ -34,6 +35,7 @@ export default function DashboardHeader({
     navSections = [],
     onSectionChange,
     activeSection: activeSectionProp,
+    onMenuToggle,
 }: DashboardHeaderProps) {
     const user = useAuthStore((s) => s.user);
     const logout = useLogout();
@@ -107,12 +109,23 @@ export default function DashboardHeader({
             .join("") || "U";
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-card/85  backdrop-blur-md">
+        <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-card/85 backdrop-blur-md">
             <div className="mx-auto flex min-h-20 w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-6 lg:px-8">
-                <div className="flex min-w-0 items-center gap-5">
+                <div className="flex min-w-0 items-center gap-3 md:gap-5">
+                    {onMenuToggle ? (
+                        <button
+                            type="button"
+                            onClick={onMenuToggle}
+                            className="rounded-2xl border border-border/60 bg-background/70 p-3 text-muted-foreground transition hover:bg-muted hover:text-foreground md:hidden"
+                            aria-label="Abrir menú de navegación"
+                        >
+                            <Menu className="h-5 w-5" />
+                        </button>
+                    ) : null}
+
                     <Link
                         href={dashboardHome}
-                        className="flex items-center gap-3 rounded-2xl bg-background/80 px-3 py-2 shadow-sm transition hover:scale-[1.01] hover:bg-background"
+                        className="flex items-center gap-3 rounded-2xl bg-background/80 px-3 py-2 shadow-sm transition hover:scale-[1.01] hover:bg-background md:hidden"
                     >
                         <Logo size="small" variant="default" alt="Vivapay" />
                     </Link>
@@ -212,9 +225,17 @@ export default function DashboardHeader({
                                     </div>
                                 </div>
                                 <div className="p-2">
+                                    <Link
+                                        href="/dashboard/perfil"
+                                        onClick={() => setShowUserMenu(false)}
+                                        className="group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-foreground transition-all duration-200 hover:bg-muted"
+                                    >
+                                        <UserRound className="h-4 w-4 text-primary" />
+                                        <span>Perfil</span>
+                                    </Link>
                                     <button
                                         onClick={handleLogout}
-                                        className="group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-destructive transition-all duration-200 hover:bg-destructive/10"
+                                        className="group mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-destructive transition-all duration-200 hover:bg-destructive/10"
                                     >
                                         <LogOut className="h-4 w-4 transition-transform group-hover:rotate-12" />
                                         <span>Cerrar sesión</span>

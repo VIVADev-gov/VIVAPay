@@ -1,3 +1,5 @@
+import { sanitizeDigitsOnly } from "@/utils/inputSanitizers";
+
 export type SeguridadSocialPlantillaModo = "UNICO" | "SEPARADO";
 
 export type SeguridadSocialPlantillaMetadata = {
@@ -14,7 +16,7 @@ export function isPlantillaNumber(value: string) {
 }
 
 export function sanitizePlantillaInput(value: string) {
-  return value.replace(/\D/g, "");
+  return sanitizeDigitsOnly(value);
 }
 
 export function buildPlantillaMetadata(input: {

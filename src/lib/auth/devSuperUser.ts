@@ -81,9 +81,9 @@ export function normalizeDevSuperUserRole(
 }
 
 export const DEV_SUPER_USER_DEFAULT_ORGANIZATION = {
-  organizationalUnitId: "dir-negocios",
-  organizationalUnitName: "Dirección de Negocios",
+  organizationalUnitId: "dir-planeacion",
+  organizationalUnitName: "Dirección de Planeación",
   organizationalUnitType: ORGANIZACION_TIPO.DIRECCION,
-  subareaId: "proc-contratos",
-  subareaName: "Proceso de contratos",
+  subareaId: "proc-planeacion-estrategica",
+  subareaName: "Planeación Estratégica",
 } as const;
