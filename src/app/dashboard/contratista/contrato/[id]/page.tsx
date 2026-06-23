@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUpRight, Pencil, RefreshCw } from "lucide-react";
+import { ArrowUpRight, ClipboardList, Pencil, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import ActionButton from "@/components/buttons/ActionButton";
@@ -9,6 +9,7 @@ import FileLink from "@/components/files/FileLink";
 import PaymentAccountsTable from "@/components/cuentas-cobro/PaymentAccountsTable";
 import ContractDetailPanel from "@/components/contratos/ContractDetailPanel";
 import ContractEditModal from "@/components/contratos/ContractEditModal";
+import ContractManualRegularizationModal from "@/components/contratos/ContractManualRegularizationModal";
 import ContractHero from "@/components/contratos/ContractHero";
 import RoleDashboardLayout from "@/components/layouts/RoleDashboardLayout";
 import { USER_ROLES } from "@/constants/userRoles";
@@ -34,6 +35,8 @@ export default function ContractDetailPage() {
   const params = useParams<{ id: string }>();
   const contractId = params.id;
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isManualRegularizationOpen, setIsManualRegularizationOpen] =
+    useState(false);
   const detailQuery = useContratoDetailQuery(contractId);
   const regenerateMutation =
     useRegenerateContratoPaymentAccountsMutation(contractId);
@@ -54,6 +57,9 @@ export default function ContractDetailPage() {
     nextPayment?.contratoId === contractId ? nextPayment : null;
 
   const highlightNumero = nextForThisContract?.numero ?? null;
+  const hasManualPaymentAccounts = paymentAccounts.some(
+    (account) => account.envioManual
+  );
 
   const handleRegeneratePaymentAccounts = async () => {
     try {
@@ -146,6 +152,13 @@ export default function ContractDetailPage() {
               paymentAccounts={paymentAccounts}
             />
 
+            <ContractManualRegularizationModal
+              isOpen={isManualRegularizationOpen}
+              onClose={() => setIsManualRegularizationOpen(false)}
+              contractId={contractId}
+              paymentAccounts={paymentAccounts}
+            />
+
             <section className="rounded-4xl border border-border bg-background/70 p-6 shadow-sm">
               <div className="mb-5">
                 <h3 className="text-xl font-black text-foreground">
@@ -196,15 +209,27 @@ export default function ContractDetailPage() {
                     envío.
                   </p>
                 </div>
-                <ActionButton
-                  type="button"
-                  variant="outline"
-                  label="Recalcular cuentas"
-                  icon={RefreshCw}
-                  loading={regenerateMutation.isPending}
-                  onClick={handleRegeneratePaymentAccounts}
-                  className="w-full md:w-auto"
-                />
+                <div className="flex w-full flex-col gap-3 md:w-auto md:items-end">
+                  {hasManualPaymentAccounts ? (
+                    <ActionButton
+                      type="button"
+                      variant="outline"
+                      label="Editar cuentas enviadas manualmente"
+                      icon={ClipboardList}
+                      onClick={() => setIsManualRegularizationOpen(true)}
+                      className="w-full md:w-auto"
+                    />
+                  ) : null}
+                  <ActionButton
+                    type="button"
+                    variant="outline"
+                    label="Recalcular cuentas"
+                    icon={RefreshCw}
+                    loading={regenerateMutation.isPending}
+                    onClick={handleRegeneratePaymentAccounts}
+                    className="w-full md:w-auto"
+                  />
+                </div>
               </div>
               <PaymentAccountsTable
                 contractId={contractId}

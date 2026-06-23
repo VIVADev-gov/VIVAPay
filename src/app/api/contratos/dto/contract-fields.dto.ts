@@ -2,6 +2,14 @@ import { z } from "zod";
 
 const positiveNumber = z.coerce.number().min(0, "El valor debe ser mayor o igual a 0");
 
+const cdpRpcReferenceSchema = z
+  .string()
+  .trim()
+  .regex(
+    /^\d+\s+del\s+\d{2}\/\d{2}\/\d{4}$/i,
+    "Formato inválido. Ejemplo: 291 del 28/01/2026"
+  );
+
 export const contractRubroAdicionalSchema = z.object({
   rubro: z.string().trim().min(1, "El rubro es obligatorio"),
   concepto: z.string().trim().min(1, "El concepto es obligatorio"),
@@ -19,9 +27,9 @@ export const contractCoreFieldsSchema = z.object({
   fechaFinal: z.string().min(1, "La fecha final es obligatoria"),
   concepto: z.string().trim().min(1, "El concepto es obligatorio"),
   rubro: z.string().trim().min(1, "El rubro es obligatorio"),
-  cdp: z.string().trim().min(1, "El CDP es obligatorio"),
+  cdp: cdpRpcReferenceSchema,
   valorCdp: positiveNumber,
-  rpc: z.string().trim().min(1, "El RPC es obligatorio"),
+  rpc: cdpRpcReferenceSchema,
   valorRpc: positiveNumber,
   valorInicialContrato: positiveNumber.refine((v) => v > 0, {
     message: "El valor inicial del contrato debe ser mayor a 0",

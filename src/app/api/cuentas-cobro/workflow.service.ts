@@ -4,7 +4,6 @@ import {
   type CuentaCobroWorkflowAction,
   inboxStatusesForRole,
 } from "@/constants/cuentaCobroWorkflow";
-import { ORGANIZACION_TIPO } from "@/constants/organizacionViva";
 import { USER_ROLES } from "@/constants/userRoles";
 import { enrichContractWithPaymentStats } from "@/lib/contratos/contractStats";
 import { connectDB } from "@/lib/db/mongoose";
@@ -17,6 +16,7 @@ import {
   canSupervisorForwardDirector,
   canSupervisorSendCad,
   contractorMatchesReviewer,
+  contractorQueryFilterForReviewer,
   hasWorkflowSignature,
   resolveStateAfterContractorSubmit,
 } from "@/lib/cuentas-cobro/paymentAccountWorkflow";
@@ -201,13 +201,7 @@ export const cuentasCobroWorkflowService = {
 
     const contractors = await User.find({
       role: USER_ROLES.CONTRATISTA,
-      organizationalUnitId: actorInput.organizationalUnitId,
-      ...(actorInput.role === USER_ROLES.JEFE
-        ? { organizationalUnitType: ORGANIZACION_TIPO.JEFATURA }
-        : {
-            organizationalUnitType: ORGANIZACION_TIPO.DIRECCION,
-            subareaId: actorInput.subareaId ?? null,
-          }),
+      ...contractorQueryFilterForReviewer(actorInput),
     })
       .select("_id name email documentId organizationalUnitName subareaName")
       .lean()

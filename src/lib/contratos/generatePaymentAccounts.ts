@@ -5,6 +5,7 @@ import {
   type ICuentaCobro,
 } from "@/models/cuentaCobro";
 import { parseDateOnlyToUtcNoon } from "@/utils/date";
+import { resolveInitialStatus } from "@/lib/contratos/paymentAccountInitialStatus";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const DAYS_BEFORE_ENABLE = 5;
@@ -137,17 +138,6 @@ function buildPaymentSegments(
       index === segments.length - 1
     ),
   }));
-}
-
-function resolveInitialStatus(
-  fechaHabilitadaEnvio: Date,
-  fechaLimiteEnvio: Date,
-  today: Date
-): (typeof CUENTA_COBRO_STATUS)[keyof typeof CUENTA_COBRO_STATUS] {
-  if (fechaHabilitadaEnvio <= today && fechaLimiteEnvio >= today) {
-    return CUENTA_COBRO_STATUS.HABILITADA;
-  }
-  return CUENTA_COBRO_STATUS.PENDIENTE;
 }
 
 /**

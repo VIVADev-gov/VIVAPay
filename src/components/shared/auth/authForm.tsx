@@ -10,8 +10,8 @@ import {
   getOrganizacionLabelPorRol,
   getUnidadOrganizacional,
   getUnidadesPermitidasPorRol,
+  requiresSubareaForRoleAndUnit,
   unidadPermitidaParaRol,
-  unidadRequiereSubarea,
 } from "@/constants/organizacionViva";
 import { USER_ROLE_OPTIONS, USER_ROLES, type UserRole } from "@/constants/userRoles";
 import { useLoginMutation, useRegisterMutation } from "@/hooks/api/useAuth";
@@ -121,15 +121,20 @@ export default function AuthForm({ mode }: AuthFormProps) {
   );
   const subareaOptions =
     selectedOrganizationalUnit &&
-    unidadRequiereSubarea(selectedOrganizationalUnit.id)
+    selectedRole &&
+    requiresSubareaForRoleAndUnit(selectedRole, selectedOrganizationalUnit.id)
       ? (selectedOrganizationalUnit.subareas ?? []).map((subarea) => ({
           value: subarea.id,
           label: subarea.name,
         }))
       : [];
-  const requiresSubarea = selectedOrganizationalUnit
-    ? unidadRequiereSubarea(selectedOrganizationalUnit.id)
-    : false;
+  const requiresSubarea =
+    selectedRole && selectedOrganizationalUnit
+      ? requiresSubareaForRoleAndUnit(
+          selectedRole,
+          selectedOrganizationalUnit.id
+        )
+      : false;
 
   const handleLoginChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>

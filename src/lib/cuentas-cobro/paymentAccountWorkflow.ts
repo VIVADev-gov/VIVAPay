@@ -24,6 +24,32 @@ export function hasWorkflowSignature(user: { signaturePath?: string | null }) {
   return Boolean(user.signaturePath?.trim());
 }
 
+export function contractorQueryFilterForReviewer(reviewer: WorkflowReviewer) {
+  const base = {
+    organizationalUnitId: reviewer.organizationalUnitId,
+  };
+
+  if (reviewer.role === USER_ROLES.JEFE) {
+    return {
+      ...base,
+      organizationalUnitType: ORGANIZACION_TIPO.JEFATURA,
+    };
+  }
+
+  if (reviewer.role === USER_ROLES.DIRECTOR) {
+    return {
+      ...base,
+      organizationalUnitType: ORGANIZACION_TIPO.DIRECCION,
+    };
+  }
+
+  return {
+    ...base,
+    organizationalUnitType: ORGANIZACION_TIPO.DIRECCION,
+    subareaId: reviewer.subareaId ?? null,
+  };
+}
+
 export function contractorMatchesReviewer(
   contractor: WorkflowContractor,
   reviewer: WorkflowReviewer
@@ -35,10 +61,20 @@ export function contractorMatchesReviewer(
     );
   }
 
-  if (
-    reviewer.role === USER_ROLES.SUPERVISOR ||
-    reviewer.role === USER_ROLES.DIRECTOR
-  ) {
+  if (reviewer.role === USER_ROLES.DIRECTOR) {
+    if (
+      contractor.organizationalUnitId !== reviewer.organizationalUnitId ||
+      contractor.organizationalUnitType !== ORGANIZACION_TIPO.DIRECCION
+    ) {
+      return false;
+    }
+    if (!reviewer.subareaId) {
+      return true;
+    }
+    return (contractor.subareaId ?? null) === reviewer.subareaId;
+  }
+
+  if (reviewer.role === USER_ROLES.SUPERVISOR) {
     return (
       contractor.organizationalUnitId === reviewer.organizationalUnitId &&
       contractor.organizationalUnitType === ORGANIZACION_TIPO.DIRECCION &&

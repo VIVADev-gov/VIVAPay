@@ -56,7 +56,6 @@ async function findActiveOrdenador(contractor: FormOrdenadorContractor) {
     role: USER_ROLES.DIRECTOR,
     organizationalUnitId: contractor.organizationalUnitId,
     organizationalUnitType: ORGANIZACION_TIPO.DIRECCION,
-    subareaId: contractor.subareaId ?? null,
     status: USER_STATUS.ACTIVE,
   })
     .select("_id name documentId role organizationalUnitName signaturePath")

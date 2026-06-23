@@ -10,6 +10,7 @@ import type {
   CreateContratoBody,
   CreateContratoResponse,
   UpdateContratoBody,
+  UpdateManualRegularizationBody,
 } from "@/types/contratos";
 import { cuentasCobroQueryKeys } from "./useCuentasCobro";
 
@@ -133,6 +134,30 @@ export function useRegenerateContratoPaymentAccountsMutation(contractId: string)
     mutationFn: async () => {
       const { data } = await api.post<ApiResponse<ContratoDetailResponse>>(
         `/api/cuentas-cobro/contrato/${contractId}`
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+    onSuccess: (data) => {
+      applyContratoDetailUpdate(data);
+      queryClient.setQueryData(contratosQueryKeys.detail(contractId), data);
+      queryClient.invalidateQueries({ queryKey: contratosQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: cuentasCobroQueryKeys.summary });
+    },
+  });
+}
+
+export function useUpdateManualRegularizationMutation(contractId: string) {
+  const queryClient = useQueryClient();
+  const applyContratoDetailUpdate = useContratosStore(
+    (s) => s.applyContratoDetailUpdate
+  );
+
+  return useMutation({
+    mutationFn: async (body: UpdateManualRegularizationBody) => {
+      const { data } = await api.patch<ApiResponse<ContratoDetailResponse>>(
+        `/api/contratos/${contractId}/regularizacion-manual`,
+        body
       );
       if (!data.success) throw new Error(data.message);
       return data.data;

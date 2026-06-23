@@ -140,6 +140,17 @@ export function unidadRequiereSubarea(unidadId: string) {
   return (unidad?.subareas?.length ?? 0) > 0;
 }
 
+/** Solo contratista y supervisor operan a nivel de subárea/proceso. */
+export function rolRequiereSubarea(role: UserRole) {
+  return (
+    role === USER_ROLES.CONTRATISTA || role === USER_ROLES.SUPERVISOR
+  );
+}
+
+export function requiresSubareaForRoleAndUnit(role: UserRole, unidadId: string) {
+  return rolRequiereSubarea(role) && unidadRequiereSubarea(unidadId);
+}
+
 export function getUnidadesPermitidasPorRol(role: UserRole) {
   switch (role) {
     case USER_ROLES.JEFE:
@@ -198,6 +209,17 @@ export function validateOrganizacionParaRol(
       path: "organizationalUnitId",
       message: `El rol seleccionado solo puede asociarse a una ${label}`,
     };
+  }
+
+  if (!rolRequiereSubarea(input.role)) {
+    if (input.subareaId) {
+      return {
+        ok: false,
+        path: "subareaId",
+        message: "Director y jefe no deben seleccionar subárea o proceso",
+      };
+    }
+    return { ok: true };
   }
 
   if (unidadRequiereSubarea(unidad.id)) {

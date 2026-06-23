@@ -56,10 +56,17 @@ export default function PaymentAccountsTable({
       field: "estado",
       header: "Estado",
       body: (row) => (
-        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-          {row.estado}
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            {row.estado}
+          </span>
+          {row.envioManual ? (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              Manual
+            </span>
+          ) : null}
           {contractRequiresReembolsables ? (
-            <span className="ml-2 rounded-full bg-ring/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ring">
+            <span className="rounded-full bg-ring/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ring">
               Reembolsables
             </span>
           ) : null}
@@ -117,14 +124,21 @@ export default function PaymentAccountsTable({
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                 <ReceiptText className="h-5 w-5" />
               </div>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                {paymentAccount.estado}
-              </span>
-              {contractRequiresReembolsables ? (
-                <span className="rounded-full bg-ring/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-ring">
-                  Reembolsables
+              <div className="flex flex-wrap justify-end gap-2">
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  {paymentAccount.estado}
                 </span>
-              ) : null}
+                {paymentAccount.envioManual ? (
+                  <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                    Manual
+                  </span>
+                ) : null}
+                {contractRequiresReembolsables ? (
+                  <span className="rounded-full bg-ring/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-ring">
+                    Reembolsables
+                  </span>
+                ) : null}
+              </div>
             </div>
 
             <h4 className="text-base font-black text-foreground">

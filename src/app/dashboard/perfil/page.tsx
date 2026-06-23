@@ -10,7 +10,7 @@ import {
   getOrganizacionLabelPorRol,
   getUnidadOrganizacional,
   getUnidadesPermitidasPorRol,
-  unidadRequiereSubarea,
+  requiresSubareaForRoleAndUnit,
 } from "@/constants/organizacionViva";
 import ProfileSignatureSection from "@/components/profile/ProfileSignatureSection";
 import { USER_ROLES } from "@/constants/userRoles";
@@ -52,15 +52,15 @@ export default function PerfilPage() {
   );
   const subareaOptions =
     selectedOrganizationalUnit &&
-    unidadRequiereSubarea(selectedOrganizationalUnit.id)
+    requiresSubareaForRoleAndUnit(userRole, selectedOrganizationalUnit.id)
       ? (selectedOrganizationalUnit.subareas ?? []).map((subarea) => ({
           value: subarea.id,
           label: subarea.name,
         }))
       : [];
-  const requiresSubarea = selectedOrganizationalUnit
-    ? unidadRequiereSubarea(selectedOrganizationalUnit.id)
-    : false;
+  const requiresSubarea =
+    selectedOrganizationalUnit &&
+    requiresSubareaForRoleAndUnit(userRole, selectedOrganizationalUnit.id);
 
   const handleChange = (
     event: React.ChangeEvent<

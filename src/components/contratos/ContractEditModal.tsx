@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ActionButton from "@/components/buttons/ActionButton";
+import ContractCdpRpcReferenceFields from "@/components/contratos/ContractCdpRpcReferenceFields";
 import ContractRubrosFields, {
   contractRubrosFromForm,
 } from "@/components/contratos/ContractRubrosFields";
@@ -11,6 +12,12 @@ import ToggleSwitch from "@/components/forms/ToggleSwitch";
 import Modal from "@/components/modals/Modal";
 import { useUpdateContratoMutation } from "@/hooks/api/useContratos";
 import { getApiErrorMessage } from "@/lib/api-error";
+import {
+  buildCdpRpcReference,
+  cdpRpcReferenceFromContract,
+  EMPTY_CDP_RPC_REFERENCE,
+  getCdpRpcReferenceValidationErrors,
+} from "@/lib/contratos/cdpRpcReference";
 import { formatContractFormErrors } from "@/lib/contratos/formatContractFormErrors";
 import { validateRubrosAdicionalesErrors } from "@/lib/contratos/contractRubrosAdicionales";
 import { useContratosStore } from "@/store/contratos/contratos.store";
@@ -82,6 +89,7 @@ export default function ContractEditModal({
   const updateMutation = useUpdateContratoMutation(contractId);
   const showToast = useUiStore((s) => s.showToast);
   const [form, setForm] = useState<UpdateContratoBody | null>(null);
+  const [cdpRpcReference, setCdpRpcReference] = useState(EMPTY_CDP_RPC_REFERENCE);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const hasPaymentAccounts = paymentAccounts.length > 0;
@@ -90,9 +98,13 @@ export default function ContractEditModal({
   useEffect(() => {
     if (isOpen && contract) {
       setForm(contractToForm(contract));
+      setCdpRpcReference(
+        cdpRpcReferenceFromContract(contract.cdp, contract.rpc)
+      );
       setErrors({});
     } else if (!isOpen) {
       setForm(null);
+      setCdpRpcReference(EMPTY_CDP_RPC_REFERENCE);
     }
   }, [isOpen, contract]);
 
@@ -155,8 +167,7 @@ export default function ContractEditModal({
       next,
       validateRubrosAdicionalesErrors(form.rubrosAdicionales ?? [])
     );
-    if (!form.cdp.trim()) next.cdp = "Requerido";
-    if (!form.rpc.trim()) next.rpc = "Requerido";
+    Object.assign(next, getCdpRpcReferenceValidationErrors(cdpRpcReference));
     if (!form.valorInicialContrato || form.valorInicialContrato <= 0) {
       next.valorInicialContrato = "Debe ser mayor a 0";
     }
@@ -198,6 +209,15 @@ export default function ContractEditModal({
         rubrosAdicionales: form.rubrosAdicionales ?? [],
       });
 
+      const cdp = buildCdpRpcReference(
+        cdpRpcReference.cdpNumero,
+        cdpRpcReference.cdpFecha
+      );
+      const rpc = buildCdpRpcReference(
+        cdpRpcReference.rpcNumero,
+        cdpRpcReference.rpcFecha
+      );
+
       await updateMutation.mutateAsync({
         ...form,
         numeroContrato: form.numeroContrato.trim(),
@@ -205,10 +225,10 @@ export default function ContractEditModal({
         concepto: rubrosPayload.concepto,
         rubro: rubrosPayload.rubro,
         rubrosAdicionales: rubrosPayload.rubrosAdicionales,
-        cdp: form.cdp.trim(),
-        rpc: form.rpc.trim(),
-        numeroDisponibilidad: form.rpc.trim(),
-        numeroCompromiso: form.rpc.trim(),
+        cdp,
+        rpc,
+        numeroDisponibilidad: rpc,
+        numeroCompromiso: rpc,
         plazoMeses: Number(form.plazoMeses),
         valorCdp: Number(form.valorCdp),
         valorRpc: Number(form.valorRpc),
@@ -384,12 +404,18 @@ export default function ContractEditModal({
             required
             helperText={plazoHelperText}
           />
-          <FormField
-            label="Certificado de disponibilidad presupuestal (CDP)"
-            name="cdp"
-            value={form.cdp}
-            onChange={handleChange}
-            required
+          <ContractCdpRpcReferenceFields
+            value={cdpRpcReference}
+            errors={errors}
+            onChange={(patch) => {
+              setCdpRpcReference((current) => ({ ...current, ...patch }));
+              setErrors((current) => ({
+                ...current,
+                ...Object.fromEntries(
+                  Object.keys(patch).map((key) => [key, ""])
+                ),
+              }));
+            }}
           />
           <CurrencyFormField
             label="Valor certificado de disponibilidad presupuestal (CDP)"
@@ -397,14 +423,6 @@ export default function ContractEditModal({
             value={form.valorCdp}
             onChange={handleCurrencyChange}
             required
-          />
-          <FormField
-            label="Registro presupuestal del compromiso (RCP)"
-            name="rpc"
-            value={form.rpc}
-            onChange={handleChange}
-            required
-            helperText="Este número se usará también como No. de disponibilidad y No. de compromiso."
           />
           <CurrencyFormField
             label="Valor registro presupuestal del compromiso (RCP)"

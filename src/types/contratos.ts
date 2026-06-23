@@ -102,6 +102,10 @@ export type CreateContratoBody = ContratoFormBody & {
   submittedPaymentAccountsCount?: number;
 };
 
+export type UpdateManualRegularizationBody = {
+  submittedPaymentAccountsCount: number;
+};
+
 export type UpdateContratoBody = ContratoFormBody;
 
 export type CreateContratoResponse = {
@@ -160,6 +164,7 @@ export type PublicCuentaCobro = {
   enviadaCadAt?: string | null;
   enviadaCadPor?: string | null;
   fechaPago?: string | null;
+  envioManual?: boolean;
   devoluciones?: PublicCuentaCobroDevolucion[];
   createdAt?: string | null;
   updatedAt?: string | null;

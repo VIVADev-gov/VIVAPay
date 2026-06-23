@@ -98,12 +98,18 @@ async function findReviewerEmail(
           organizationalUnitId: contractor.organizationalUnitId,
           organizationalUnitType: ORGANIZACION_TIPO.JEFATURA,
         }
-      : {
-          ...baseQuery,
-          organizationalUnitId: contractor.organizationalUnitId,
-          organizationalUnitType: ORGANIZACION_TIPO.DIRECCION,
-          subareaId: contractor.subareaId ?? null,
-        };
+      : role === USER_ROLES.DIRECTOR
+        ? {
+            ...baseQuery,
+            organizationalUnitId: contractor.organizationalUnitId,
+            organizationalUnitType: ORGANIZACION_TIPO.DIRECCION,
+          }
+        : {
+            ...baseQuery,
+            organizationalUnitId: contractor.organizationalUnitId,
+            organizationalUnitType: ORGANIZACION_TIPO.DIRECCION,
+            subareaId: contractor.subareaId ?? null,
+          };
 
   const reviewer = await User.findOne(query).select("name email").exec();
   if (!reviewer?.email?.trim()) {

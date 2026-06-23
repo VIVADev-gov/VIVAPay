@@ -25,6 +25,11 @@ import {
   hasBlockedFieldChanges,
 } from "@/lib/contratos/contractEditDiff";
 import { normalizeRubrosAdicionales } from "@/lib/contratos/contractRubrosAdicionales";
+import {
+  buildManualRegularizationUpdatesForAccounts,
+  getManualRegularizationBoundary,
+} from "@/lib/contratos/manualRegularization.server";
+import type { UpdateManualRegularizationBodyDto } from "./dto/update-manual-regularization.dto";
 
 function getContractEndDate(contrato: IContratoDocument) {
   return getCurrentContractSnapshot(contrato).fechaFinal ?? contrato.fechaFinal;
@@ -217,6 +222,7 @@ export const contratosService = {
           $set: {
             estado: CUENTA_COBRO_STATUS.ENVIADA,
             fechaEnvio: new Date(),
+            envioManual: true,
           },
         }
       );
@@ -403,6 +409,81 @@ export const contratosService = {
     return {
       contract,
       paymentAccounts: cuentasCobro.map(toPublicCuentaCobro),
+    };
+  },
+
+  async updateManualRegularization(
+    userId: string,
+    contractId: string,
+    dto: UpdateManualRegularizationBodyDto
+  ) {
+    await connectDB();
+
+    if (!Types.ObjectId.isValid(contractId)) {
+      throw new ContractServiceError(
+        "Contrato no encontrado",
+        404,
+        CONTRACT_ERROR_CODES.CONTRACT_NOT_FOUND
+      );
+    }
+
+    const contrato = await Contrato.findOne({ _id: contractId, userId }).exec();
+
+    if (!contrato) {
+      throw new ContractServiceError(
+        "Contrato no encontrado",
+        404,
+        CONTRACT_ERROR_CODES.CONTRACT_NOT_FOUND
+      );
+    }
+
+    const cuentasCobro = await CuentaCobro.find({
+      userId,
+      contratoId: contrato._id,
+    })
+      .sort({ numero: 1 })
+      .exec();
+
+    const boundary = getManualRegularizationBoundary(cuentasCobro);
+    const requestedCount = dto.submittedPaymentAccountsCount;
+
+    if (requestedCount > boundary) {
+      throw new ContractServiceError(
+        "No puedes marcar más cuentas porque ya hay cuentas enviadas por la app",
+        409,
+        CONTRACT_ERROR_CODES.MANUAL_REGULARIZATION_BLOCKED
+      );
+    }
+
+    const updates = buildManualRegularizationUpdatesForAccounts(
+      cuentasCobro,
+      requestedCount
+    );
+
+    await Promise.all(
+      updates.map((update) =>
+        CuentaCobro.updateOne(
+          { _id: update.accountId, userId, contratoId: contrato._id },
+          { $set: update.set }
+        )
+      )
+    );
+
+    const updatedAccounts = await CuentaCobro.find({
+      userId,
+      contratoId: contrato._id,
+    })
+      .sort({ numero: 1 })
+      .exec();
+
+    const contract = enrichContractWithPaymentStats(
+      toPublicContrato(contrato),
+      updatedAccounts
+    );
+
+    return {
+      contract,
+      paymentAccounts: updatedAccounts.map(toPublicCuentaCobro),
     };
   },
 };
