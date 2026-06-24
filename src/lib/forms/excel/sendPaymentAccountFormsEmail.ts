@@ -6,6 +6,7 @@ import { sendEmail } from "@/lib/email/send";
 
 export type SendPaymentAccountFormsEmailInput = {
   to: string | string[];
+  cc?: string | string[];
   contractorName: string;
   contractorDocumentId: string;
   contractNumber: string;
@@ -36,6 +37,7 @@ export async function sendPaymentAccountFormsEmail(
 
   const result = await sendEmail({
     to: destination,
+    cc: input.cc,
     subject,
     template: "cuenta-cobro-formularios",
     data: {

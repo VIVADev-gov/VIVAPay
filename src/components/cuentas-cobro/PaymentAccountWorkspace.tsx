@@ -200,9 +200,13 @@ function DocumentUploadRow({
           <span className="w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
             Cargado
           </span>
-        ) : (
+        ) : requirement.required ? (
           <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
             Pendiente
+          </span>
+        ) : (
+          <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
+            Opcional
           </span>
         )}
       </div>

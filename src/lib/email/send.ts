@@ -9,9 +9,23 @@ export interface EmailFileAttachment {
   contentType?: string;
 }
 
+function normalizeEmailList(value: string | string[] | undefined) {
+  if (!value) return [];
+
+  const items = Array.isArray(value) ? value : [value];
+  const normalized = items
+    .flatMap((item) => item.split(","))
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return [...new Set(normalized)];
+}
+
 export interface SendEmailOptions {
   /** Destinatario(s). Puede ser un email o lista separada por comas */
   to: string | string[];
+  /** Copia (opcional) */
+  cc?: string | string[];
   /** Asunto del correo */
   subject: string;
   /** Nombre de la plantilla (archivo en templates sin .hbs) */
@@ -37,16 +51,18 @@ export interface SendEmailResult {
  * Si SMTP no está configurado, registra un warning y devuelve success: false.
  */
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
-  const { to, subject, template, data, from, text, fileAttachments } = options;
+  const { to, cc, subject, template, data, from, text, fileAttachments } = options;
   const transporter = getTransporter();
   if (!transporter) {
     logger.warn("[Email] No se envió correo: SMTP no configurado.");
     return { success: false, error: "SMTP no configurado" };
   }
 
-  const override = process.env.EMAIL_OVERRIDE;
-  const toList = override ? [override] : (Array.isArray(to) ? to : [to]);
+  const override = process.env.EMAIL_OVERRIDE?.trim();
+  const toList = override ? [override] : normalizeEmailList(to);
+  const ccList = override ? [] : normalizeEmailList(cc);
   const toStr = toList.join(", ");
+  const ccStr = ccList.length > 0 ? ccList.join(", ") : undefined;
 
   try {
     const html = compileTemplate(template, data);
@@ -54,6 +70,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
     const info = await transporter.sendMail({
       from: from ?? getDefaultFrom(),
       to: toStr,
+      cc: ccStr,
       subject,
       text: text ?? undefined,
       html,
@@ -75,7 +92,9 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       ],
     });
 
-    logger.info(`[Email] Correo enviado a ${toStr} (template: ${template})`);
+    logger.info(
+      `[Email] Correo enviado a ${toStr}${ccStr ? ` (cc: ${ccStr})` : ""} (template: ${template})`
+    );
     return { success: true, messageId: info.messageId };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

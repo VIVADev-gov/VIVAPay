@@ -1,19 +1,17 @@
 import "server-only";
 
-import { USER_STATUS } from "@/app/api/auth/_shared/auth.constants";
 import { CUENTA_COBRO_STATUS_LABELS } from "@/constants/cuentaCobroWorkflow";
-import { ORGANIZACION_TIPO } from "@/constants/organizacionViva";
 import { USER_ROLES, type UserRole } from "@/constants/userRoles";
 import { getDashboardPathForRole } from "@/lib/auth/roles";
 import { connectDB } from "@/lib/db/mongoose";
 import { getEmailCad } from "@/lib/email/getEmailCad";
 import logger from "@/lib/logger";
 import type { CuentaCobroStatus } from "@/models/cuentaCobro";
-import { User } from "@/models/user";
 import {
   getPaymentAccountHref,
   getPaymentAccountReviewHref,
 } from "./paymentAccountAccess";
+import { findReviewerEmail } from "./findReviewerByOrg";
 
 export type WorkflowNotificationContractor = {
   name: string;
@@ -80,46 +78,6 @@ function buildMensaje(
     default:
       return `La cuenta de cobro No. ${accountNumber} de ${contractorName} requiere tu atención.`;
   }
-}
-
-async function findReviewerEmail(
-  role: UserRole,
-  contractor: WorkflowNotificationContractor
-) {
-  const baseQuery = {
-    role,
-    status: USER_STATUS.ACTIVE,
-  };
-
-  const query =
-    role === USER_ROLES.JEFE
-      ? {
-          ...baseQuery,
-          organizationalUnitId: contractor.organizationalUnitId,
-          organizationalUnitType: ORGANIZACION_TIPO.JEFATURA,
-        }
-      : role === USER_ROLES.DIRECTOR
-        ? {
-            ...baseQuery,
-            organizationalUnitId: contractor.organizationalUnitId,
-            organizationalUnitType: ORGANIZACION_TIPO.DIRECCION,
-          }
-        : {
-            ...baseQuery,
-            organizationalUnitId: contractor.organizationalUnitId,
-            organizationalUnitType: ORGANIZACION_TIPO.DIRECCION,
-            subareaId: contractor.subareaId ?? null,
-          };
-
-  const reviewer = await User.findOne(query).select("name email").exec();
-  if (!reviewer?.email?.trim()) {
-    return null;
-  }
-
-  return {
-    email: reviewer.email.trim(),
-    name: reviewer.name,
-  };
 }
 
 export async function resolveWorkflowNotificationRecipient(input: {

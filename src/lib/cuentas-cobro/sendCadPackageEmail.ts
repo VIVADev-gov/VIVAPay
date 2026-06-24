@@ -1,6 +1,7 @@
 import "server-only";
 
 import { buildCadEmailPackage } from "@/lib/cuentas-cobro/buildCadEmailPackage";
+import { resolveCadEmailCcRecipients } from "@/lib/cuentas-cobro/resolveCadEmailCcRecipients";
 import { sendPaymentAccountFormsEmail } from "@/lib/forms/excel/sendPaymentAccountFormsEmail";
 import logger from "@/lib/logger";
 
@@ -39,9 +40,17 @@ export async function sendCadPackageEmail(
   }
 
   const { context, attachments } = packageResult;
+  const destination = input.to ?? "";
+
+  const cc = await resolveCadEmailCcRecipients({
+    userId: input.userId,
+    contractor: context.contractor,
+    to: destination,
+  });
 
   const emailResult = await sendPaymentAccountFormsEmail({
-    to: input.to ?? "",
+    to: destination,
+    cc,
     contractorName: context.contractor.name,
     contractorDocumentId: context.contractor.documentId,
     contractNumber: context.contract.numeroContrato,

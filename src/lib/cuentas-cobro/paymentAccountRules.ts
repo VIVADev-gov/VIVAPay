@@ -1,4 +1,5 @@
 import { CONTRACT_PAYMENT_DOCUMENTS } from "@/constants/contractDocuments";
+import { ACCOUNT_PAYMENT_DOCUMENTS } from "@/constants/paymentAccountDocuments";
 import type { PublicCuentaCobro } from "@/types/contratos";
 
 export type PaymentPhase = "PRIMERA" | "INTERMEDIA" | "ULTIMA" | "UNICA";
@@ -61,6 +62,28 @@ const CONTRACT_SCOPE_REQUIREMENTS: PaymentDocumentRequirement[] =
     phases: CONTRACT_SCOPE_PHASES,
   }));
 
+const ALL_PHASES: PaymentPhase[] = ["PRIMERA", "INTERMEDIA", "ULTIMA", "UNICA"];
+const CLOSING_PHASES: PaymentPhase[] = ["ULTIMA", "UNICA"];
+
+const ACCOUNT_SCOPE_REQUIREMENTS: PaymentDocumentRequirement[] = [
+  {
+    tipoDocumento: ACCOUNT_PAYMENT_DOCUMENTS[0].tipoDocumento,
+    label: ACCOUNT_PAYMENT_DOCUMENTS[0].label,
+    helperText: ACCOUNT_PAYMENT_DOCUMENTS[0].helperText,
+    scope: "account",
+    required: false,
+    phases: ALL_PHASES,
+  },
+  ...ACCOUNT_PAYMENT_DOCUMENTS.slice(1).map((document) => ({
+    tipoDocumento: document.tipoDocumento,
+    label: document.label,
+    helperText: document.helperText,
+    scope: "account" as const,
+    required: true,
+    phases: CLOSING_PHASES,
+  })),
+];
+
 export const PAYMENT_DOCUMENT_REQUIREMENTS: PaymentDocumentRequirement[] = [
   ...CONTRACT_SCOPE_REQUIREMENTS,
   {
@@ -71,8 +94,9 @@ export const PAYMENT_DOCUMENT_REQUIREMENTS: PaymentDocumentRequirement[] = [
     scope: "account",
     required: true,
     requiresPlantilla: true,
-    phases: ["PRIMERA", "INTERMEDIA", "ULTIMA", "UNICA"],
+    phases: ALL_PHASES,
   },
+  ...ACCOUNT_SCOPE_REQUIREMENTS,
 ];
 
 export function getPaymentDocumentRequirements(phase: PaymentPhase) {

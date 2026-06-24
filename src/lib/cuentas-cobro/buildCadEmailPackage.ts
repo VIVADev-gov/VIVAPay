@@ -160,18 +160,15 @@ export async function buildCadEmailPackage(
       .filter((item) => item.scope === "contract" && item.required)
       .map((item) => item.tipoDocumento)
   );
-  const requiredAccountTypes = new Set(
-    requirements
-      .filter((item) => item.scope === "account" && item.required)
-      .map((item) => item.tipoDocumento)
-  );
+  const accountRequirementTypeSet = new Set(accountRequirementTypes);
 
   const documentsToAttach = [
     ...contractDocuments.filter((doc) =>
       requiredContractTypes.has(doc.tipoDocumento)
     ),
-    ...accountDocuments.filter((doc) =>
-      requiredAccountTypes.has(doc.tipoDocumento)
+    ...accountDocuments.filter(
+      (doc) =>
+        accountRequirementTypeSet.has(doc.tipoDocumento) && doc.filePath
     ),
   ];
 

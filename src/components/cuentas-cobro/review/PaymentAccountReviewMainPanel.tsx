@@ -5,7 +5,7 @@ import {
   ReviewDocumentCard,
   ReviewDocumentPlaceholder,
 } from "@/components/cuentas-cobro/review/ReviewDocumentCards";
-import { formatDeclarationsSummary } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
+import PaymentAccountDeclarationsDisplay from "@/components/cuentas-cobro/PaymentAccountDeclarationsDisplay";
 import { formatGfrFo11Summary } from "@/lib/cuentas-cobro/gfrFo11Responses";
 import {
   formatReembolsablesContractSummary,
@@ -214,9 +214,9 @@ export default function PaymentAccountReviewMainPanel({
               icon={FileText}
             >
               {account.declaracionesJuradas ? (
-                <p className="rounded-2xl border border-border/60 bg-muted/30 p-4 text-sm font-semibold leading-6 text-foreground md:p-5">
-                  {formatDeclarationsSummary(account.declaracionesJuradas)}
-                </p>
+                <PaymentAccountDeclarationsDisplay
+                  declarations={account.declaracionesJuradas}
+                />
               ) : (
                 <p className="text-sm text-destructive">
                   Sin declaraciones registradas.

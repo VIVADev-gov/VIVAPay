@@ -6,6 +6,7 @@ import ToggleSwitch from "@/components/forms/ToggleSwitch";
 import Modal from "@/components/modals/Modal";
 import {
   defaultPaymentAccountDeclarations,
+  PAYMENT_ACCOUNT_DECLARATION_ITEMS,
   type PaymentAccountDeclarations,
 } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
 
@@ -26,30 +27,32 @@ export default function PaymentAccountDeclarationsModal({
   onSave,
   loading = false,
 }: PaymentAccountDeclarationsModalProps) {
-  const [contratoMultiplesTrabajadores, setContratoMultiplesTrabajadores] =
-    useState(defaultPaymentAccountDeclarations.contratoMultiplesTrabajadores);
-  const [rutActualizado, setRutActualizado] = useState(
-    defaultPaymentAccountDeclarations.rutActualizado
+  const [declarations, setDeclarations] = useState(
+    defaultPaymentAccountDeclarations
   );
 
   useEffect(() => {
     if (!isOpen) return;
 
-    setContratoMultiplesTrabajadores(
-      initialDeclarations?.contratoMultiplesTrabajadores ??
-        defaultPaymentAccountDeclarations.contratoMultiplesTrabajadores
-    );
-    setRutActualizado(
-      initialDeclarations?.rutActualizado ??
-        defaultPaymentAccountDeclarations.rutActualizado
-    );
+    setDeclarations({
+      contratoMultiplesTrabajadores:
+        initialDeclarations?.contratoMultiplesTrabajadores ??
+        defaultPaymentAccountDeclarations.contratoMultiplesTrabajadores,
+      rutActualizado:
+        initialDeclarations?.rutActualizado ??
+        defaultPaymentAccountDeclarations.rutActualizado,
+    });
   }, [isOpen, initialDeclarations]);
 
   const handleSave = async () => {
-    await onSave({
-      contratoMultiplesTrabajadores,
-      rutActualizado,
-    });
+    await onSave(declarations);
+  };
+
+  const updateDeclaration = (
+    key: keyof PaymentAccountDeclarations,
+    value: boolean
+  ) => {
+    setDeclarations((current) => ({ ...current, [key]: value }));
   };
 
   return (
@@ -65,41 +68,32 @@ export default function PaymentAccountDeclarationsModal({
           la cuenta de cobro del periodo.
         </p>
 
-        <section className="grid gap-4 rounded-3xl border border-border/70 bg-muted/20 p-4">
-          <div>
-            <h4 className="text-sm font-bold text-foreground">
-              Retención en la fuente (artículo 383 E.T.)
-            </h4>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Para efectos de la aplicación de la tabla de retención en la fuente
-              establecida en el artículo 383 del Estatuto Tributario, incorporada
-              por el artículo 33 del Decreto 1808 de 2019:
-            </p>
-          </div>
+        {PAYMENT_ACCOUNT_DECLARATION_ITEMS.map((item) => (
+          <section
+            key={item.key}
+            className="grid gap-4 rounded-3xl border border-border/70 bg-muted/20 p-4"
+          >
+            <div>
+              <h4 className="text-sm font-bold text-foreground">
+                {item.number}. {item.title}
+              </h4>
+              {item.intro ? (
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {item.intro}
+                </p>
+              ) : null}
+            </div>
 
-          <ToggleSwitch
-            label="He contratado o vinculado más de un trabajador asociado a mi actividad económica por al menos noventa (90) días continuos o discontinuos"
-            description="En el momento en que contrate o vincule más de un trabajador asociado a mi actividad económica, me comprometo a informar."
-            value={contratoMultiplesTrabajadores}
-            disabled={disabled || loading}
-            onChange={setContratoMultiplesTrabajadores}
-          />
-        </section>
-
-        <section className="grid gap-4 rounded-3xl border border-border/70 bg-muted/20 p-4">
-          <div>
-            <h4 className="text-sm font-bold text-foreground">
-              Actualización del RUT
-            </h4>
-          </div>
-
-          <ToggleSwitch
-            label="Declaro que a la fecha de presentación de este documento, mi RUT se encuentra actualizado"
-            value={rutActualizado}
-            disabled={disabled || loading}
-            onChange={setRutActualizado}
-          />
-        </section>
+            <ToggleSwitch
+              label={item.statement}
+              description={item.commitment}
+              statusLabels={item.statusLabels}
+              value={declarations[item.key]}
+              disabled={disabled || loading}
+              onChange={(value) => updateDeclaration(item.key, value)}
+            />
+          </section>
+        ))}
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <ActionButton

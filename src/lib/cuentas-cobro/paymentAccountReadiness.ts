@@ -23,7 +23,8 @@ export type PaymentAccountReadinessIssue =
   | "MISSING_PLANTILLA"
   | "MISSING_DECLARATIONS"
   | "MISSING_GFR_FO_11"
-  | "MISSING_CONTRACT_DOCUMENT";
+  | "MISSING_CONTRACT_DOCUMENT"
+  | "MISSING_ACCOUNT_DOCUMENT";
 
 export type PaymentAccountReadinessResult = {
   ready: boolean;
@@ -93,6 +94,27 @@ export function validatePaymentAccountReadiness(input: {
       }
       missingContractDocuments.push(requirement.label);
       messages.push(`Falta el documento del contrato: ${requirement.label}.`);
+    }
+  }
+
+  for (const requirement of requirements) {
+    if (
+      requirement.scope !== "account" ||
+      !requirement.required ||
+      requirement.tipoDocumento === SEGURIDAD_SOCIAL_TIPO
+    ) {
+      continue;
+    }
+
+    const document = input.accountDocuments.find(
+      (item) => item.tipoDocumento === requirement.tipoDocumento && item.filePath
+    );
+
+    if (!document) {
+      if (!issues.includes("MISSING_ACCOUNT_DOCUMENT")) {
+        issues.push("MISSING_ACCOUNT_DOCUMENT");
+      }
+      messages.push(`Falta el soporte de la cuenta: ${requirement.label}.`);
     }
   }
 
