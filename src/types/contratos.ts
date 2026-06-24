@@ -211,6 +211,11 @@ export type SeguridadSocialPlantillaMetadata = {
   plantillaPension: string;
   plantillaEps: string;
   plantillaArl: string;
+  aportesManuales?: {
+    aporteSalud: number;
+    aportePension: number;
+    aporteArl: number;
+  } | null;
 };
 
 export type PublicCuentaCobroDocumento = {

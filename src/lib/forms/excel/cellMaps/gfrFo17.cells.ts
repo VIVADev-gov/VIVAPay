@@ -1,4 +1,4 @@
-export const GFR_FO_17_CELLS = {
+export const GFR_FO_17_HEADER_CELLS = {
   contratista: "C4",
   tipoDocumento: "G4",
   documentoContratista: "H4",
@@ -26,6 +26,18 @@ export const GFR_FO_17_CELLS = {
   planillaSalud: "F36",
   planillaPension: "G36",
   planillaArl: "H36",
+  ibcSalud: "F37",
+  ibcPension: "G37",
+  ibcArl: "H37",
+  aporteSalud: "F38",
+  aportePension: "G38",
+  aporteArl: "H38",
+  pctBaseValorCuentaSalud: "F39",
+  pctBaseValorCuentaPension: "G39",
+  pctBaseValorCuentaArl: "H39",
+  pctAporteIbcSalud: "F40",
+  pctAporteIbcPension: "G40",
+  pctAporteIbcArl: "H40",
   disponibilidadActual: "B44",
   compromisoActual: "D44",
   rubroActual: "F44",
@@ -33,6 +45,11 @@ export const GFR_FO_17_CELLS = {
   centroCostoActual: "H44",
   valorActual: "J44",
   cuentaActualTotal: "J50",
+} as const;
+
+/** @deprecated Use GFR_FO_17_HEADER_CELLS or getGfrFo17Layout().cells */
+export const GFR_FO_17_CELLS = {
+  ...GFR_FO_17_HEADER_CELLS,
   historialTotalHonorarios: "F59",
   historialTotalGastos: "G59",
   historialTotalIva: "H59",
@@ -56,15 +73,150 @@ export const GFR_FO_17_CELLS = {
 } as const;
 
 export const GFR_FO_17_HISTORIAL_START_ROW = 53;
-export const GFR_FO_17_HISTORIAL_MAX_ROWS = 6;
+export const GFR_FO_17_HISTORIAL_BASE_ROWS = 6;
+
+/** @deprecated Use getGfrFo17Layout().historialRowCount */
+export const GFR_FO_17_HISTORIAL_MAX_ROWS = GFR_FO_17_HISTORIAL_BASE_ROWS;
+
+const LAYOUT_BASE = {
+  totalRow: 59,
+  valorRow: 60,
+  saldoRow: 61,
+  declaracion383Si: "D67",
+  declaracion383No: "F67",
+  declaracionRutSi: "D71",
+  declaracionRutNo: "F71",
+  porcentajeEjecucionFinanciera: "E76",
+  porcentajeEjecucionFisica: "J76",
+  actividadStartRow: 80,
+  documentoContratistaFirma: "H123",
+  tipoInforme: "E129",
+  documentoSupervisorFirma: "B136",
+  fechaExpedicion: "G135",
+  trimRowsAfter: 143,
+  signatureContratistaRow: 122.9,
+  signatureSupervisorRow: 134.9,
+} as const;
+
+export type GfrFo17Layout = {
+  historialRowCount: number;
+  historialStartRow: number;
+  historialEndRow: number;
+  totalRow: number;
+  valorRow: number;
+  saldoRow: number;
+  cells: {
+    historialTotalHonorarios: string;
+    historialTotalGastos: string;
+    historialTotalIva: string;
+    valorContractual: string;
+    valorContractualGastos: string;
+    valorContractualIva: string;
+    saldoContractualHonorarios: string;
+    saldoContractualGastos: string;
+    saldoContractualIva: string;
+    declaracion383Si: string;
+    declaracion383No: string;
+    declaracionRutSi: string;
+    declaracionRutNo: string;
+    porcentajeEjecucionFinanciera: string;
+    porcentajeEjecucionFisica: string;
+    documentoContratistaFirma: string;
+    tipoInforme: string;
+    documentoSupervisorFirma: string;
+    fechaExpedicion: string;
+  };
+  actividadStartRow: number;
+  trimRowsAfter: number;
+  signatureAnchors: {
+    contratista: {
+      tl: { col: number; row: number };
+      ext: { width: number; height: number };
+    };
+    supervisor: {
+      tl: { col: number; row: number };
+      ext: { width: number; height: number };
+    };
+  };
+};
+
+function shiftCellRow(cellRef: string, extraRows: number) {
+  const match = /^([A-Z]+)(\d+)$/.exec(cellRef);
+  if (!match) return cellRef;
+  return `${match[1]}${Number(match[2]) + extraRows}`;
+}
+
+export function getGfrFo17Layout(historialRowCount: number): GfrFo17Layout {
+  const rows = Math.max(GFR_FO_17_HISTORIAL_BASE_ROWS, historialRowCount);
+  const extra = rows - GFR_FO_17_HISTORIAL_BASE_ROWS;
+  const historialStartRow = GFR_FO_17_HISTORIAL_START_ROW;
+  const historialEndRow = historialStartRow + rows - 1;
+  const totalRow = historialEndRow + 1;
+  const valorRow = totalRow + 1;
+  const saldoRow = totalRow + 2;
+
+  return {
+    historialRowCount: rows,
+    historialStartRow,
+    historialEndRow,
+    totalRow,
+    valorRow,
+    saldoRow,
+    cells: {
+      historialTotalHonorarios: `F${totalRow}`,
+      historialTotalGastos: `G${totalRow}`,
+      historialTotalIva: `H${totalRow}`,
+      valorContractual: `F${valorRow}`,
+      valorContractualGastos: `G${valorRow}`,
+      valorContractualIva: `H${valorRow}`,
+      saldoContractualHonorarios: `F${saldoRow}`,
+      saldoContractualGastos: `G${saldoRow}`,
+      saldoContractualIva: `H${saldoRow}`,
+      declaracion383Si: shiftCellRow(LAYOUT_BASE.declaracion383Si, extra),
+      declaracion383No: shiftCellRow(LAYOUT_BASE.declaracion383No, extra),
+      declaracionRutSi: shiftCellRow(LAYOUT_BASE.declaracionRutSi, extra),
+      declaracionRutNo: shiftCellRow(LAYOUT_BASE.declaracionRutNo, extra),
+      porcentajeEjecucionFinanciera: shiftCellRow(
+        LAYOUT_BASE.porcentajeEjecucionFinanciera,
+        extra
+      ),
+      porcentajeEjecucionFisica: shiftCellRow(
+        LAYOUT_BASE.porcentajeEjecucionFisica,
+        extra
+      ),
+      documentoContratistaFirma: shiftCellRow(
+        LAYOUT_BASE.documentoContratistaFirma,
+        extra
+      ),
+      tipoInforme: shiftCellRow(LAYOUT_BASE.tipoInforme, extra),
+      documentoSupervisorFirma: shiftCellRow(
+        LAYOUT_BASE.documentoSupervisorFirma,
+        extra
+      ),
+      fechaExpedicion: shiftCellRow(LAYOUT_BASE.fechaExpedicion, extra),
+    },
+    actividadStartRow: LAYOUT_BASE.actividadStartRow + extra,
+    trimRowsAfter: LAYOUT_BASE.trimRowsAfter + extra,
+    signatureAnchors: {
+      contratista: {
+        tl: { col: 1.0, row: LAYOUT_BASE.signatureContratistaRow + extra },
+        ext: { width: 220, height: 40 },
+      },
+      supervisor: {
+        tl: { col: 1.0, row: LAYOUT_BASE.signatureSupervisorRow + extra },
+        ext: { width: 220, height: 40 },
+      },
+    },
+  };
+}
 
 export const GFR_FO_17_SIGNATURE_ANCHORS = {
   contratista: {
-    tl: { col: 1.0, row: 122.9 },
+    tl: { col: 1.0, row: LAYOUT_BASE.signatureContratistaRow },
     ext: { width: 220, height: 40 },
   },
   supervisor: {
-    tl: { col: 1.0, row: 134.9 },
+    tl: { col: 1.0, row: LAYOUT_BASE.signatureSupervisorRow },
     ext: { width: 220, height: 40 },
   },
 } as const;

@@ -462,6 +462,22 @@ export function useUploadCuentaCobroDocumentMutation(
           formData.append("plantillaEps", plantillaMetadata.plantillaEps);
           formData.append("plantillaArl", plantillaMetadata.plantillaArl);
         }
+
+        if (plantillaMetadata.aportesManuales) {
+          formData.append("useAportesManuales", "true");
+          formData.append(
+            "aporteSalud",
+            String(plantillaMetadata.aportesManuales.aporteSalud)
+          );
+          formData.append(
+            "aportePension",
+            String(plantillaMetadata.aportesManuales.aportePension)
+          );
+          formData.append(
+            "aporteArl",
+            String(plantillaMetadata.aportesManuales.aporteArl)
+          );
+        }
       }
 
       const { data } = await api.post<

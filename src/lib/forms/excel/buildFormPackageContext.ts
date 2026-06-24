@@ -37,9 +37,11 @@ function toPaymentAccountSnapshot(
   return {
     id: String(account._id),
     numero: account.numero,
+    estado: account.estado,
     periodoInicio: parseIsoDate(account.periodoInicio),
     periodoFin: parseIsoDate(account.periodoFin),
     valor: account.valor ?? null,
+    fechaEnvio: parseIsoDate(account.fechaEnvio),
     enviadaCadAt: parseIsoDate(account.enviadaCadAt),
     fechaPago: parseIsoDate(account.fechaPago),
     declaracionesJuradas: parsePaymentAccountDeclarations(

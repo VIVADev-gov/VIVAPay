@@ -63,6 +63,52 @@ function getPayableDays(
   return Math.min(30, calendarDays);
 }
 
+export function getPayableDaysForAccountAtIndex(
+  account: { periodoInicio: Date | null; periodoFin: Date | null },
+  index: number,
+  totalAccounts: number
+): number {
+  if (!account.periodoInicio || !account.periodoFin) return 0;
+
+  return getPayableDays(
+    account.periodoInicio,
+    account.periodoFin,
+    index === 0,
+    index === totalAccounts - 1
+  );
+}
+
+export function mapPayableDaysByAccountNumero<
+  T extends {
+    numero: number;
+    periodoInicio: Date | null;
+    periodoFin: Date | null;
+  },
+>(accounts: readonly T[]): Map<number, number> {
+  const sorted = [...accounts].sort((a, b) => a.numero - b.numero);
+  const total = sorted.length;
+
+  return new Map(
+    sorted.map((account, index) => [
+      account.numero,
+      getPayableDaysForAccountAtIndex(account, index, total),
+    ])
+  );
+}
+
+export function getTotalContractPayableDays<
+  T extends {
+    numero: number;
+    periodoInicio: Date | null;
+    periodoFin: Date | null;
+  },
+>(accounts: readonly T[]): number {
+  return [...mapPayableDaysByAccountNumero(accounts).values()].reduce(
+    (sum, days) => sum + days,
+    0
+  );
+}
+
 export function buildPaymentAccountPreviews({
   fechaActaInicio,
   fechaFinal,

@@ -3,6 +3,10 @@ import "server-only";
 import ExcelJS from "exceljs";
 import path from "path";
 import type { CellValues } from "./types";
+import {
+  expandGfrFo17HistorialRows,
+  type ExpandGfrFo17HistorialOptions,
+} from "./expandGfrFo17Historial";
 
 export type FillXlsxImageExtension = "png" | "jpeg" | "gif";
 
@@ -45,6 +49,7 @@ export type FillXlsxOptions = {
   removeOtherSheets?: boolean;
   clearColumnsAfter?: string;
   resetDimensions?: { lastRow: number; lastCol: number };
+  expandGfrFo17Historial?: ExpandGfrFo17HistorialOptions;
 };
 
 function columnLetterToNumber(letter: string): number {
@@ -169,6 +174,10 @@ export async function fillXlsxTemplate(
 
   if (options?.removeOtherSheets) {
     removeWorksheetsExcept(workbook, sheet);
+  }
+
+  if (options?.expandGfrFo17Historial) {
+    expandGfrFo17HistorialRows(sheet, options.expandGfrFo17Historial);
   }
 
   for (const [cellRef, value] of Object.entries(values)) {

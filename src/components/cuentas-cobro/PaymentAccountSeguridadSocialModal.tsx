@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import ActionButton from "@/components/buttons/ActionButton";
+import CurrencyFormField from "@/components/forms/CurrencyFormField";
 import FileUpload from "@/components/forms/FileUpload";
 import FormField from "@/components/forms/FormField";
 import ToggleSwitch from "@/components/forms/ToggleSwitch";
 import Modal from "@/components/modals/Modal";
 import {
   buildPlantillaMetadata,
+  hasSeguridadSocialAportesManuales,
+  parseSeguridadSocialPlantillaMetadata,
   sanitizePlantillaInput,
   type SeguridadSocialPlantillaMetadata,
 } from "@/lib/cuentas-cobro/seguridadSocialPlantilla";
@@ -40,12 +43,18 @@ export default function PaymentAccountSeguridadSocialModal({
   const [plantillaPension, setPlantillaPension] = useState("");
   const [plantillaEps, setPlantillaEps] = useState("");
   const [plantillaArl, setPlantillaArl] = useState("");
+  const [useAportesManuales, setUseAportesManuales] = useState(false);
+  const [aporteSalud, setAporteSalud] = useState(0);
+  const [aportePension, setAportePension] = useState(0);
+  const [aporteArl, setAporteArl] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    const metadata = existingDocument?.metadata ?? null;
+    const metadata = parseSeguridadSocialPlantillaMetadata(
+      existingDocument?.metadata ?? null
+    );
     setFile(null);
     setKeepExistingFile(Boolean(existingDocument));
     setError(null);
@@ -56,8 +65,18 @@ export default function PaymentAccountSeguridadSocialModal({
       setPlantillaPension("");
       setPlantillaEps("");
       setPlantillaArl("");
+      setUseAportesManuales(false);
+      setAporteSalud(0);
+      setAportePension(0);
+      setAporteArl(0);
       return;
     }
+
+    const hasManualAportes = hasSeguridadSocialAportesManuales(metadata);
+    setUseAportesManuales(hasManualAportes);
+    setAporteSalud(metadata.aportesManuales?.aporteSalud ?? 0);
+    setAportePension(metadata.aportesManuales?.aportePension ?? 0);
+    setAporteArl(metadata.aportesManuales?.aporteArl ?? 0);
 
     if (metadata.modo === "SEPARADO") {
       setModo("SEPARADO");
@@ -77,6 +96,12 @@ export default function PaymentAccountSeguridadSocialModal({
 
   const hasPdf = Boolean(file) || (keepExistingFile && Boolean(existingDocument));
 
+  const handleCurrencyChange = (name: string, value: number) => {
+    if (name === "aporteSalud") setAporteSalud(value);
+    if (name === "aportePension") setAportePension(value);
+    if (name === "aporteArl") setAporteArl(value);
+  };
+
   const handleSubmit = async () => {
     if (!hasPdf) {
       setError("Debes adjuntar el soporte en PDF");
@@ -89,6 +114,10 @@ export default function PaymentAccountSeguridadSocialModal({
       plantillaPension,
       plantillaEps,
       plantillaArl,
+      useAportesManuales,
+      aporteSalud,
+      aportePension,
+      aporteArl,
     });
 
     if (validationError || !metadata) {
@@ -225,6 +254,57 @@ export default function PaymentAccountSeguridadSocialModal({
               />
             </div>
           )}
+        </section>
+
+        <section className="grid gap-4 rounded-3xl border border-border/70 bg-muted/20 p-4">
+          <div>
+            <h4 className="text-sm font-bold text-foreground">Valores de aporte (GFR-FO-17)</h4>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Por defecto el formulario calcula los aportes a partir del valor de
+              la cuenta. Activa esta opción si los valores de tu planilla PILA
+              son distintos.
+            </p>
+          </div>
+
+          <ToggleSwitch
+            label="Usar valores de aporte según planilla PILA"
+            description="Indica salud, pensión y ARL tal como aparecen en tu comprobante."
+            value={useAportesManuales}
+            disabled={disabled || loading}
+            onChange={setUseAportesManuales}
+          />
+
+          {useAportesManuales ? (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <CurrencyFormField
+                id="aporte-salud"
+                name="aporteSalud"
+                label="Salud"
+                value={aporteSalud}
+                required
+                disabled={disabled || loading}
+                onChange={handleCurrencyChange}
+              />
+              <CurrencyFormField
+                id="aporte-pension"
+                name="aportePension"
+                label="Pensión"
+                value={aportePension}
+                required
+                disabled={disabled || loading}
+                onChange={handleCurrencyChange}
+              />
+              <CurrencyFormField
+                id="aporte-arl"
+                name="aporteArl"
+                label="ARL"
+                value={aporteArl}
+                required
+                disabled={disabled || loading}
+                onChange={handleCurrencyChange}
+              />
+            </div>
+          ) : null}
         </section>
 
         {error ? (

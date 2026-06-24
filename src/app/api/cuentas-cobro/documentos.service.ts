@@ -59,6 +59,8 @@ function resolveDocumentMetadata(
 export function parsePlantillaMetadataFromFormData(formData: FormData) {
   const modo = String(formData.get("plantillaModo") ?? "UNICO").trim();
   const plantillaModo = modo === "SEPARADO" ? "SEPARADO" : "UNICO";
+  const useAportesManuales =
+    String(formData.get("useAportesManuales") ?? "").trim() === "true";
 
   const { metadata, error } = buildPlantillaMetadata({
     modo: plantillaModo,
@@ -66,6 +68,10 @@ export function parsePlantillaMetadataFromFormData(formData: FormData) {
     plantillaPension: String(formData.get("plantillaPension") ?? ""),
     plantillaEps: String(formData.get("plantillaEps") ?? ""),
     plantillaArl: String(formData.get("plantillaArl") ?? ""),
+    useAportesManuales,
+    aporteSalud: String(formData.get("aporteSalud") ?? ""),
+    aportePension: String(formData.get("aportePension") ?? ""),
+    aporteArl: String(formData.get("aporteArl") ?? ""),
   });
 
   if (error || !metadata) {

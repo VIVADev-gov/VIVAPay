@@ -2,6 +2,7 @@ import type { FormOrdenador } from "@/lib/cuentas-cobro/resolveFormOrdenador";
 import type { FormReviewer } from "@/lib/cuentas-cobro/resolveFormReviewer";
 import type { SeguridadSocialPlantillaMetadata } from "@/lib/cuentas-cobro/seguridadSocialPlantilla";
 import type {
+  CuentaCobroStatus,
   GfrFo11Responses,
   PaymentAccountDeclarations,
 } from "@/types/contratos";
@@ -55,9 +56,11 @@ export type FormContractorSnapshot = {
 export type FormPaymentAccountSnapshot = {
   id: string;
   numero: number;
+  estado: CuentaCobroStatus;
   periodoInicio: Date | null;
   periodoFin: Date | null;
   valor: number | null;
+  fechaEnvio: Date | null;
   enviadaCadAt: Date | null;
   fechaPago: Date | null;
   declaracionesJuradas: PaymentAccountDeclarations | null;

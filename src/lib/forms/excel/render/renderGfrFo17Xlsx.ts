@@ -1,7 +1,11 @@
 import "server-only";
 
 import { buildGfrFo17Data } from "../build/buildGfrFo17Data";
-import { GFR_FO_17_SIGNATURE_ANCHORS } from "../cellMaps/gfrFo17.cells";
+import {
+  GFR_FO_17_HISTORIAL_BASE_ROWS,
+  GFR_FO_17_HISTORIAL_START_ROW,
+  getGfrFo17Layout,
+} from "../cellMaps/gfrFo17.cells";
 import { fillXlsxTemplate } from "../fillXlsxTemplate";
 import { FORM_TEMPLATES } from "../formTemplates";
 import { resolveFormSignatureImage } from "../resolveFormSignatureImage";
@@ -9,6 +13,8 @@ import type { FormPackageContext } from "../types";
 
 export async function renderGfrFo17Xlsx(ctx: FormPackageContext) {
   const template = FORM_TEMPLATES.GFR_FO_17;
+  const historialRowCount = ctx.paymentAccounts.length;
+  const layout = getGfrFo17Layout(historialRowCount);
 
   const [contratistaImage, supervisorImage] = await Promise.all([
     resolveFormSignatureImage(
@@ -28,13 +34,18 @@ export async function renderGfrFo17Xlsx(ctx: FormPackageContext) {
   return fillXlsxTemplate(
     template.file,
     template.sheet,
-    buildGfrFo17Data(ctx),
+    buildGfrFo17Data(ctx, layout),
     {
-      trimRowsAfter: 143,
-      printArea: "A1:K143",
+      expandGfrFo17Historial: {
+        startRow: GFR_FO_17_HISTORIAL_START_ROW,
+        baseRows: GFR_FO_17_HISTORIAL_BASE_ROWS,
+        targetRows: historialRowCount,
+      },
+      trimRowsAfter: layout.trimRowsAfter,
+      printArea: `A1:K${layout.trimRowsAfter}`,
       removeOtherSheets: true,
       clearColumnsAfter: "K",
-      resetDimensions: { lastRow: 143, lastCol: 11 },
+      resetDimensions: { lastRow: layout.trimRowsAfter, lastCol: 11 },
       pageSetup: {
         fitToPage: true,
         fitToWidth: 1,
@@ -54,14 +65,14 @@ export async function renderGfrFo17Xlsx(ctx: FormPackageContext) {
       images: [
         {
           ...contratistaImage,
-          tl: { ...GFR_FO_17_SIGNATURE_ANCHORS.contratista.tl },
-          ext: { ...GFR_FO_17_SIGNATURE_ANCHORS.contratista.ext },
+          tl: { ...layout.signatureAnchors.contratista.tl },
+          ext: { ...layout.signatureAnchors.contratista.ext },
           editAs: "absolute",
         },
         {
           ...supervisorImage,
-          tl: { ...GFR_FO_17_SIGNATURE_ANCHORS.supervisor.tl },
-          ext: { ...GFR_FO_17_SIGNATURE_ANCHORS.supervisor.ext },
+          tl: { ...layout.signatureAnchors.supervisor.tl },
+          ext: { ...layout.signatureAnchors.supervisor.ext },
           editAs: "absolute",
         },
       ],

@@ -1,102 +1,112 @@
 import { formatCurrencyInWords } from "@/utils/numberToWords";
 import {
-  GFR_FO_17_CELLS,
-  GFR_FO_17_HISTORIAL_MAX_ROWS,
-  GFR_FO_17_HISTORIAL_START_ROW,
+  GFR_FO_17_HEADER_CELLS,
+  type GfrFo17Layout,
 } from "../cellMaps/gfrFo17.cells";
+import { getGfrFo17Config } from "../config/gfrFo17.config";
 import type {
   CellValues,
   FormPackageContext,
   FormPaymentAccountSnapshot,
 } from "../types";
 import {
+  applyGfrFo17SeguridadSocialCells,
+  computeGfrFo17SeguridadSocialAportes,
+} from "./buildGfrFo17SeguridadSocial";
+import {
+  getGfrFo17HistorialAccounts,
+  isGfrFo17HistorialEligible,
+} from "./gfrFo17Historial";
+import { computeGfrFo17EjecucionPorcentajes } from "./gfrFo17Ejecucion";
+import {
   applyDeclarationCells,
   formatPlazoMeses,
   parseIsoDate,
 } from "./formExcelHelpers";
 
-function appendHistorialRows(values: CellValues, ctx: FormPackageContext) {
-  const currentNumero = ctx.paymentAccount.numero;
-  const valorContrato = ctx.contract.valorInicialContrato;
-  const sorted = [...ctx.paymentAccounts]
-    .filter((account) => account.numero <= currentNumero)
-    .sort((a, b) => a.numero - b.numero);
-
-  const totalHonorarios = sorted.reduce(
-    (sum, account) => sum + (account.valor ?? 0),
-    0
-  );
-
-  let honorariosAcum = 0;
-
-  for (let index = 0; index < GFR_FO_17_HISTORIAL_MAX_ROWS; index++) {
-    const row = GFR_FO_17_HISTORIAL_START_ROW + index;
-    const account = sorted[index];
-
-    if (!account) {
-      values[`C${row}`] = "";
-      values[`E${row}`] = "";
-      values[`F${row}`] = "";
-      values[`G${row}`] = "";
-      values[`H${row}`] = "";
-      values[`I${row}`] = "";
-      continue;
-    }
-
-    honorariosAcum += account.valor ?? 0;
-    fillHistorialRow(
-      values,
-      row,
-      account,
-      currentNumero,
-      valorContrato,
-      honorariosAcum
-    );
-  }
-
-  const saldoContractual = valorContrato - totalHonorarios;
-
-  values[GFR_FO_17_CELLS.historialTotalHonorarios] = totalHonorarios;
-  values[GFR_FO_17_CELLS.historialTotalGastos] = 0;
-  values[GFR_FO_17_CELLS.historialTotalIva] = totalHonorarios;
-  values[GFR_FO_17_CELLS.valorContractual] = valorContrato;
-  values[GFR_FO_17_CELLS.valorContractualGastos] = 0;
-  values[GFR_FO_17_CELLS.valorContractualIva] = valorContrato;
-  values[GFR_FO_17_CELLS.saldoContractualHonorarios] = saldoContractual;
-  values[GFR_FO_17_CELLS.saldoContractualGastos] = 0;
-  values[GFR_FO_17_CELLS.saldoContractualIva] = saldoContractual;
+function clearHistorialRow(values: CellValues, row: number) {
+  values[`C${row}`] = "";
+  values[`D${row}`] = "";
+  values[`E${row}`] = "";
+  values[`F${row}`] = "";
+  values[`G${row}`] = "";
+  values[`I${row}`] = "";
 }
 
 function fillHistorialRow(
   values: CellValues,
   row: number,
   account: FormPaymentAccountSnapshot,
-  currentNumero: number,
   valorContrato: number,
   honorariosAcum: number
 ) {
   const honorario = account.valor ?? 0;
   const saldo = valorContrato - honorariosAcum;
-  const isCurrent = account.numero === currentNumero;
 
-  if (isCurrent) {
-    values[`C${row}`] = "";
-    values[`E${row}`] = "";
-  } else {
-    values[`C${row}`] = account.enviadaCadAt ?? "";
-    values[`E${row}`] = account.fechaPago ?? "";
-  }
-
+  values[`C${row}`] = account.numero;
+  values[`D${row}`] = account.fechaEnvio ?? "";
+  values[`E${row}`] = account.fechaPago ?? account.periodoFin ?? "";
   values[`F${row}`] = honorario;
-  values[`G${row}`] = "";
-  values[`H${row}`] = honorario;
+  values[`G${row}`] = 0;
   values[`I${row}`] = saldo;
 }
 
-function appendActivityRows(values: CellValues, ctx: FormPackageContext) {
-  const startRow = GFR_FO_17_CELLS.actividadStartRow;
+function appendHistorialRows(
+  values: CellValues,
+  ctx: FormPackageContext,
+  layout: GfrFo17Layout
+) {
+  const currentNumero = ctx.paymentAccount.numero;
+  const valorContrato = ctx.contract.valorInicialContrato;
+  const accountsByNumero = new Map(
+    ctx.paymentAccounts.map((account) => [account.numero, account])
+  );
+  const eligibleAccounts = getGfrFo17HistorialAccounts(
+    ctx.paymentAccounts,
+    currentNumero
+  );
+  const totalHonorarios = eligibleAccounts.reduce(
+    (sum, account) => sum + (account.valor ?? 0),
+    0
+  );
+
+  let honorariosAcum = 0;
+
+  for (let index = 0; index < layout.historialRowCount; index++) {
+    const row = layout.historialStartRow + index;
+    const numero = index + 1;
+    const account = accountsByNumero.get(numero);
+
+    if (!account || !isGfrFo17HistorialEligible(account, currentNumero)) {
+      clearHistorialRow(values, row);
+      continue;
+    }
+
+    honorariosAcum += account.valor ?? 0;
+    fillHistorialRow(values, row, account, valorContrato, honorariosAcum);
+  }
+
+  const saldoContractual = valorContrato - totalHonorarios;
+  const { cells } = layout;
+
+  values[cells.historialTotalHonorarios] = totalHonorarios;
+  values[cells.historialTotalGastos] = 0;
+  values[cells.historialTotalIva] = totalHonorarios;
+  values[cells.valorContractual] = valorContrato;
+  values[cells.valorContractualGastos] = 0;
+  values[cells.valorContractualIva] = valorContrato;
+  values[cells.saldoContractualHonorarios] = saldoContractual;
+  values[cells.saldoContractualGastos] = 0;
+  values[cells.saldoContractualIva] = saldoContractual;
+}
+
+function appendActivityRows(
+  values: CellValues,
+  ctx: FormPackageContext,
+  actividadStartRow: number
+) {
   ctx.activities.forEach((activity, index) => {
-    const row = startRow + index;
+    const row = actividadStartRow + index;
     values[`B${row}`] = activity.actividad;
     values[`E${row}`] = activity.accion;
     values[`I${row}`] =
@@ -107,80 +117,86 @@ function appendActivityRows(values: CellValues, ctx: FormPackageContext) {
   });
 }
 
-export function buildGfrFo17Data(ctx: FormPackageContext): CellValues {
+export function buildGfrFo17Data(
+  ctx: FormPackageContext,
+  layout: GfrFo17Layout
+): CellValues {
   const { contract, contractor, reviewer, paymentAccount, seguridadSocialMetadata } =
     ctx;
+  const header = GFR_FO_17_HEADER_CELLS;
+  const { cells } = layout;
   const valor = paymentAccount.valor ?? 0;
-  const totalPagado = ctx.paymentAccounts
-    .filter((account) => account.numero < paymentAccount.numero)
-    .reduce((sum, account) => sum + (account.valor ?? 0), 0);
+  const ejecucion = computeGfrFo17EjecucionPorcentajes(ctx);
 
   const values: CellValues = {
-    [GFR_FO_17_CELLS.contratista]: contractor.name.toUpperCase(),
-    [GFR_FO_17_CELLS.tipoDocumento]: "CC",
-    [GFR_FO_17_CELLS.documentoContratista]: contractor.documentId,
-    [GFR_FO_17_CELLS.numeroContrato]: contract.numeroContrato,
-    [GFR_FO_17_CELLS.dependenciaContratante]: contractor.organizationalUnitName,
-    [GFR_FO_17_CELLS.nombreSupervisor]: reviewer.name.toUpperCase(),
-    [GFR_FO_17_CELLS.documentoSupervisor]: reviewer.documentId,
-    [GFR_FO_17_CELLS.objeto]: contract.objeto,
-    [GFR_FO_17_CELLS.plazoMeses]: formatPlazoMeses(contract.plazoMeses),
-    [GFR_FO_17_CELLS.fechaActaInicio]: contract.fechaActaInicio,
-    [GFR_FO_17_CELLS.fechaFinal]: contract.fechaFinal,
-    [GFR_FO_17_CELLS.concepto]: contract.concepto,
-    [GFR_FO_17_CELLS.rubro]: contract.rubro,
-    [GFR_FO_17_CELLS.cdp]: contract.cdp,
-    [GFR_FO_17_CELLS.valorCdp]: contract.valorCdp,
-    [GFR_FO_17_CELLS.rpc]: contract.rpc,
-    [GFR_FO_17_CELLS.valorRpc]: contract.valorRpc,
-    [GFR_FO_17_CELLS.valorInicialContrato]: contract.valorInicialContrato,
-    [GFR_FO_17_CELLS.totalRecursosComprometidos]:
-      contract.totalRecursosComprometidos,
-    [GFR_FO_17_CELLS.cuentaNumero]: paymentAccount.numero,
-    [GFR_FO_17_CELLS.periodoDesde]: paymentAccount.periodoInicio,
-    [GFR_FO_17_CELLS.periodoHasta]: paymentAccount.periodoFin,
-    [GFR_FO_17_CELLS.valorPagoNumeros]: valor,
-    [GFR_FO_17_CELLS.valorPagoLetras]: formatCurrencyInWords(valor),
-    [GFR_FO_17_CELLS.disponibilidadActual]: contract.numeroDisponibilidad,
-    [GFR_FO_17_CELLS.compromisoActual]: contract.numeroCompromiso,
-    [GFR_FO_17_CELLS.rubroActual]: contract.rubro,
-    [GFR_FO_17_CELLS.conceptoActual]: contract.concepto,
-    [GFR_FO_17_CELLS.centroCostoActual]: process.env.GFR_FO_17_CENTRO_COSTO ?? "",
-    [GFR_FO_17_CELLS.valorActual]: valor,
-    [GFR_FO_17_CELLS.cuentaActualTotal]: valor,
-    [GFR_FO_17_CELLS.porcentajeEjecucionFinanciera]:
-      contract.valorInicialContrato > 0
-        ? totalPagado / contract.valorInicialContrato
-        : 0,
-    [GFR_FO_17_CELLS.porcentajeEjecucionFisica]:
-      contract.plazoMeses > 0
-        ? paymentAccount.numero / contract.plazoMeses
-        : 0,
-    [GFR_FO_17_CELLS.documentoContratistaFirma]: contractor.documentId,
-    [GFR_FO_17_CELLS.tipoInforme]:
+    [header.contratista]: contractor.name.toUpperCase(),
+    [header.tipoDocumento]: "CC",
+    [header.documentoContratista]: contractor.documentId,
+    [header.numeroContrato]: contract.numeroContrato,
+    [header.dependenciaContratante]: contractor.organizationalUnitName,
+    [header.nombreSupervisor]: reviewer.name.toUpperCase(),
+    [header.documentoSupervisor]: reviewer.documentId,
+    [header.objeto]: contract.objeto,
+    [header.plazoMeses]: formatPlazoMeses(contract.plazoMeses),
+    [header.fechaActaInicio]: contract.fechaActaInicio,
+    [header.fechaFinal]: contract.fechaFinal,
+    [header.concepto]: contract.concepto,
+    [header.rubro]: contract.rubro,
+    [header.cdp]: contract.cdp,
+    [header.valorCdp]: contract.valorCdp,
+    [header.rpc]: contract.rpc,
+    [header.valorRpc]: contract.valorRpc,
+    [header.valorInicialContrato]: contract.valorInicialContrato,
+    [header.totalRecursosComprometidos]: contract.totalRecursosComprometidos,
+    [header.cuentaNumero]: paymentAccount.numero,
+    [header.periodoDesde]: paymentAccount.periodoInicio,
+    [header.periodoHasta]: paymentAccount.periodoFin,
+    [header.valorPagoNumeros]: valor,
+    [header.valorPagoLetras]: formatCurrencyInWords(valor),
+    [header.disponibilidadActual]: contract.numeroDisponibilidad,
+    [header.compromisoActual]: contract.numeroCompromiso,
+    [header.rubroActual]: contract.rubro,
+    [header.conceptoActual]: contract.concepto,
+    [header.centroCostoActual]: process.env.GFR_FO_17_CENTRO_COSTO ?? "",
+    [header.valorActual]: valor,
+    [header.cuentaActualTotal]: valor,
+    [cells.porcentajeEjecucionFinanciera]: ejecucion.financiera,
+    [cells.porcentajeEjecucionFisica]: ejecucion.fisica,
+    [cells.documentoContratistaFirma]: contractor.documentId,
+    [cells.tipoInforme]:
       paymentAccount.numero >= ctx.paymentAccounts.length ? "Final" : "Parcial",
-    [GFR_FO_17_CELLS.documentoSupervisorFirma]: reviewer.documentId,
-    [GFR_FO_17_CELLS.fechaExpedicion]:
+    [cells.documentoSupervisorFirma]: reviewer.documentId,
+    [cells.fechaExpedicion]:
       paymentAccount.periodoFin ?? parseIsoDate(new Date().toISOString()),
   };
 
   if (seguridadSocialMetadata) {
-    values[GFR_FO_17_CELLS.planillaSalud] =
-      seguridadSocialMetadata.plantillaEps;
-    values[GFR_FO_17_CELLS.planillaPension] =
-      seguridadSocialMetadata.plantillaPension;
-    values[GFR_FO_17_CELLS.planillaArl] = seguridadSocialMetadata.plantillaArl;
+    values[header.planillaSalud] = seguridadSocialMetadata.plantillaEps;
+    values[header.planillaPension] = seguridadSocialMetadata.plantillaPension;
+    values[header.planillaArl] = seguridadSocialMetadata.plantillaArl;
+
+    if (valor > 0) {
+      const config = getGfrFo17Config();
+      if (config.smmlv > 0) {
+        const aportes = computeGfrFo17SeguridadSocialAportes(
+          valor,
+          config,
+          seguridadSocialMetadata.aportesManuales
+        );
+        applyGfrFo17SeguridadSocialCells(values, header, aportes);
+      }
+    }
   }
 
   applyDeclarationCells(values, paymentAccount.declaracionesJuradas, {
-    declaracion383Si: GFR_FO_17_CELLS.declaracion383Si,
-    declaracion383No: GFR_FO_17_CELLS.declaracion383No,
-    declaracionRutSi: GFR_FO_17_CELLS.declaracionRutSi,
-    declaracionRutNo: GFR_FO_17_CELLS.declaracionRutNo,
+    declaracion383Si: cells.declaracion383Si,
+    declaracion383No: cells.declaracion383No,
+    declaracionRutSi: cells.declaracionRutSi,
+    declaracionRutNo: cells.declaracionRutNo,
   });
 
-  appendHistorialRows(values, ctx);
-  appendActivityRows(values, ctx);
+  appendHistorialRows(values, ctx, layout);
+  appendActivityRows(values, ctx, layout.actividadStartRow);
 
   return values;
 }
