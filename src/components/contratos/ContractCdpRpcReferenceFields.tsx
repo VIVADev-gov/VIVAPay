@@ -60,11 +60,7 @@ export default function ContractCdpRpcReferenceFields({
             })
           }
           required
-          helperText={
-            errors.rpcNumero ??
-            (rpcPreview ||
-              "Este número se usará también como No. de disponibilidad y No. de compromiso.")
-          }
+          helperText={errors.rpcNumero ?? (rpcPreview || undefined)}
         />
         <FormField
           label="Fecha RCP"

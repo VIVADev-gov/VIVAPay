@@ -2,7 +2,6 @@
 
 import ActionButton from "@/components/buttons/ActionButton";
 import { DashboardHero } from "@/components/dashboard";
-import { ModuleCreateButton } from "@/components/contratos";
 import FormField from "@/components/forms/FormField";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import EmptyState from "@/components/ui/EmptyState";
@@ -17,7 +16,6 @@ import { USER_ROLES } from "@/constants/userRoles";
 import { normalizeUserRole } from "@/lib/auth/roles";
 import { useProfileQuery, useUpdateProfileMutation } from "@/hooks/api/useProfile";
 import { useProfileStore } from "@/store/profile/profile.store";
-import { useUiStore } from "@/store/ui/ui-store";
 import { sanitizeProfileField } from "@/utils/inputSanitizers";
 
 export default function PerfilPage() {
@@ -30,7 +28,6 @@ export default function PerfilPage() {
   const successMessage = useProfileStore((s) => s.successMessage);
   const setProfileForm = useProfileStore((s) => s.setProfileForm);
   const updateProfile = useUpdateProfileMutation();
-  const showToast = useUiStore((s) => s.showToast);
 
   const userRole = normalizeUserRole(user?.role);
   const requiresSignature = [
@@ -86,13 +83,6 @@ export default function PerfilPage() {
     });
   };
 
-  const handleAdvanced = () => {
-    showToast({
-      message: "La gestión avanzada de perfil estará disponible próximamente.",
-      variant: "info",
-    });
-  };
-
   return (
     <DashboardLayout title="Perfil">
       <section className="grid gap-8">
@@ -101,13 +91,6 @@ export default function PerfilPage() {
           title="Actualiza tu información"
           description="Puedes editar tus datos de contacto y tu dirección o jefatura. El correo institucional, documento y rol permanecen bloqueados."
         />
-
-        <div className="flex justify-end">
-          <ModuleCreateButton
-            label="Opciones avanzadas"
-            onClick={handleAdvanced}
-          />
-        </div>
 
         {isLoading || !user ? (
           <section className="overflow-hidden rounded-4xl border border-border/80 bg-card p-6 shadow-sm">

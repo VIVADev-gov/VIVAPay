@@ -19,8 +19,6 @@ const detailRows = [
     "Valor registro presupuestal del compromiso (RCP)",
     "valorRpc",
   ],
-  ["No. disponibilidad", "numeroDisponibilidad"],
-  ["No. compromiso", "numeroCompromiso"],
 ] as const;
 
 export default function ContractDetailPanel() {

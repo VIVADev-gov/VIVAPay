@@ -17,4 +17,6 @@ export { sendEmail } from "@/lib/email/send";
 export type { SendEmailOptions, SendEmailResult } from "@/lib/email/send";
 export { getTransporter, isEmailConfigured, getDefaultFrom } from "@/lib/email/config";
 export { compileTemplate } from "@/lib/email/compile";
+export { buildAppUrl, getAppHost } from "@/lib/appHost";
+/** @deprecated Usar getAppHost() */
 export { APP_URL } from "@/lib/email/constants";

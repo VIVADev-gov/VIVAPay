@@ -498,6 +498,14 @@ export default function AuthForm({ mode }: AuthFormProps) {
               required
               floatingLabel
             />
+            <p className="-mt-1 text-right text-sm">
+              <a
+                href="/auth/forgot-password"
+                className="font-semibold text-primary hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </a>
+            </p>
             {devSuperUserEnabled ? (
               <FormField
                 label="Entrar como (dev)"

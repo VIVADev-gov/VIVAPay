@@ -1,12 +1,11 @@
 import Handlebars from "handlebars";
 import fs from "fs";
 import path from "path";
+import { getAppHost } from "@/lib/appHost";
 import { logger } from "@/lib/logger";
 
 // Registrar helper global para la base URL (logo y links)
-Handlebars.registerHelper("baseUrl", () => {
-  return process.env.NEXT_PUBLIC_API ?? "http://localhost:3000";
-});
+Handlebars.registerHelper("baseUrl", () => getAppHost());
 
 const TEMPLATES_DIR = path.join(process.cwd(), "src", "lib", "email", "templates");
 const PARTIALS_DIR = path.join(TEMPLATES_DIR, "partials");

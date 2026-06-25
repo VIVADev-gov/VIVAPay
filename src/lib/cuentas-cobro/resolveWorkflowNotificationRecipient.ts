@@ -2,6 +2,7 @@ import "server-only";
 
 import { CUENTA_COBRO_STATUS_LABELS } from "@/constants/cuentaCobroWorkflow";
 import { USER_ROLES, type UserRole } from "@/constants/userRoles";
+import { buildAppUrl } from "@/lib/appHost";
 import { getDashboardPathForRole } from "@/lib/auth/roles";
 import { connectDB } from "@/lib/db/mongoose";
 import { getEmailCad } from "@/lib/email/getEmailCad";
@@ -40,12 +41,7 @@ const NOTIFIABLE_STATUSES = new Set<CuentaCobroStatus>([
   "ENVIADA_CAD",
 ]);
 
-function getAppHost() {
-  return process.env.NEXT_PUBLIC_HOST?.trim() || "http://localhost:3000";
-}
-
 function buildActionUrl(role: UserRole, contractId: string, accountNumber: number) {
-  const host = getAppHost();
   const path =
     role === USER_ROLES.CONTRATISTA
       ? getPaymentAccountHref(contractId, accountNumber)
@@ -54,7 +50,7 @@ function buildActionUrl(role: UserRole, contractId: string, accountNumber: numbe
           contractId,
           accountNumber
         );
-  return `${host.replace(/\/$/, "")}${path}`;
+  return buildAppUrl(path);
 }
 
 function buildMensaje(

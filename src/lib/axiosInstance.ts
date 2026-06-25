@@ -1,4 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
+import { getAppHost } from "@/lib/appHost";
 
 // Usar la URL del navegador actual en lugar de localhost
 const getBaseURL = () => {
@@ -6,8 +7,7 @@ const getBaseURL = () => {
         // En el cliente, usar el origin actual del navegador
         return window.location.origin;
     }
-    // En el servidor, usar la variable de entorno o fallback
-    return process.env.NEXT_PUBLIC_HOST || "http://localhost:3000";
+    return getAppHost();
 };
 
 const api = axios.create({

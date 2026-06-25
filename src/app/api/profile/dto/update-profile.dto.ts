@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  ORGANIZACION_TIPO,
   getSubareaOrganizacional,
   getUnidadOrganizacional,
   validateOrganizacionParaRol,
@@ -44,10 +43,9 @@ export function resolveOrganizacionFromProfile(dto: UpdateProfileBodyDto) {
     throw new Error("Unidad organizacional inválida");
   }
 
-  const subarea =
-    unidad.tipo === ORGANIZACION_TIPO.DIRECCION && dto.subareaId
-      ? getSubareaOrganizacional(unidad.id, dto.subareaId)
-      : null;
+  const subarea = dto.subareaId
+    ? getSubareaOrganizacional(unidad.id, dto.subareaId)
+    : null;
 
   return {
     organizationalUnitId: unidad.id,

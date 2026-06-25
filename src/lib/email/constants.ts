@@ -1,6 +1,6 @@
+import { getAppHost } from "@/lib/appHost";
+
 /**
- * URL base de la aplicación para enlaces en correos.
- * Se toma de la variable de entorno APP_URL; por defecto la URL de producción.
+ * @deprecated Usar getAppHost() desde @/lib/appHost
  */
-export const APP_URL =
-    process.env.APP_URL ?? "https://viva-mat.viva.gov.co";
+export const APP_URL = getAppHost();

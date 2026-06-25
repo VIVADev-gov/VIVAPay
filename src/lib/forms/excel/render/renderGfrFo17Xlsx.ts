@@ -1,5 +1,6 @@
 import "server-only";
 
+import { buildGfrFo17CellFormats } from "../build/buildGfrFo17CellFormats";
 import { buildGfrFo17Data } from "../build/buildGfrFo17Data";
 import {
   GFR_FO_17_HISTORIAL_BASE_ROWS,
@@ -36,6 +37,7 @@ export async function renderGfrFo17Xlsx(ctx: FormPackageContext) {
     template.sheet,
     buildGfrFo17Data(ctx, layout),
     {
+      cellFormats: buildGfrFo17CellFormats(ctx, layout),
       expandGfrFo17Historial: {
         startRow: GFR_FO_17_HISTORIAL_START_ROW,
         baseRows: GFR_FO_17_HISTORIAL_BASE_ROWS,
@@ -72,7 +74,7 @@ export async function renderGfrFo17Xlsx(ctx: FormPackageContext) {
         {
           ...supervisorImage,
           tl: { ...layout.signatureAnchors.supervisor.tl },
-          ext: { ...layout.signatureAnchors.supervisor.ext },
+          br: { ...layout.signatureAnchors.supervisor.br },
           editAs: "absolute",
         },
       ],

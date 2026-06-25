@@ -4,6 +4,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { Bell, Building2, ChevronDown, LogOut, Menu, Search, ShieldCheck, UserRound } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/components/logo/Logo";
+import {
+  DashboardHeaderNavDesktop,
+  DashboardHeaderNavMobile,
+} from "@/components/navegacion/DashboardHeaderNav";
+import { useDashboardHeaderNav } from "@/hooks/useDashboardHeaderNav";
 import { useLogout } from "@/hooks/useLogout";
 import { getDashboardPathForRole } from "@/lib/auth/roles";
 import { useAuthStore } from "@/store/auth/auth.store";
@@ -39,6 +44,7 @@ export default function DashboardHeader({
 }: DashboardHeaderProps) {
     const user = useAuthStore((s) => s.user);
     const logout = useLogout();
+    const { items: headerNavItems } = useDashboardHeaderNav();
     const [searchValue, setSearchValue] = useState("");
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -147,6 +153,8 @@ export default function DashboardHeader({
                     )}
                 </div>
 
+                <DashboardHeaderNavDesktop items={headerNavItems} />
+
                 {showSearch && (
                     <div className="hidden max-w-lg flex-1 lg:flex">
                         <div className="group relative w-full">
@@ -246,6 +254,8 @@ export default function DashboardHeader({
                     </div>
                 </div>
             </div>
+
+            <DashboardHeaderNavMobile items={headerNavItems} />
 
             {visibleSections.length > 0 && (
                 <div className="border-t border-border/50 bg-muted/20 backdrop-blur-sm">

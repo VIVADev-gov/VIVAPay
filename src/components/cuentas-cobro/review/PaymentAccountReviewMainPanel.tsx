@@ -5,7 +5,10 @@ import {
   ReviewDocumentCard,
   ReviewDocumentPlaceholder,
 } from "@/components/cuentas-cobro/review/ReviewDocumentCards";
+import PaymentAccountActivitiesViewModal from "@/components/cuentas-cobro/PaymentAccountActivitiesViewModal";
+import { getPaymentAccountActivitiesStats } from "@/components/cuentas-cobro/PaymentAccountActivitiesList";
 import PaymentAccountDeclarationsDisplay from "@/components/cuentas-cobro/PaymentAccountDeclarationsDisplay";
+import ActionButton from "@/components/buttons/ActionButton";
 import { formatGfrFo11Summary } from "@/lib/cuentas-cobro/gfrFo11Responses";
 import {
   formatReembolsablesContractSummary,
@@ -150,6 +153,8 @@ export default function PaymentAccountReviewMainPanel({
   accountDocuments,
 }: PaymentAccountReviewMainPanelProps) {
   const [activeTab, setActiveTab] = useState<ReviewTab>("revision");
+  const [isActivitiesModalOpen, setIsActivitiesModalOpen] = useState(false);
+  const activityStats = getPaymentAccountActivitiesStats(activities);
 
   const contractCounts = countRequiredDocuments(
     contractRequirements,
@@ -180,31 +185,43 @@ export default function PaymentAccountReviewMainPanel({
       <div className="px-6 pb-8">
         {activeTab === "revision" ? (
           <>
-            <SectionBlock title="Actividades" icon={ListChecks}>
-              {activities.length === 0 ? (
+            <SectionBlock
+              title="Actividades"
+              description="Actividades, acciones y soportes registrados por el contratista para este periodo."
+              icon={ListChecks}
+            >
+              {activityStats.count === 0 ? (
                 <p className="text-sm leading-6 text-muted-foreground">
                   Sin actividades registradas.
                 </p>
               ) : (
-                <ul className="divide-y divide-border/50 overflow-hidden rounded-2xl border border-border/60">
-                  {activities.map((activity) => (
-                    <li key={activity.orden} className="p-4 md:p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-foreground">
-                            {activity.actividad}
-                          </p>
-                          <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                            {activity.accion}
-                          </p>
-                        </div>
-                        <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
-                          {activity.ejecucion}%
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <div className="grid gap-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground">
+                        Actividades
+                      </p>
+                      <p className="mt-1 text-2xl font-black text-foreground">
+                        {activityStats.count}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground">
+                        Ejecución promedio
+                      </p>
+                      <p className="mt-1 text-2xl font-black text-foreground">
+                        {activityStats.averageExecution}%
+                      </p>
+                    </div>
+                  </div>
+                  <ActionButton
+                    type="button"
+                    variant="outline"
+                    icon={ListChecks}
+                    label="Mostrar actividades"
+                    onClick={() => setIsActivitiesModalOpen(true)}
+                  />
+                </div>
               )}
             </SectionBlock>
 
@@ -406,6 +423,12 @@ export default function PaymentAccountReviewMainPanel({
           </div>
         )}
       </div>
+
+      <PaymentAccountActivitiesViewModal
+        isOpen={isActivitiesModalOpen}
+        onClose={() => setIsActivitiesModalOpen(false)}
+        activities={activities}
+      />
     </div>
   );
 }

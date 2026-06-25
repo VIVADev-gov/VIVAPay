@@ -25,6 +25,8 @@ export interface IUser {
   status: UserStatus;
   verificationTokenHash?: string | null;
   verificationTokenExpiresAt?: Date | null;
+  passwordResetTokenHash?: string | null;
+  passwordResetTokenExpiresAt?: Date | null;
   signaturePath?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
@@ -77,6 +79,8 @@ const userSchema = new Schema<IUserDocument>(
     },
     verificationTokenHash: { type: String, default: null },
     verificationTokenExpiresAt: { type: Date, default: null },
+    passwordResetTokenHash: { type: String, default: null },
+    passwordResetTokenExpiresAt: { type: Date, default: null },
     signaturePath: { type: String, default: null, trim: true },
   },
   { timestamps: true, collection: "users" }

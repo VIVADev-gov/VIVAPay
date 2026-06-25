@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import { getAppHost } from "@/lib/appHost";
 import type { SessionPayload } from "./session-payload";
 import { JWT_EXPIRY } from "./auth.constants";
 
@@ -27,10 +28,7 @@ export function verificationTokenExpiresAt(hours = 48): Date {
   return new Date(Date.now() + hours * 60 * 60 * 1000);
 }
 
+/** @deprecated Usar getAppHost() desde @/lib/appHost */
 export function getAppBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_HOST ??
-    process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, "") ??
-    "http://localhost:3000"
-  );
+  return getAppHost();
 }

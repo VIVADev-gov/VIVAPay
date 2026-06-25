@@ -94,8 +94,18 @@ const LAYOUT_BASE = {
   documentoSupervisorFirma: "B136",
   fechaExpedicion: "G135",
   trimRowsAfter: 143,
+  /**
+   * Anclas de firma (plantilla public/forms/02.xlsx, hoja GFR-FO-17).
+   * Ajuste fino aquí: row/col usan rejilla Excel (decimales = fracción de celda).
+   * - Contratista: tl + ext (ancho/alto en píxeles)
+   * - Supervisor: tl + br (esquinas de la caja; debe quedar encima de fila 135)
+   */
   signatureContratistaRow: 122.9,
-  signatureSupervisorRow: 134.9,
+  signatureContratistaExt: { width: 220, height: 40 },
+  signatureSupervisorTlCol: 1.2,
+  signatureSupervisorTlRow: 131.85,
+  signatureSupervisorBrCol: 2.2,
+  signatureSupervisorBrRow: 133.2,
 } as const;
 
 export type GfrFo17Layout = {
@@ -135,7 +145,7 @@ export type GfrFo17Layout = {
     };
     supervisor: {
       tl: { col: number; row: number };
-      ext: { width: number; height: number };
+      br: { col: number; row: number };
     };
   };
 };
@@ -200,11 +210,17 @@ export function getGfrFo17Layout(historialRowCount: number): GfrFo17Layout {
     signatureAnchors: {
       contratista: {
         tl: { col: 1.0, row: LAYOUT_BASE.signatureContratistaRow + extra },
-        ext: { width: 220, height: 40 },
+        ext: { ...LAYOUT_BASE.signatureContratistaExt },
       },
       supervisor: {
-        tl: { col: 1.0, row: LAYOUT_BASE.signatureSupervisorRow + extra },
-        ext: { width: 220, height: 40 },
+        tl: {
+          col: LAYOUT_BASE.signatureSupervisorTlCol,
+          row: LAYOUT_BASE.signatureSupervisorTlRow + extra,
+        },
+        br: {
+          col: LAYOUT_BASE.signatureSupervisorBrCol,
+          row: LAYOUT_BASE.signatureSupervisorBrRow + extra,
+        },
       },
     },
   };
@@ -213,10 +229,16 @@ export function getGfrFo17Layout(historialRowCount: number): GfrFo17Layout {
 export const GFR_FO_17_SIGNATURE_ANCHORS = {
   contratista: {
     tl: { col: 1.0, row: LAYOUT_BASE.signatureContratistaRow },
-    ext: { width: 220, height: 40 },
+    ext: { ...LAYOUT_BASE.signatureContratistaExt },
   },
   supervisor: {
-    tl: { col: 1.0, row: LAYOUT_BASE.signatureSupervisorRow },
-    ext: { width: 220, height: 40 },
+    tl: {
+      col: LAYOUT_BASE.signatureSupervisorTlCol,
+      row: LAYOUT_BASE.signatureSupervisorTlRow,
+    },
+    br: {
+      col: LAYOUT_BASE.signatureSupervisorBrCol,
+      row: LAYOUT_BASE.signatureSupervisorBrRow,
+    },
   },
 } as const;

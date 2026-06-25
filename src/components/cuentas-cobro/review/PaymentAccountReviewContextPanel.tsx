@@ -21,8 +21,6 @@ const budgetRows = [
   ["Valor certificado de disponibilidad presupuestal (CDP)", "valorCdp"],
   ["Registro presupuestal del compromiso (RCP)", "rpc"],
   ["Valor registro presupuestal del compromiso (RCP)", "valorRpc"],
-  ["No. disponibilidad", "numeroDisponibilidad"],
-  ["No. compromiso", "numeroCompromiso"],
 ] as const;
 
 function ContextSection({
@@ -42,13 +40,23 @@ function ContextSection({
   );
 }
 
-function FieldCard({ label, value }: { label: string; value: string }) {
+function FieldCard({
+  label,
+  value,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
   return (
-    <div className="rounded-2xl bg-muted/40 p-4">
+    <div className={`min-w-0 rounded-2xl bg-muted/40 p-4 ${className}`}>
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
-      <p className="mt-2 text-sm font-semibold leading-6 text-foreground">{value}</p>
+      <p className="mt-2 break-words text-sm font-semibold leading-6 text-foreground">
+        {value}
+      </p>
     </div>
   );
 }
@@ -56,12 +64,19 @@ function FieldCard({ label, value }: { label: string; value: string }) {
 function FieldGrid({
   items,
 }: {
-  items: ReadonlyArray<readonly [string, string]>;
+  items: ReadonlyArray<
+    readonly [string, string] | readonly [string, string, "full"]
+  >;
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {items.map(([label, value]) => (
-        <FieldCard key={label} label={label} value={value} />
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {items.map(([label, value, span]) => (
+        <FieldCard
+          key={label}
+          label={label}
+          value={value}
+          className={span === "full" ? "sm:col-span-2" : undefined}
+        />
       ))}
     </div>
   );
@@ -104,7 +119,7 @@ function ContextPanelContent({
   const contractorItems = [
     ["Nombre", contractor.name],
     ["Documento", contractor.documentId],
-    ["Correo", contractor.email],
+    ["Correo", contractor.email, "full"],
     ["Área", contractor.organizationalUnitName || "Sin registrar"],
     ["Subárea", contractor.subareaName || "Sin registrar"],
   ] as const;
