@@ -66,7 +66,7 @@ function clearColumnsAfterLetter(
   lastRow: number
 ) {
   const startColumn = columnLetterToNumber(afterColumn) + 1;
-  const maxColumn = Math.max(sheet.columnCount, 80);
+  const maxColumn = Math.max(sheet.columnCount, 100);
   for (let rowNumber = 1; rowNumber <= lastRow; rowNumber++) {
     const row = sheet.getRow(rowNumber);
     for (let columnNumber = startColumn; columnNumber <= maxColumn; columnNumber++) {
@@ -194,6 +194,9 @@ export async function fillXlsxTemplate(
     const rowsToRemove = sheet.rowCount - options.trimRowsAfter;
     if (rowsToRemove > 0) {
       sheet.spliceRows(options.trimRowsAfter + 1, rowsToRemove);
+      // ExcelJS no acorta _rows al eliminar; sin esto la dimensión usada queda inflada.
+      (sheet as ExcelJS.Worksheet & { _rows: unknown[] })._rows.length =
+        options.trimRowsAfter;
     }
   }
 

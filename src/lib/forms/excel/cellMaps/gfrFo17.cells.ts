@@ -96,16 +96,18 @@ const LAYOUT_BASE = {
   trimRowsAfter: 143,
   /**
    * Anclas de firma (plantilla public/forms/02.xlsx, hoja GFR-FO-17).
-   * Ajuste fino aquí: row/col usan rejilla Excel (decimales = fracción de celda).
-   * - Contratista: tl + ext (ancho/alto en píxeles)
-   * - Supervisor: tl + br (esquinas de la caja; debe quedar encima de fila 135)
+   * row/col usan rejilla ExcelJS (0-based; col 1 = B).
+   * - Contratista: merge B123:C123
+   * - Supervisor: merge B134:C135
    */
-  signatureContratistaRow: 122.9,
-  signatureContratistaExt: { width: 220, height: 40 },
-  signatureSupervisorTlCol: 1.2,
-  signatureSupervisorTlRow: 131.85,
-  signatureSupervisorBrCol: 2.2,
-  signatureSupervisorBrRow: 133.2,
+  signatureContratistaTlCol: 1,
+  signatureContratistaTlRow: 122,
+  signatureContratistaBrCol: 3,
+  signatureContratistaBrRow: 123,
+  signatureSupervisorTlCol: 1,
+  signatureSupervisorTlRow: 133,
+  signatureSupervisorBrCol: 3,
+  signatureSupervisorBrRow: 135,
 } as const;
 
 export type GfrFo17Layout = {
@@ -141,7 +143,7 @@ export type GfrFo17Layout = {
   signatureAnchors: {
     contratista: {
       tl: { col: number; row: number };
-      ext: { width: number; height: number };
+      br: { col: number; row: number };
     };
     supervisor: {
       tl: { col: number; row: number };
@@ -209,8 +211,14 @@ export function getGfrFo17Layout(historialRowCount: number): GfrFo17Layout {
     trimRowsAfter: LAYOUT_BASE.trimRowsAfter + extra,
     signatureAnchors: {
       contratista: {
-        tl: { col: 1.0, row: LAYOUT_BASE.signatureContratistaRow + extra },
-        ext: { ...LAYOUT_BASE.signatureContratistaExt },
+        tl: {
+          col: LAYOUT_BASE.signatureContratistaTlCol,
+          row: LAYOUT_BASE.signatureContratistaTlRow + extra,
+        },
+        br: {
+          col: LAYOUT_BASE.signatureContratistaBrCol,
+          row: LAYOUT_BASE.signatureContratistaBrRow + extra,
+        },
       },
       supervisor: {
         tl: {
@@ -228,8 +236,14 @@ export function getGfrFo17Layout(historialRowCount: number): GfrFo17Layout {
 
 export const GFR_FO_17_SIGNATURE_ANCHORS = {
   contratista: {
-    tl: { col: 1.0, row: LAYOUT_BASE.signatureContratistaRow },
-    ext: { ...LAYOUT_BASE.signatureContratistaExt },
+    tl: {
+      col: LAYOUT_BASE.signatureContratistaTlCol,
+      row: LAYOUT_BASE.signatureContratistaTlRow,
+    },
+    br: {
+      col: LAYOUT_BASE.signatureContratistaBrCol,
+      row: LAYOUT_BASE.signatureContratistaBrRow,
+    },
   },
   supervisor: {
     tl: {

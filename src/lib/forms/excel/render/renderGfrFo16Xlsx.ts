@@ -30,6 +30,8 @@ export async function renderGfrFo16Xlsx(ctx: FormPackageContext) {
       trimRowsAfter: 35,
       printArea: "A1:I35",
       removeOtherSheets: true,
+      clearColumnsAfter: "I",
+      resetDimensions: { lastRow: 35, lastCol: 9 },
       pageSetup: {
         fitToPage: true,
         fitToWidth: 1,

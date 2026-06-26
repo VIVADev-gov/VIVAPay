@@ -45,11 +45,11 @@ export async function renderGfrFo17Xlsx(ctx: FormPackageContext) {
       printArea: `A1:K${layout.trimRowsAfter}`,
       removeOtherSheets: true,
       clearColumnsAfter: "K",
+      resetDimensions: { lastRow: layout.trimRowsAfter, lastCol: 11 },
       pageSetup: {
         fitToPage: true,
         fitToWidth: 1,
         fitToHeight: 0,
-        scale: 72,
         orientation: "landscape",
         horizontalCentered: true,
         margins: {
@@ -65,7 +65,7 @@ export async function renderGfrFo17Xlsx(ctx: FormPackageContext) {
         {
           ...contratistaImage,
           tl: { ...layout.signatureAnchors.contratista.tl },
-          ext: { ...layout.signatureAnchors.contratista.ext },
+          br: { ...layout.signatureAnchors.contratista.br },
           editAs: "absolute",
         },
         {
