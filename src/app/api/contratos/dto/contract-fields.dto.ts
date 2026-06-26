@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { manualPaymentDatesSchema } from "./manual-payment-dates.dto";
 
 const positiveNumber = z.coerce.number().min(0, "El valor debe ser mayor o igual a 0");
 
@@ -108,6 +109,7 @@ export const createContractBodySchema = contractCoreFieldsSchema
       .max(120, "La cantidad de cuentas enviadas es demasiado alta")
       .optional()
       .default(0),
+    manualPaymentDates: manualPaymentDatesSchema,
   })
   .superRefine(validateContractDatesAndReembolsables);
 

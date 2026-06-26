@@ -2,18 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ActionButton from "@/components/buttons/ActionButton";
-import ToggleSwitch from "@/components/forms/ToggleSwitch";
+import ManualRegularizationAccountsFields from "@/components/contratos/ManualRegularizationAccountsFields";
 import Modal from "@/components/modals/Modal";
 import { useUpdateManualRegularizationMutation } from "@/hooks/api/useContratos";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
-  canToggleManualRegularizationAccount,
   getManualRegularizationBoundary,
-  isAppSubmittedAccount,
 } from "@/lib/contratos/manualRegularization.shared";
+import {
+  buildManualPaymentDatesPayload,
+  validateManualPaymentDatesClient,
+} from "@/lib/contratos/manualPaymentDates.shared";
 import { useUiStore } from "@/store/ui/ui-store";
 import type { PublicCuentaCobro } from "@/types/contratos";
-import { formatCurrency, formatDate } from "@/utils/formatters";
 
 type ContractManualRegularizationModalProps = {
   isOpen: boolean;
@@ -43,16 +44,23 @@ export default function ContractManualRegularizationModal({
     [sortedAccounts]
   );
   const [submittedCount, setSubmittedCount] = useState(0);
+  const [paymentDatesByNumero, setPaymentDatesByNumero] = useState<
+    Record<number, string | undefined>
+  >({});
 
   useEffect(() => {
-    if (isOpen) {
-      setSubmittedCount(countManualAccounts(sortedAccounts));
-    }
-  }, [isOpen, sortedAccounts]);
+    if (!isOpen) return;
 
-  const setSubmittedCountFromToggle = (numero: number, checked: boolean) => {
-    setSubmittedCount(checked ? numero : Math.max(0, numero - 1));
-  };
+    const initialCount = countManualAccounts(sortedAccounts);
+    setSubmittedCount(initialCount);
+    const initialDates: Record<number, string | undefined> = {};
+    for (const account of sortedAccounts) {
+      if (account.numero <= initialCount && account.fechaPago) {
+        initialDates[account.numero] = account.fechaPago.slice(0, 10);
+      }
+    }
+    setPaymentDatesByNumero(initialDates);
+  }, [isOpen, sortedAccounts]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -66,9 +74,22 @@ export default function ContractManualRegularizationModal({
       return;
     }
 
+    const datesError = validateManualPaymentDatesClient(
+      submittedCount,
+      paymentDatesByNumero
+    );
+    if (datesError) {
+      showToast({ message: datesError, variant: "warning" });
+      return;
+    }
+
     try {
       await updateMutation.mutateAsync({
         submittedPaymentAccountsCount: submittedCount,
+        manualPaymentDates: buildManualPaymentDatesPayload(
+          submittedCount,
+          paymentDatesByNumero
+        ),
       });
       showToast({
         message: "Regularización manual actualizada correctamente",
@@ -95,45 +116,18 @@ export default function ContractManualRegularizationModal({
     >
       <form onSubmit={handleSubmit} className="grid gap-4">
         <p className="text-sm leading-6 text-muted-foreground">
-          Marca en orden las cuentas que ya enviaste fuera de la app. Solo
-          puedes editar cuentas manuales o pendientes antes de la primera cuenta
-          enviada por la app.
+          Marca en orden las cuentas que ya enviaste fuera de la app e indica
+          cuándo te pagaron cada una.
         </p>
 
-        <div className="grid gap-3">
-          {sortedAccounts.map((account) => {
-            const isAppSubmitted = isAppSubmittedAccount(account);
-            const checked =
-              isAppSubmitted || account.numero <= submittedCount;
-            const toggleEnabled = canToggleManualRegularizationAccount(
-              account,
-              boundary
-            );
-
-            return (
-              <ToggleSwitch
-                key={account.id}
-                label={`Cuenta ${account.numero} — ${formatDate(
-                  account.periodoInicio
-                )} - ${formatDate(account.periodoFin)} — ${formatCurrency(
-                  account.valor
-                )}`}
-                description={
-                  isAppSubmitted
-                    ? "Enviada por la app"
-                    : account.envioManual
-                      ? "Enviada manualmente"
-                      : "Pendiente"
-                }
-                value={checked}
-                disabled={!toggleEnabled}
-                onChange={(value) =>
-                  setSubmittedCountFromToggle(account.numero, value)
-                }
-              />
-            );
-          })}
-        </div>
+        <ManualRegularizationAccountsFields
+          accounts={sortedAccounts}
+          submittedCount={submittedCount}
+          paymentDatesByNumero={paymentDatesByNumero}
+          boundary={boundary}
+          onSubmittedCountChange={setSubmittedCount}
+          onPaymentDatesChange={setPaymentDatesByNumero}
+        />
 
         <div className="flex justify-end gap-3 border-t border-border pt-4">
           <ActionButton

@@ -47,12 +47,11 @@ export async function renderGfrFo17Xlsx(ctx: FormPackageContext) {
       printArea: `A1:K${layout.trimRowsAfter}`,
       removeOtherSheets: true,
       clearColumnsAfter: "K",
-      resetDimensions: { lastRow: layout.trimRowsAfter, lastCol: 11 },
       pageSetup: {
         fitToPage: true,
         fitToWidth: 1,
         fitToHeight: 0,
-        scale: 60,
+        scale: 72,
         orientation: "landscape",
         horizontalCentered: true,
         margins: {

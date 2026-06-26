@@ -38,17 +38,31 @@ function fillHistorialRow(
   row: number,
   account: FormPaymentAccountSnapshot,
   valorContrato: number,
-  honorariosAcum: number
+  honorariosAcum: number,
+  currentNumero: number
 ) {
   const honorario = account.valor ?? 0;
   const saldo = valorContrato - honorariosAcum;
 
   values[`C${row}`] = account.numero;
   values[`D${row}`] = account.fechaEnvio ?? "";
-  values[`E${row}`] = account.fechaPago ?? account.periodoFin ?? "";
+  values[`E${row}`] = resolveHistorialPaymentDate(account, currentNumero);
   values[`F${row}`] = honorario;
   values[`G${row}`] = 0;
   values[`I${row}`] = saldo;
+}
+
+function resolveHistorialPaymentDate(
+  account: FormPaymentAccountSnapshot,
+  currentNumero: number
+): Date | "" {
+  if (account.numero === currentNumero) {
+    return "";
+  }
+  if (account.fechaPago) {
+    return account.fechaPago;
+  }
+  return "";
 }
 
 function appendHistorialRows(
@@ -83,7 +97,14 @@ function appendHistorialRows(
     }
 
     honorariosAcum += account.valor ?? 0;
-    fillHistorialRow(values, row, account, valorContrato, honorariosAcum);
+    fillHistorialRow(
+      values,
+      row,
+      account,
+      valorContrato,
+      honorariosAcum,
+      currentNumero
+    );
   }
 
   const saldoContractual = valorContrato - totalHonorarios;

@@ -1,10 +1,10 @@
 import type { PaymentAccountDeclarations } from "@/types/contratos";
 import type { CellValues } from "../types";
 
-/** Formatos Excel estilo Colombia: . miles, , decimales */
+/** Formatos Excel/LibreOffice estilo Colombia: . miles, , decimales */
 export const EXCEL_NUMFMT_CO = {
-  currency: '"$" #.##0',
-  currencyDecimal: '"$" #.##0,00',
+  currency: "#.##0",
+  currencyDecimal: "#.##0,00",
   number: "#.##0",
   decimal: "#.##0,00",
   percent: "0,00%",

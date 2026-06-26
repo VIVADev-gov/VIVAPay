@@ -98,12 +98,19 @@ export type ContratoFormBody = {
   rubrosAdicionales?: ContractRubroAdicional[];
 };
 
-export type CreateContratoBody = ContratoFormBody & {
-  submittedPaymentAccountsCount?: number;
-};
-
 export type UpdateManualRegularizationBody = {
   submittedPaymentAccountsCount: number;
+  manualPaymentDates?: ManualPaymentDateEntry[];
+};
+
+export type ManualPaymentDateEntry = {
+  numero: number;
+  fechaPago: string;
+};
+
+export type CreateContratoBody = ContratoFormBody & {
+  submittedPaymentAccountsCount?: number;
+  manualPaymentDates?: ManualPaymentDateEntry[];
 };
 
 export type UpdateContratoBody = ContratoFormBody;

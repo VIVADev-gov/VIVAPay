@@ -17,6 +17,11 @@ export type ManualRegularizationAccount = Pick<
   "numero" | "envioManual" | "estado"
 >;
 
+export type ManualRegularizationAccountDisplay = Pick<
+  PublicCuentaCobro,
+  "id" | "numero" | "envioManual" | "estado" | "periodoInicio" | "periodoFin" | "valor"
+>;
+
 export function isAppSubmittedAccount(account: ManualRegularizationAccount) {
   return !account.envioManual && SUBMITTED_STATUSES.has(account.estado);
 }

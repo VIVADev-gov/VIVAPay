@@ -10,5 +10,6 @@ export const GFR_FO_16_CELLS = {
   valorPago: "C22",
   ordenadorNombreFirma: "A27",
   ordenadorDocumento: "E27",
-  ordenadorOrganizacionFirma: "F29",
+  /** Merge G26:I29 en plantilla 16.xlsx */
+  ordenadorOrganizacionFirma: "G26",
 } as const;

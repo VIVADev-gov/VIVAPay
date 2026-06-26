@@ -29,6 +29,10 @@ import {
   buildManualRegularizationUpdatesForAccounts,
   getManualRegularizationBoundary,
 } from "@/lib/contratos/manualRegularization.server";
+import {
+  parseManualPaymentDatesMap,
+  validateManualPaymentDatesForCount,
+} from "./dto/manual-payment-dates.dto";
 import type { UpdateManualRegularizationBodyDto } from "./dto/update-manual-regularization.dto";
 
 function getContractEndDate(contrato: IContratoDocument) {
@@ -211,20 +215,37 @@ export const contratosService = {
       generated.length
     );
 
-    if (regularizedCount > 0) {
-      const regularizedIds = generated
-        .slice(0, regularizedCount)
-        .map((account) => account._id);
+    const manualDatesError = validateManualPaymentDatesForCount(
+      regularizedCount,
+      dto.manualPaymentDates ?? []
+    );
+    if (manualDatesError) {
+      throw new ContractServiceError(
+        manualDatesError,
+        400,
+        CONTRACT_ERROR_CODES.MANUAL_REGULARIZATION_BLOCKED
+      );
+    }
 
-      await CuentaCobro.updateMany(
-        { _id: { $in: regularizedIds } },
-        {
-          $set: {
-            estado: CUENTA_COBRO_STATUS.ENVIADA,
-            fechaEnvio: new Date(),
-            envioManual: true,
-          },
-        }
+    const paymentDatesByNumero = parseManualPaymentDatesMap(
+      dto.manualPaymentDates ?? []
+    );
+
+    if (regularizedCount > 0) {
+      await Promise.all(
+        generated.slice(0, regularizedCount).map((account) =>
+          CuentaCobro.updateOne(
+            { _id: account._id },
+            {
+              $set: {
+                estado: CUENTA_COBRO_STATUS.ENVIADA,
+                fechaEnvio: new Date(),
+                envioManual: true,
+                fechaPago: paymentDatesByNumero.get(account.numero) ?? null,
+              },
+            }
+          )
+        )
       );
     }
 
@@ -455,9 +476,26 @@ export const contratosService = {
       );
     }
 
+    const manualDatesError = validateManualPaymentDatesForCount(
+      requestedCount,
+      dto.manualPaymentDates ?? []
+    );
+    if (manualDatesError) {
+      throw new ContractServiceError(
+        manualDatesError,
+        400,
+        CONTRACT_ERROR_CODES.MANUAL_REGULARIZATION_BLOCKED
+      );
+    }
+
+    const paymentDatesByNumero = parseManualPaymentDatesMap(
+      dto.manualPaymentDates ?? []
+    );
+
     const updates = buildManualRegularizationUpdatesForAccounts(
       cuentasCobro,
-      requestedCount
+      requestedCount,
+      paymentDatesByNumero
     );
 
     await Promise.all(

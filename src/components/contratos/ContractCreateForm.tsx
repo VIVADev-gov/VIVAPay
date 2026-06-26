@@ -6,6 +6,7 @@ import ContractCdpRpcReferenceFields from "@/components/contratos/ContractCdpRpc
 import ContractRubrosFields, {
   contractRubrosFromForm,
 } from "@/components/contratos/ContractRubrosFields";
+import ManualRegularizationAccountsFields from "@/components/contratos/ManualRegularizationAccountsFields";
 import CurrencyFormField from "@/components/forms/CurrencyFormField";
 import FileUpload from "@/components/forms/FileUpload";
 import FormField from "@/components/forms/FormField";
@@ -19,6 +20,10 @@ import {
   getCdpRpcReferenceValidationErrors,
 } from "@/lib/contratos/cdpRpcReference";
 import { validateContractCreationAgainstVigente } from "@/lib/contratos/contractCreationValidation";
+import {
+  buildManualPaymentDatesPayload,
+  validateManualPaymentDatesClient,
+} from "@/lib/contratos/manualPaymentDates.shared";
 import { formatContractFormErrors } from "@/lib/contratos/formatContractFormErrors";
 import { validateRubrosAdicionalesErrors } from "@/lib/contratos/contractRubrosAdicionales";
 import { buildPaymentAccountPreviews } from "@/lib/cuentas-cobro/paymentAccountPreview";
@@ -26,7 +31,7 @@ import { useContratosStore } from "@/store/contratos/contratos.store";
 import { useUiStore } from "@/store/ui/ui-store";
 import type { CreateContratoBody } from "@/types/contratos";
 import { formatCurrency, formatDate } from "@/utils/formatters";
-import { calculatePlazoMeses, parseDateOnlyToUtcNoon } from "@/utils/date";
+import { calculatePlazoMeses, parseDateOnlyToUtcNoon, toDateOnlyString } from "@/utils/date";
 
 const initialForm: CreateContratoBody = {
   numeroContrato: "",
@@ -122,6 +127,9 @@ export default function ContractCreateForm({
   const currentContract = useContratosStore((s) => s.currentContract);
   const [form, setForm] = useState(initialForm);
   const [cdpRpcReference, setCdpRpcReference] = useState(EMPTY_CDP_RPC_REFERENCE);
+  const [paymentDatesByNumero, setPaymentDatesByNumero] = useState<
+    Record<number, string | undefined>
+  >({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [contractFiles, setContractFiles] = useState<
     Partial<Record<ContractDocumentType, File>>
@@ -259,12 +267,15 @@ export default function ContractCreateForm({
     valorTotal: Number(form.valorInicialContrato),
   });
 
-  const setSubmittedCountFromToggle = (numero: number, checked: boolean) => {
-    setForm((current) => ({
-      ...current,
-      submittedPaymentAccountsCount: checked ? numero : Math.max(0, numero - 1),
-    }));
-  };
+  const regularizationPreviewAccounts = paymentPreviews.map((account) => ({
+    id: String(account.numero),
+    numero: account.numero,
+    periodoInicio: toDateOnlyString(account.periodoInicio),
+    periodoFin: toDateOnlyString(account.periodoFin),
+    valor: account.valor,
+    envioManual: false,
+    estado: "BORRADOR" as const,
+  }));
 
   const uploadContractDocuments = async (contractId: string) => {
     for (const document of CONTRACT_DOCUMENTS) {
@@ -293,6 +304,16 @@ export default function ContractCreateForm({
         message: formatContractFormErrors(clientErrors),
         variant: "warning",
       });
+      return;
+    }
+
+    const submittedCount = Number(form.submittedPaymentAccountsCount ?? 0);
+    const datesError = validateManualPaymentDatesClient(
+      submittedCount,
+      paymentDatesByNumero
+    );
+    if (datesError) {
+      showToast({ message: datesError, variant: "warning" });
       return;
     }
 
@@ -334,8 +355,10 @@ export default function ContractCreateForm({
         conceptoRembolsable: form.tieneReembolsables
           ? form.conceptoRembolsable?.trim()
           : undefined,
-        submittedPaymentAccountsCount: Number(
-          form.submittedPaymentAccountsCount ?? 0
+        submittedPaymentAccountsCount: submittedCount,
+        manualPaymentDates: buildManualPaymentDatesPayload(
+          submittedCount,
+          paymentDatesByNumero
         ),
       });
 
@@ -545,33 +568,25 @@ export default function ContractCreateForm({
             Cuentas ya enviadas
           </h3>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            Marca en orden las cuentas que ya enviaste manualmente. Si marcas
-            una cuenta, se asumen enviadas todas las anteriores.
+            Marca en orden las cuentas que ya enviaste manualmente e indica cuándo
+            te pagaron cada una.
           </p>
         </div>
 
         {paymentPreviews.length > 0 ? (
-          <div className="grid gap-3">
-            {paymentPreviews.map((account) => {
-              const checked =
-                account.numero <= (form.submittedPaymentAccountsCount ?? 0);
-              return (
-                <ToggleSwitch
-                  key={account.numero}
-                  label={`Cuenta ${account.numero} — ${formatDate(
-                    account.periodoInicio
-                  )} - ${formatDate(account.periodoFin)} — ${formatCurrency(
-                    account.valor
-                  )}`}
-                  description={`${account.diasPagables} días pagables`}
-                  value={checked}
-                  onChange={(value) =>
-                    setSubmittedCountFromToggle(account.numero, value)
-                  }
-                />
-              );
-            })}
-          </div>
+          <ManualRegularizationAccountsFields
+            accounts={regularizationPreviewAccounts}
+            submittedCount={form.submittedPaymentAccountsCount ?? 0}
+            paymentDatesByNumero={paymentDatesByNumero}
+            boundary={paymentPreviews.length}
+            onSubmittedCountChange={(count) =>
+              setForm((current) => ({
+                ...current,
+                submittedPaymentAccountsCount: count,
+              }))
+            }
+            onPaymentDatesChange={setPaymentDatesByNumero}
+          />
         ) : (
           <p className="rounded-2xl bg-background/80 px-4 py-3 text-sm text-muted-foreground">
             Completa fechas, plazo y valor inicial para ver las cuentas
