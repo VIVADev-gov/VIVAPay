@@ -1,25 +1,6 @@
 import type { PaymentAccountDeclarations } from "@/types/contratos";
 import type { CellValues } from "../types";
 
-/** Formatos Excel/LibreOffice estilo Colombia: . miles, , decimales */
-export const EXCEL_NUMFMT_CO = {
-  currency: "#.##0",
-  currencyDecimal: "#.##0,00",
-  number: "#.##0",
-  decimal: "#.##0,00",
-  percent: "0,00%",
-} as const;
-
-export type CellFormats = Record<string, string>;
-
-export function setCellFormat(
-  formats: CellFormats,
-  cellRef: string,
-  numFmt: string
-) {
-  formats[cellRef] = numFmt;
-}
-
 export function parseIsoDate(value: string | Date | null | undefined): Date | null {
   if (!value) return null;
   if (value instanceof Date) {

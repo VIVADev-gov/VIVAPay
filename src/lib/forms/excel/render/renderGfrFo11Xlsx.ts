@@ -1,6 +1,5 @@
 import "server-only";
 
-import { buildGfrFo11CellFormats } from "../build/buildGfrFo11CellFormats";
 import { buildGfrFo11Data } from "../build/buildGfrFo11Data";
 import { fillXlsxTemplate } from "../fillXlsxTemplate";
 import { FORM_TEMPLATES } from "../formTemplates";
@@ -11,7 +10,6 @@ export async function renderGfrFo11Xlsx(ctx: FormPackageContext) {
   return fillXlsxTemplate(
     template.file,
     template.sheet,
-    buildGfrFo11Data(ctx),
-    { cellFormats: buildGfrFo11CellFormats() }
+    buildGfrFo11Data(ctx)
   );
 }

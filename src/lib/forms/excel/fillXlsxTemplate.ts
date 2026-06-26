@@ -7,8 +7,6 @@ import {
   expandGfrFo17HistorialRows,
   type ExpandGfrFo17HistorialOptions,
 } from "./expandGfrFo17Historial";
-import type { CellFormats } from "./build/formExcelHelpers";
-
 export type FillXlsxImageExtension = "png" | "jpeg" | "gif";
 
 export type FillXlsxImageEditAs = "oneCell" | "absolute" | "twoCell";
@@ -51,7 +49,6 @@ export type FillXlsxOptions = {
   clearColumnsAfter?: string;
   resetDimensions?: { lastRow: number; lastCol: number };
   expandGfrFo17Historial?: ExpandGfrFo17HistorialOptions;
-  cellFormats?: CellFormats;
 };
 
 function columnLetterToNumber(letter: string): number {
@@ -184,12 +181,7 @@ export async function fillXlsxTemplate(
 
   for (const [cellRef, value] of Object.entries(values)) {
     if (value === undefined || value === null) continue;
-    const cell = sheet.getCell(cellRef);
-    cell.value = value;
-    const numFmt = options?.cellFormats?.[cellRef];
-    if (numFmt) {
-      cell.numFmt = numFmt;
-    }
+    sheet.getCell(cellRef).value = value;
   }
 
   if (options?.trimRowsAfter != null && sheet.rowCount > options.trimRowsAfter) {

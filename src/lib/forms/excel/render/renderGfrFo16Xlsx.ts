@@ -1,6 +1,5 @@
 import "server-only";
 
-import { buildGfrFo16CellFormats } from "../build/buildGfrFo16CellFormats";
 import { buildGfrFo16Data } from "../build/buildGfrFo16Data";
 import { fillXlsxTemplate } from "../fillXlsxTemplate";
 import { FORM_TEMPLATES } from "../formTemplates";
@@ -28,7 +27,6 @@ export async function renderGfrFo16Xlsx(ctx: FormPackageContext) {
     template.sheet,
     buildGfrFo16Data(ctx),
     {
-      cellFormats: buildGfrFo16CellFormats(),
       trimRowsAfter: 35,
       printArea: "A1:I35",
       removeOtherSheets: true,
