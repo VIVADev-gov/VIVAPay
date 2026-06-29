@@ -50,7 +50,10 @@ export function isPaymentAccountActionable(
   return next?.id === paymentAccount.id;
 }
 
-const CONTRACT_SCOPE_PHASES: PaymentPhase[] = ["PRIMERA", "ULTIMA", "UNICA"];
+// Según GFR-FO-12 los documentos de contrato (RUT, contrato, acta de inicio,
+// póliza, certificado de aprobación de póliza y certificación bancaria) solo se
+// exigen en la primera cuenta y en la cuenta única; en la última no aplican.
+const CONTRACT_SCOPE_PHASES: PaymentPhase[] = ["PRIMERA", "UNICA"];
 
 const CONTRACT_SCOPE_REQUIREMENTS: PaymentDocumentRequirement[] =
   CONTRACT_PAYMENT_DOCUMENTS.map((document) => ({
