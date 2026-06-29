@@ -11,8 +11,9 @@ const source = path.join(process.cwd(), "public/forms/01.docx");
 const target = path.join(process.cwd(), "public/templates/gfr-fo-12-template.docx");
 
 function replaceCellText(cellXml, text) {
+  // Conservar <w:tcPr> (bordes, sombreado, ancho) y reemplazar solo el contenido.
   return cellXml.replace(
-    /(<w:tc(?:>|[\s\S]*?<\/w:tcPr>))([\s\S]*?)(<\/w:tc>)/,
+    /(<w:tc>(?:<w:tcPr>[\s\S]*?<\/w:tcPr>)?)([\s\S]*?)(<\/w:tc>)/,
     (_, open, _body, close) =>
       `${open}<w:p><w:r><w:t xml:space="preserve">${text}</w:t></w:r></w:p>${close}`
   );
