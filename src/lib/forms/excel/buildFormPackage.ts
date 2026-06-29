@@ -7,6 +7,9 @@ import {
 import { parseGfrFo11Responses } from "@/lib/cuentas-cobro/gfrFo11Responses";
 import { isReembolsablesComplete } from "@/lib/cuentas-cobro/paymentAccountReembolsables";
 import { renderGthFo52DocxBuffer } from "@/lib/forms/gthFo52/renderGthFo52Docx";
+import { validateGfrFo12ForPhase } from "@/lib/forms/gfrFo12/gfrFo12Checklist";
+import { loadGfrFo12DocumentTypes } from "@/lib/forms/gfrFo12/loadGfrFo12DocumentTypes";
+import { renderGfrFo12Docx } from "@/lib/forms/gfrFo12/renderGfrFo12Docx";
 import { convertOfficeBufferToPdf } from "@/lib/office/convertOfficeToPdf";
 import type { PublicCuentaCobro } from "@/types/contratos";
 import { buildFormPackageContext } from "./buildFormPackageContext";
@@ -114,8 +117,21 @@ export async function buildFormPackage(
     }
 
     const reembolsables = ctx.paymentAccount.reembolsables;
+    const uploadedDocuments = await loadGfrFo12DocumentTypes(
+      userId,
+      contractId,
+      ctx
+    );
+    const gfrFo12ValidationError = validateGfrFo12ForPhase(ctx, uploadedDocuments);
+    if (gfrFo12ValidationError) {
+      return {
+        success: false,
+        error: gfrFo12ValidationError,
+      };
+    }
 
-    const [gfrFo16, gfrFo17, gfrFo11, gthFo52Xlsx] = await Promise.all([
+    const [gfrFo12, gfrFo16, gfrFo17, gfrFo11, gthFo52Xlsx] = await Promise.all([
+      renderGfrFo12Docx(ctx, uploadedDocuments),
       renderGfrFo16Xlsx(ctx),
       renderGfrFo17Xlsx(ctx),
       shouldIncludeGfrFo11 ? renderGfrFo11Xlsx(ctx) : Promise.resolve(null),
@@ -125,15 +141,20 @@ export async function buildFormPackage(
     ]);
 
     const attachmentPromises = [
-      xlsxToPdf(
-        gfrFo16,
-        FORM_TEMPLATES.GFR_FO_16.code,
-        `${FORM_TEMPLATES.GFR_FO_16.code}-${suffix}.pdf`
+      docxToPdf(
+        gfrFo12,
+        FORM_TEMPLATES.GFR_FO_12.code,
+        `${FORM_TEMPLATES.GFR_FO_12.code}-${suffix}.pdf`
       ),
       xlsxToPdf(
         gfrFo17,
         FORM_TEMPLATES.GFR_FO_17.code,
         `${FORM_TEMPLATES.GFR_FO_17.code}-${suffix}.pdf`
+      ),
+      xlsxToPdf(
+        gfrFo16,
+        FORM_TEMPLATES.GFR_FO_16.code,
+        `${FORM_TEMPLATES.GFR_FO_16.code}-${suffix}.pdf`
       ),
     ];
 

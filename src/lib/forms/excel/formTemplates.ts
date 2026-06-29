@@ -1,4 +1,8 @@
 export const FORM_TEMPLATES = {
+  GFR_FO_12: {
+    file: "public/forms/01.docx",
+    code: "GFR-FO-12",
+  },
   GFR_FO_16: {
     file: "public/forms/16.xlsx",
     sheet: "GFR-FO-16",
