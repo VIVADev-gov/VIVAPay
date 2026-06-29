@@ -7,6 +7,7 @@ import {
   expandGfrFo17HistorialRows,
   type ExpandGfrFo17HistorialOptions,
 } from "./expandGfrFo17Historial";
+import { spliceRowsWithMerges } from "./spliceRowsWithMerges";
 export type FillXlsxImageExtension = "png" | "jpeg" | "gif";
 
 export type FillXlsxImageEditAs = "oneCell" | "absolute" | "twoCell";
@@ -193,7 +194,7 @@ export async function fillXlsxTemplate(
     }
     const rowsToRemove = sheet.rowCount - options.trimRowsAfter;
     if (rowsToRemove > 0) {
-      sheet.spliceRows(options.trimRowsAfter + 1, rowsToRemove);
+      spliceRowsWithMerges(sheet, options.trimRowsAfter + 1, rowsToRemove);
       // ExcelJS no acorta _rows al eliminar; sin esto la dimensión usada queda inflada.
       (sheet as ExcelJS.Worksheet & { _rows: unknown[] })._rows.length =
         options.trimRowsAfter;

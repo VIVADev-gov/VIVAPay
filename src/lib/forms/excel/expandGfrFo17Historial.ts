@@ -2,6 +2,8 @@ import "server-only";
 
 import type ExcelJS from "exceljs";
 
+import { spliceRowsWithMerges } from "./spliceRowsWithMerges";
+
 export type ExpandGfrFo17HistorialOptions = {
   startRow: number;
   baseRows: number;
@@ -47,7 +49,7 @@ export function expandGfrFo17HistorialRows(
     const templateRow = startRow + baseRows - 1;
     const totalRowBefore = startRow + baseRows;
     const emptyRows = Array.from({ length: rowsToInsert }, () => []);
-    sheet.spliceRows(totalRowBefore, 0, ...emptyRows);
+    spliceRowsWithMerges(sheet, totalRowBefore, 0, ...emptyRows);
 
     for (let index = 0; index < rowsToInsert; index++) {
       const targetRow = totalRowBefore + index;
