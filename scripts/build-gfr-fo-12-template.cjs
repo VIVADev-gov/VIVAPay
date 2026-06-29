@@ -69,13 +69,17 @@ const templateRow = buildTemplateDataRow(rows[1]);
 const newTableXml = `<w:tbl>${tableXml.match(/<w:tblPr[\s\S]*?<\/w:tblGrid>/)[0]}${headerRow}${templateRow}</w:tbl>`;
 xml = xml.replace(tableMatch[0], newTableXml);
 
+// Parada de tabulación que separa la columna del contratista (izquierda)
+// de la del supervisor (derecha). ~4500 twips ≈ centro de la página.
+const SUPERVISOR_TAB_TWIPS = 4500;
+
 function replaceParagraphByParaId(xml, paraId, runsXml) {
   const pattern = new RegExp(
     `<w:p [^>]*w14:paraId="${paraId}"[\\s\\S]*?</w:p>`
   );
   return xml.replace(
     pattern,
-    `<w:p w14:paraId="${paraId}"><w:pPr><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/></w:rPr></w:pPr>${runsXml}</w:p>`
+    `<w:p w14:paraId="${paraId}"><w:pPr><w:tabs><w:tab w:val="left" w:pos="${SUPERVISOR_TAB_TWIPS}"/></w:tabs><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/></w:rPr></w:pPr>${runsXml}</w:p>`
   );
 }
 
@@ -83,20 +87,34 @@ function buildRun(text) {
   return `<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/></w:rPr><w:t xml:space="preserve">${text}</w:t></w:r>`;
 }
 
+function buildTab() {
+  return `<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/></w:rPr><w:tab/></w:r>`;
+}
+
 xml = replaceParagraphByParaId(
   xml,
   "1C3D56D3",
-  `${buildRun("{%contratistaFirma}")}${buildRun("    ")}${buildRun("{%supervisorFirma}")}`
+  `${buildRun("{%contratistaFirma}")}${buildTab()}${buildRun("{%supervisorFirma}")}`
 );
 xml = replaceParagraphByParaId(
   xml,
   "3F3A39B6",
-  `${buildRun("NOMBRE: {contratistaNombre}")}${buildRun("    NOMBRE: {supervisorNombre}")}`
+  `${buildRun("NOMBRE: {contratistaNombre}")}${buildTab()}${buildRun("NOMBRE: {supervisorNombre}")}`
 );
 xml = replaceParagraphByParaId(
   xml,
   "4425A44D",
-  `${buildRun("CÉDULA: {contratistaCedula}")}${buildRun("    CÉDULA: {supervisorCedula}")}`
+  `${buildRun("CÉDULA: {contratistaCedula}")}${buildTab()}${buildRun("CÉDULA: {supervisorCedula}")}`
+);
+xml = replaceParagraphByParaId(
+  xml,
+  "1275CBD9",
+  `${buildRun("FIRMA")}${buildTab()}${buildRun("FIRMA")}`
+);
+xml = replaceParagraphByParaId(
+  xml,
+  "2F6537FC",
+  `${buildRun("Prestador de Servicios")}${buildTab()}${buildRun("Supervisor")}`
 );
 
 zip.file("word/document.xml", xml);
