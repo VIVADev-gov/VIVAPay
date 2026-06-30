@@ -315,6 +315,19 @@ export function resolveGfrFo12Entrega(
   ctx: FormPackageContext,
   uploaded: GfrFo12DocumentTypes
 ): "SI" | "NO" {
+  const phase = resolvePaymentPhase(
+    { numero: ctx.paymentAccount.numero } as PublicCuentaCobro,
+    ctx.paymentAccounts.map(
+      (account) => ({ numero: account.numero }) as PublicCuentaCobro
+    )
+  );
+
+  // La columna ENTREGA solo aplica a documentos que corresponden a la fase
+  // actual (según las columnas pago1/pago2/pagoUltimo/pagoUnico). Sin esto, los
+  // documentos de contrato reutilizables se marcaban como "SI" en cuentas
+  // intermedias/última aunque no se adjuntan en ese pago.
+  if (!rowAppliesToPhase(row, phase)) return "NO";
+
   switch (row.code) {
     case "GFR_FO_12":
     case "GFR_FO_17":
@@ -325,16 +338,9 @@ export function resolveGfrFo12Entrega(
       return isReembolsablesComplete(ctx.paymentAccount.reembolsables)
         ? "SI"
         : "NO";
-    case "GFR_FO_11": {
-      const phase = resolvePaymentPhase(
-        { numero: ctx.paymentAccount.numero } as PublicCuentaCobro,
-        ctx.paymentAccounts.map(
-          (account) => ({ numero: account.numero }) as PublicCuentaCobro
-        )
-      );
+    case "GFR_FO_11":
       if (!includesGfrFo11(phase)) return "NO";
       return parseGfrFo11Responses(ctx.paymentAccount.gfrFo11) ? "SI" : "NO";
-    }
     case "FACTURA":
     case "GFR_FO_10":
       return "NO";
