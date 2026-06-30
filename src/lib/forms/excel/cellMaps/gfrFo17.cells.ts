@@ -95,19 +95,16 @@ const LAYOUT_BASE = {
   fechaExpedicion: "G135",
   trimRowsAfter: 143,
   /**
-   * Anclas de firma (plantilla public/forms/02.xlsx, hoja GFR-FO-17).
+   * Ancla superior de firma (plantilla public/forms/02.xlsx, hoja GFR-FO-17).
    * row/col usan rejilla ExcelJS (0-based; col 1 = B).
-   * - Contratista: merge B123:C123
-   * - Supervisor: merge B134:C135
+   * El tamaño se define en píxeles (ext) respetando proporción; ver formSignatureExtents.ts.
+   * - Contratista: esquina superior del merge B123:C123
+   * - Supervisor: esquina superior del merge B134:C135
    */
   signatureContratistaTlCol: 1,
   signatureContratistaTlRow: 122,
-  signatureContratistaBrCol: 3,
-  signatureContratistaBrRow: 123,
   signatureSupervisorTlCol: 1,
   signatureSupervisorTlRow: 133,
-  signatureSupervisorBrCol: 3,
-  signatureSupervisorBrRow: 135,
 } as const;
 
 export type GfrFo17Layout = {
@@ -143,11 +140,9 @@ export type GfrFo17Layout = {
   signatureAnchors: {
     contratista: {
       tl: { col: number; row: number };
-      br: { col: number; row: number };
     };
     supervisor: {
       tl: { col: number; row: number };
-      br: { col: number; row: number };
     };
   };
 };
@@ -215,19 +210,11 @@ export function getGfrFo17Layout(historialRowCount: number): GfrFo17Layout {
           col: LAYOUT_BASE.signatureContratistaTlCol,
           row: LAYOUT_BASE.signatureContratistaTlRow + extra,
         },
-        br: {
-          col: LAYOUT_BASE.signatureContratistaBrCol,
-          row: LAYOUT_BASE.signatureContratistaBrRow + extra,
-        },
       },
       supervisor: {
         tl: {
           col: LAYOUT_BASE.signatureSupervisorTlCol,
           row: LAYOUT_BASE.signatureSupervisorTlRow + extra,
-        },
-        br: {
-          col: LAYOUT_BASE.signatureSupervisorBrCol,
-          row: LAYOUT_BASE.signatureSupervisorBrRow + extra,
         },
       },
     },
@@ -240,19 +227,11 @@ export const GFR_FO_17_SIGNATURE_ANCHORS = {
       col: LAYOUT_BASE.signatureContratistaTlCol,
       row: LAYOUT_BASE.signatureContratistaTlRow,
     },
-    br: {
-      col: LAYOUT_BASE.signatureContratistaBrCol,
-      row: LAYOUT_BASE.signatureContratistaBrRow,
-    },
   },
   supervisor: {
     tl: {
       col: LAYOUT_BASE.signatureSupervisorTlCol,
       row: LAYOUT_BASE.signatureSupervisorTlRow,
-    },
-    br: {
-      col: LAYOUT_BASE.signatureSupervisorBrCol,
-      row: LAYOUT_BASE.signatureSupervisorBrRow,
     },
   },
 } as const;

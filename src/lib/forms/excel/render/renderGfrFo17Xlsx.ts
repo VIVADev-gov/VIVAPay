@@ -9,6 +9,7 @@ import {
 import { fillXlsxTemplate } from "../fillXlsxTemplate";
 import { FORM_TEMPLATES } from "../formTemplates";
 import { resolveFormSignatureImage } from "../resolveFormSignatureImage";
+import { resolveSignatureImageExtents } from "../formSignatureExtents";
 import type { FormPackageContext } from "../types";
 
 export async function renderGfrFo17Xlsx(ctx: FormPackageContext) {
@@ -65,13 +66,13 @@ export async function renderGfrFo17Xlsx(ctx: FormPackageContext) {
         {
           ...contratistaImage,
           tl: { ...layout.signatureAnchors.contratista.tl },
-          br: { ...layout.signatureAnchors.contratista.br },
+          ext: resolveSignatureImageExtents(contratistaImage),
           editAs: "absolute",
         },
         {
           ...supervisorImage,
           tl: { ...layout.signatureAnchors.supervisor.tl },
-          br: { ...layout.signatureAnchors.supervisor.br },
+          ext: resolveSignatureImageExtents(supervisorImage),
           editAs: "absolute",
         },
       ],
