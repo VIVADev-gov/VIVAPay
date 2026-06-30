@@ -5,10 +5,9 @@ import {
 import type { FormPackageContext } from "../types";
 
 export function computeGfrFo17EjecucionPorcentajes(
-  ctx: Pick<FormPackageContext, "contract" | "paymentAccounts" | "paymentAccount">
+  ctx: Pick<FormPackageContext, "paymentAccounts" | "paymentAccount">
 ) {
-  const { contract, paymentAccounts, paymentAccount } = ctx;
-  const valorContrato = contract.valorInicialContrato;
+  const { paymentAccounts, paymentAccount } = ctx;
   const currentNumero = paymentAccount.numero;
   const payableDaysByNumero = mapPayableDaysByAccountNumero(paymentAccounts);
   const totalDiasContrato = getTotalContractPayableDays(paymentAccounts);
@@ -22,13 +21,19 @@ export function computeGfrFo17EjecucionPorcentajes(
     0
   );
 
+  const valorTotalCuentas = paymentAccounts.reduce(
+    (sum, account) => sum + (account.valor ?? 0),
+    0
+  );
+
   const diasEjecutados = accountsHastaActual.reduce(
     (sum, account) => sum + (payableDaysByNumero.get(account.numero) ?? 0),
     0
   );
 
   return {
-    financiera: valorContrato > 0 ? valorAcumulado / valorContrato : 0,
+    financiera:
+      valorTotalCuentas > 0 ? valorAcumulado / valorTotalCuentas : 0,
     fisica: totalDiasContrato > 0 ? diasEjecutados / totalDiasContrato : 0,
   };
 }
