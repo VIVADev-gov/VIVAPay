@@ -42,6 +42,10 @@ export async function renderGfrFo17Xlsx(ctx: FormPackageContext) {
         baseRows: GFR_FO_17_HISTORIAL_BASE_ROWS,
         targetRows: historialRowCount,
       },
+      gfrFo17Activities: {
+        startRow: layout.actividadStartRow,
+        count: ctx.activities.length,
+      },
       trimRowsAfter: layout.trimRowsAfter,
       printArea: `A1:K${layout.trimRowsAfter}`,
       removeOtherSheets: true,

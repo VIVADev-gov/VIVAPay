@@ -7,6 +7,10 @@ import {
   expandGfrFo17HistorialRows,
   type ExpandGfrFo17HistorialOptions,
 } from "./expandGfrFo17Historial";
+import {
+  applyGfrFo17ActivityRows,
+  type GfrFo17ActivitiesLayout,
+} from "./applyGfrFo17ActivityRows";
 import { spliceRowsWithMerges } from "./spliceRowsWithMerges";
 export type FillXlsxImageExtension = "png" | "jpeg" | "gif";
 
@@ -50,6 +54,7 @@ export type FillXlsxOptions = {
   clearColumnsAfter?: string;
   resetDimensions?: { lastRow: number; lastCol: number };
   expandGfrFo17Historial?: ExpandGfrFo17HistorialOptions;
+  gfrFo17Activities?: GfrFo17ActivitiesLayout;
 };
 
 function columnLetterToNumber(letter: string): number {
@@ -183,6 +188,10 @@ export async function fillXlsxTemplate(
   for (const [cellRef, value] of Object.entries(values)) {
     if (value === undefined || value === null) continue;
     sheet.getCell(cellRef).value = value;
+  }
+
+  if (options?.gfrFo17Activities) {
+    applyGfrFo17ActivityRows(sheet, options.gfrFo17Activities);
   }
 
   if (options?.trimRowsAfter != null && sheet.rowCount > options.trimRowsAfter) {

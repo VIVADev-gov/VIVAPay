@@ -10,12 +10,20 @@ const PizZip = require("pizzip");
 const source = path.join(process.cwd(), "public/forms/01.docx");
 const target = path.join(process.cwd(), "public/templates/gfr-fo-12-template.docx");
 
-function replaceCellText(cellXml, text) {
+// Las celdas de datos en 01.docx usan Arial 8pt (sz=16). Hay que conservar ese
+// tamaño y la alineación; si se omiten, el texto se renderiza a 11pt (default)
+// y los números de dos dígitos se parten en la columna estrecha, además de
+// inflar la altura de la tabla (provoca una página extra vacía).
+function replaceCellText(cellXml, text, align = "both") {
+  const rpr =
+    `<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>` +
+    `<w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>`;
   // Conservar <w:tcPr> (bordes, sombreado, ancho) y reemplazar solo el contenido.
   return cellXml.replace(
     /(<w:tc>(?:<w:tcPr>[\s\S]*?<\/w:tcPr>)?)([\s\S]*?)(<\/w:tc>)/,
     (_, open, _body, close) =>
-      `${open}<w:p><w:r><w:t xml:space="preserve">${text}</w:t></w:r></w:p>${close}`
+      `${open}<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="${align}"/>${rpr}</w:pPr>` +
+      `<w:r>${rpr}<w:t xml:space="preserve">${text}</w:t></w:r></w:p>${close}`
   );
 }
 
@@ -32,6 +40,8 @@ function buildTemplateDataRow(rowXml) {
     "{nota}",
     "{entrega}{/filas}",
   ];
+  // Centrar número, columnas de pago y entrega; justificar descripción y nota.
+  const alignments = ["center", "both", "center", "center", "center", "center", "both", "center"];
 
   if (cells.length !== placeholders.length) {
     throw new Error(
@@ -41,7 +51,10 @@ function buildTemplateDataRow(rowXml) {
 
   let updated = rowXml;
   for (let index = 0; index < placeholders.length; index++) {
-    updated = updated.replace(cells[index], replaceCellText(cells[index], placeholders[index]));
+    updated = updated.replace(
+      cells[index],
+      replaceCellText(cells[index], placeholders[index], alignments[index])
+    );
   }
 
   return updated;
@@ -73,18 +86,32 @@ xml = xml.replace(tableMatch[0], newTableXml);
 // de la del supervisor (derecha). ~4500 twips ≈ centro de la página.
 const SUPERVISOR_TAB_TWIPS = 4500;
 
+// Mantener el bloque de firmas compacto como en la plantilla original
+// (01.docx usa spacing after=0). Sin esto se hereda el docDefault
+// (after=200, line=276) y aparecen saltos de línea de más.
+function buildParaPr() {
+  return (
+    `<w:pPr>` +
+    `<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>` +
+    `<w:tabs><w:tab w:val="left" w:pos="${SUPERVISOR_TAB_TWIPS}"/></w:tabs>` +
+    `<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>` +
+    `</w:pPr>`
+  );
+}
+
 function replaceParagraphByParaId(xml, paraId, runsXml) {
   const pattern = new RegExp(
     `<w:p [^>]*w14:paraId="${paraId}"[\\s\\S]*?</w:p>`
   );
   return xml.replace(
     pattern,
-    `<w:p w14:paraId="${paraId}"><w:pPr><w:tabs><w:tab w:val="left" w:pos="${SUPERVISOR_TAB_TWIPS}"/></w:tabs><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/></w:rPr></w:pPr>${runsXml}</w:p>`
+    `<w:p w14:paraId="${paraId}">${buildParaPr()}${runsXml}</w:p>`
   );
 }
 
-function buildRun(text) {
-  return `<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/></w:rPr><w:t xml:space="preserve">${text}</w:t></w:r>`;
+function buildRun(text, bold = false) {
+  const boldXml = bold ? "<w:b/><w:bCs/>" : "";
+  return `<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>${boldXml}<w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t xml:space="preserve">${text}</w:t></w:r>`;
 }
 
 function buildTab() {
@@ -99,17 +126,17 @@ xml = replaceParagraphByParaId(
 xml = replaceParagraphByParaId(
   xml,
   "3F3A39B6",
-  `${buildRun("NOMBRE: {contratistaNombre}")}${buildTab()}${buildRun("NOMBRE: {supervisorNombre}")}`
+  `${buildRun("NOMBRE: {contratistaNombre}", true)}${buildTab()}${buildRun("NOMBRE: {supervisorNombre}", true)}`
 );
 xml = replaceParagraphByParaId(
   xml,
   "4425A44D",
-  `${buildRun("CÉDULA: {contratistaCedula}")}${buildTab()}${buildRun("CÉDULA: {supervisorCedula}")}`
+  `${buildRun("CÉDULA: {contratistaCedula}", true)}${buildTab()}${buildRun("CÉDULA: {supervisorCedula}", true)}`
 );
 xml = replaceParagraphByParaId(
   xml,
   "1275CBD9",
-  `${buildRun("FIRMA")}${buildTab()}${buildRun("FIRMA")}`
+  `${buildRun("FIRMA", true)}${buildTab()}${buildRun("FIRMA", true)}`
 );
 xml = replaceParagraphByParaId(
   xml,
