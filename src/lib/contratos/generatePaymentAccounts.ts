@@ -6,7 +6,10 @@ import {
 } from "@/models/cuentaCobro";
 import { parseDateOnlyToUtcNoon } from "@/utils/date";
 import { resolveInitialStatus } from "@/lib/contratos/paymentAccountInitialStatus";
-import { getPayableDays } from "@/lib/cuentas-cobro/paymentAccountPreview";
+import {
+  distributeByDays,
+  getPayableDays,
+} from "@/lib/cuentas-cobro/paymentAccountPreview";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const DAYS_BEFORE_ENABLE = 5;
@@ -102,8 +105,9 @@ function buildPaymentSegments(
  * Genera cuentas de cobro por cada mes calendario tocado. El valor se reparte
  * proporcional a los días pagables reales de cada mes (mes contable de 30 días),
  * de modo que los meses completos valen `valorTotal × 30 / totalDías` y el primer
- * y último mes parciales cobran solo su fracción. La última cuenta toma el
- * remanente exacto para consumir el valor total sin inflarse.
+ * y último mes parciales cobran solo su fracción. El ajuste de redondeo se suma a
+ * la cuenta con más días, de modo que la suma cuadra exacta con el valor total sin
+ * inflar ni volver negativa ninguna cuenta.
  */
 export async function generatePaymentAccountsForContract(
   input: GeneratePaymentAccountsInput
@@ -113,29 +117,17 @@ export async function generatePaymentAccountsForContract(
   const segments = buildPaymentSegments(fechaActaInicio, fechaFinal);
   if (segments.length === 0) return [];
 
-  const totalDias = segments.reduce(
-    (sum, segment) => sum + segment.diasPagables,
-    0
+  const valores = distributeByDays(
+    valorTotal,
+    segments.map((segment) => segment.diasPagables)
   );
   const today = new Date();
 
   const accounts: Omit<ICuentaCobro, "createdAt" | "updatedAt">[] = [];
-  let totalAssigned = 0;
 
   for (let i = 0; i < segments.length; i++) {
     const { periodoInicio, periodoFin, diasPagables } = segments[i];
-
-    // Reparto proporcional a los días pagables reales. La última cuenta toma el
-    // remanente exacto para cuadrar con el valor total sin inflarse (el remanente
-    // equivale a su parte proporcional salvo centavos de redondeo).
-    let valor: number;
-    if (i === segments.length - 1) {
-      valor = valorTotal - totalAssigned;
-    } else {
-      valor =
-        totalDias > 0 ? Math.round((valorTotal * diasPagables) / totalDias) : 0;
-      totalAssigned += valor;
-    }
+    const valor = valores[i];
 
     const fechaLimiteEnvio = new Date(periodoFin);
     const fechaHabilitadaEnvio = subtractDays(periodoFin, DAYS_BEFORE_ENABLE);

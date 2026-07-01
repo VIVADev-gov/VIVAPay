@@ -85,6 +85,34 @@ export function getPayableDays(
   return Math.max(0, Math.min(30, days360(periodoInicio, periodoFin)));
 }
 
+/**
+ * Reparte `valorTotal` proporcional a los días pagables de cada cuenta. El ajuste
+ * de redondeo (unos pocos pesos) se suma a la cuenta con más días, de modo que la
+ * suma cuadra exacta con `valorTotal` sin inflar ni volver negativa ninguna cuenta.
+ */
+export function distributeByDays(
+  valorTotal: number,
+  diasList: readonly number[]
+): number[] {
+  const totalDias = diasList.reduce((sum, dias) => sum + dias, 0);
+  if (totalDias <= 0) return diasList.map(() => 0);
+
+  const valores = diasList.map((dias) =>
+    Math.round((valorTotal * dias) / totalDias)
+  );
+  const diff = valorTotal - valores.reduce((sum, valor) => sum + valor, 0);
+
+  if (diff !== 0) {
+    let idxMax = 0;
+    for (let i = 1; i < diasList.length; i++) {
+      if (diasList[i] > diasList[idxMax]) idxMax = i;
+    }
+    valores[idxMax] += diff;
+  }
+
+  return valores;
+}
+
 export function getPayableDaysForAccountAtIndex(
   account: { periodoInicio: Date | null; periodoFin: Date | null },
   index: number,
@@ -187,28 +215,13 @@ export function buildPaymentAccountPreviews({
       index === segments.length - 1
     )
   );
-  const totalDias = diasList.reduce((sum, dias) => sum + dias, 0);
-  let totalAssigned = 0;
+  const valores = distributeByDays(valorTotal, diasList);
 
-  return segments.map((segment, index) => {
-    const diasPagables = diasList[index];
-    // Reparto proporcional a los días pagables reales. La última cuenta toma el
-    // remanente exacto para cuadrar con el total sin inflarse.
-    let valor: number;
-    if (index === segments.length - 1) {
-      valor = valorTotal - totalAssigned;
-    } else {
-      valor =
-        totalDias > 0 ? Math.round((valorTotal * diasPagables) / totalDias) : 0;
-      totalAssigned += valor;
-    }
-
-    return {
-      numero: index + 1,
-      periodoInicio: segment.periodoInicio,
-      periodoFin: segment.periodoFin,
-      diasPagables,
-      valor,
-    };
-  });
+  return segments.map((segment, index) => ({
+    numero: index + 1,
+    periodoInicio: segment.periodoInicio,
+    periodoFin: segment.periodoFin,
+    diasPagables: diasList[index],
+    valor: valores[index],
+  }));
 }
