@@ -146,9 +146,13 @@ export function formatFechaHoraDisplay(value: unknown): string {
 
 /**
  * Plazo en meses entre fecha de acta de inicio y fecha final.
- * La fecha final se interpreta como aniversario (exclusiva): del 29-ene al 29-jul
- * son 6 meses, no 7. Solo se suma el mes de cierre cuando el día final es
- * estrictamente posterior al día de inicio (p. ej. 01-ene → 31-jul = 7 meses).
+ * Redondea la duración al mes más cercano usando un mes contable de 30 días para
+ * la fracción del último mes (coherente con el conteo 30/360 de las cuentas de
+ * cobro). Un sobrante pequeño no infla el plazo, pero un mes casi completo sí:
+ *   - 29-ene → 30-jul = 6 + 1/30  ≈ 6.03 → 6 meses (1 día extra no cuenta)
+ *   - 01-ene → 31-jul = 6 + 30/30 = 7.00 → 7 meses (mes final completo)
+ *   - 01-ene → 30-jun = 5 + 29/30 ≈ 5.97 → 6 meses (180 días)
+ *   - 29-ene → 29-jul = 6 + 0/30  = 6.00 → 6 meses (aniversario exacto)
  */
 export function calculatePlazoMeses(
     fechaActaInicio: string,
@@ -158,13 +162,12 @@ export function calculatePlazoMeses(
     const end = parseToDate(fechaFinal);
     if (!start || !end || end < start) return null;
 
-    let months =
+    const monthDiff =
         (end.getFullYear() - start.getFullYear()) * 12 +
         (end.getMonth() - start.getMonth());
+    const dayDiff = end.getDate() - start.getDate();
 
-    if (end.getDate() > start.getDate()) {
-        months += 1;
-    }
+    const months = Math.round(monthDiff + dayDiff / 30);
 
     return Math.max(1, months);
 }

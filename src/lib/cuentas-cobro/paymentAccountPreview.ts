@@ -86,29 +86,31 @@ export function getPayableDays(
 }
 
 /**
- * Reparte `valorTotal` proporcional a los días pagables de cada cuenta. El ajuste
- * de redondeo (unos pocos pesos) se suma a la cuenta con más días, de modo que la
- * suma cuadra exacta con `valorTotal` sin inflar ni volver negativa ninguna cuenta.
+ * Reparte `valorTotal` con honorario mensual fijo (`valorTotal / plazoMeses`):
+ * cada cuenta cobra `valorMensual × díasPagables / 30` (mes contable de 30 días) y
+ * la última toma el remanente exacto para que la suma cuadre con `valorTotal`. Así
+ * los meses completos siempre valen el honorario mensual del contrato y los meses
+ * parciales cobran su fracción.
  */
-export function distributeByDays(
+export function distributeByMonthly(
   valorTotal: number,
+  plazoMeses: number,
   diasList: readonly number[]
 ): number[] {
-  const totalDias = diasList.reduce((sum, dias) => sum + dias, 0);
-  if (totalDias <= 0) return diasList.map(() => 0);
+  if (diasList.length === 0) return [];
+
+  const plazo = Math.max(1, Math.round(plazoMeses));
+  const valorMensual = valorTotal / plazo;
 
   const valores = diasList.map((dias) =>
-    Math.round((valorTotal * dias) / totalDias)
+    Math.round((valorMensual * dias) / 30)
   );
-  const diff = valorTotal - valores.reduce((sum, valor) => sum + valor, 0);
 
-  if (diff !== 0) {
-    let idxMax = 0;
-    for (let i = 1; i < diasList.length; i++) {
-      if (diasList[i] > diasList[idxMax]) idxMax = i;
-    }
-    valores[idxMax] += diff;
-  }
+  const lastIdx = diasList.length - 1;
+  const sumExceptLast = valores
+    .slice(0, lastIdx)
+    .reduce((sum, valor) => sum + valor, 0);
+  valores[lastIdx] = valorTotal - sumExceptLast;
 
   return valores;
 }
@@ -215,7 +217,7 @@ export function buildPaymentAccountPreviews({
       index === segments.length - 1
     )
   );
-  const valores = distributeByDays(valorTotal, diasList);
+  const valores = distributeByMonthly(valorTotal, plazoMeses, diasList);
 
   return segments.map((segment, index) => ({
     numero: index + 1,

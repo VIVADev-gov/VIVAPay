@@ -124,21 +124,16 @@ function getPayableDays(periodoInicio, periodoFin, isFirstSegment, isLastSegment
   return Math.max(0, Math.min(30, days360(pi, pf)));
 }
 
-// Reparto proporcional a los días; el ajuste de redondeo va a la cuenta con más
-// días (nunca infla ni vuelve negativa ninguna cuenta). Espejo de distributeByDays.
-function distributeByDays(valorTotal, diasList) {
-  const totalDias = diasList.reduce((sum, d) => sum + d, 0);
-  if (totalDias <= 0) return diasList.map(() => 0);
-
-  const valores = diasList.map((d) => Math.round((valorTotal * d) / totalDias));
-  const diff = valorTotal - valores.reduce((sum, v) => sum + v, 0);
-  if (diff !== 0) {
-    let idxMax = 0;
-    for (let i = 1; i < diasList.length; i++) {
-      if (diasList[i] > diasList[idxMax]) idxMax = i;
-    }
-    valores[idxMax] += diff;
-  }
+// Honorario mensual fijo (÷plazo); la última cuenta toma el remanente para cuadrar
+// con valorTotal. Espejo de distributeByMonthly (src/lib/cuentas-cobro).
+function distributeByMonthly(valorTotal, plazoMeses, diasList) {
+  if (diasList.length === 0) return [];
+  const plazo = Math.max(1, Math.round(Number(plazoMeses) || 0));
+  const valorMensual = valorTotal / plazo;
+  const valores = diasList.map((d) => Math.round((valorMensual * d) / 30));
+  const lastIdx = diasList.length - 1;
+  const sumExceptLast = valores.slice(0, lastIdx).reduce((s, v) => s + v, 0);
+  valores[lastIdx] = valorTotal - sumExceptLast;
   return valores;
 }
 
@@ -148,10 +143,11 @@ function calculatePlazoMeses(fechaActaInicio, fechaFinal) {
   const end = toUtcNoon(fechaFinal);
   if (end < start) return null;
 
-  let months =
+  const monthDiff =
     (end.getUTCFullYear() - start.getUTCFullYear()) * 12 +
     (end.getUTCMonth() - start.getUTCMonth());
-  if (end.getUTCDate() > start.getUTCDate()) months += 1;
+  const dayDiff = end.getUTCDate() - start.getUTCDate();
+  const months = Math.round(monthDiff + dayDiff / 30);
   return Math.max(1, months);
 }
 
@@ -289,14 +285,17 @@ async function main() {
     );
     const totalDias = dias.reduce((sum, d) => sum + d, 0);
 
-    // Reparto proporcional robusto (ajuste de redondeo a la cuenta con más días)
-    const nuevos = distributeByDays(valorTotal, dias);
-
-    // Plazo real (para display)
+    // Plazo real (para display y para el honorario mensual)
     const plazoActual = current.plazoMeses ?? contrato.plazoMeses;
     const plazoNuevo = calculatePlazoMeses(fechaActaInicio, fechaFinal);
     const plazoCambia =
       FIX_PLAZO && plazoNuevo != null && plazoNuevo !== contrato.plazoMeses;
+
+    // El valor usa el plazo corregido (si se corrige plazo); si no, el almacenado.
+    const plazoCalc = FIX_PLAZO ? (plazoNuevo ?? plazoActual) : plazoActual;
+
+    // Honorario mensual fijo (÷plazo); la última toma el remanente.
+    const nuevos = distributeByMonthly(valorTotal, plazoCalc, dias);
 
     const cambios = [];
     for (let i = 0; i < accounts.length; i++) {

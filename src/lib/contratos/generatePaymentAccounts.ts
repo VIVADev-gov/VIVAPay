@@ -7,7 +7,7 @@ import {
 import { parseDateOnlyToUtcNoon } from "@/utils/date";
 import { resolveInitialStatus } from "@/lib/contratos/paymentAccountInitialStatus";
 import {
-  distributeByDays,
+  distributeByMonthly,
   getPayableDays,
 } from "@/lib/cuentas-cobro/paymentAccountPreview";
 
@@ -102,23 +102,24 @@ function buildPaymentSegments(
 }
 
 /**
- * Genera cuentas de cobro por cada mes calendario tocado. El valor se reparte
- * proporcional a los días pagables reales de cada mes (mes contable de 30 días),
- * de modo que los meses completos valen `valorTotal × 30 / totalDías` y el primer
- * y último mes parciales cobran solo su fracción. El ajuste de redondeo se suma a
- * la cuenta con más días, de modo que la suma cuadra exacta con el valor total sin
- * inflar ni volver negativa ninguna cuenta.
+ * Genera cuentas de cobro por cada mes calendario tocado. Usa honorario mensual
+ * fijo (`valorTotal / plazoMeses`): los meses completos valen el honorario mensual
+ * del contrato y el primer y último mes parciales cobran su fracción (mes contable
+ * de 30 días). La última cuenta toma el remanente para que la suma cuadre exacta
+ * con el valor total.
  */
 export async function generatePaymentAccountsForContract(
   input: GeneratePaymentAccountsInput
 ) {
-  const { userId, contratoId, fechaActaInicio, fechaFinal, valorTotal } = input;
+  const { userId, contratoId, fechaActaInicio, fechaFinal, plazoMeses, valorTotal } =
+    input;
 
   const segments = buildPaymentSegments(fechaActaInicio, fechaFinal);
   if (segments.length === 0) return [];
 
-  const valores = distributeByDays(
+  const valores = distributeByMonthly(
     valorTotal,
+    plazoMeses,
     segments.map((segment) => segment.diasPagables)
   );
   const today = new Date();
