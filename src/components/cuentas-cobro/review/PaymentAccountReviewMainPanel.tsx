@@ -378,7 +378,7 @@ export default function PaymentAccountReviewMainPanel({
               title="De la cuenta"
               description={`Soportes adjuntos a la cuenta No. ${account.numero}.`}
             >
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-4">
                 {accountRequirements.length > 0
                   ? accountRequirements.map((requirement) => {
                       const document = accountDocuments.find(

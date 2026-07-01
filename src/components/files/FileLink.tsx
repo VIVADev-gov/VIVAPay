@@ -34,6 +34,7 @@ export default function FileLink({
             href={href}
             target="_blank"
             rel="noopener noreferrer"
+            title={displayName}
             className={className}
         >
             {icon ?? <FileText className="w-4 h-4 shrink-0" />}
