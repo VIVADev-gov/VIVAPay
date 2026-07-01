@@ -66,6 +66,7 @@ export type FormPaymentAccountSnapshot = {
   declaracionesJuradas: PaymentAccountDeclarations | null;
   gfrFo11: GfrFo11Responses | null;
   reembolsables: PaymentAccountReembolsables | null;
+  ejecucionGfrFo17Manuales: import("@/lib/cuentas-cobro/paymentAccountEjecucionGfrFo17").PaymentAccountEjecucionGfrFo17Manuales | null;
 };
 
 export type FormPackageContext = {

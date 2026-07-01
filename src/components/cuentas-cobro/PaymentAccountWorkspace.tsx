@@ -5,6 +5,7 @@ import { useState } from "react";
 import ActionButton from "@/components/buttons/ActionButton";
 import PaymentAccountActivitiesModal from "@/components/cuentas-cobro/PaymentAccountActivitiesModal";
 import PaymentAccountDeclarationsModal from "@/components/cuentas-cobro/PaymentAccountDeclarationsModal";
+import PaymentAccountEjecucionGfrFo17Section from "@/components/cuentas-cobro/PaymentAccountEjecucionGfrFo17Section";
 import PaymentAccountGfrFo11Modal from "@/components/cuentas-cobro/PaymentAccountGfrFo11Modal";
 import PaymentAccountReembolsablesModal from "@/components/cuentas-cobro/PaymentAccountReembolsablesModal";
 import PaymentAccountSeguridadSocialModal from "@/components/cuentas-cobro/PaymentAccountSeguridadSocialModal";
@@ -18,6 +19,7 @@ import {
   useCuentaCobroReembolsablesQuery,
   usePaymentAccountWorkflowMutation,
   useSaveCuentaCobroDeclarationsMutation,
+  useSaveCuentaCobroEjecucionGfrFo17Mutation,
   useSaveCuentaCobroGfrFo11Mutation,
   useSaveCuentaCobroReembolsablesMutation,
   useUploadContratoDocumentMutation,
@@ -336,6 +338,10 @@ export default function PaymentAccountWorkspace({
     requiresReembolsables || isReembolsablesModalOpen
   );
   const saveReembolsablesMutation = useSaveCuentaCobroReembolsablesMutation(
+    contract.id,
+    paymentAccount.numero
+  );
+  const saveEjecucionGfrFo17Mutation = useSaveCuentaCobroEjecucionGfrFo17Mutation(
     contract.id,
     paymentAccount.numero
   );
@@ -716,6 +722,44 @@ export default function PaymentAccountWorkspace({
         </div>
       </article>
 
+      <article className="rounded-4xl border border-border/80 bg-linear-to-br from-card via-background to-ring/5 p-6 shadow-sm md:p-8">
+        <div className="mb-5">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+            Ejecución contractual
+          </p>
+          <h3 className="mt-2 text-xl font-black text-foreground">
+            GFR-FO-17
+          </h3>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+            Porcentaje de ejecución física del contrato para esta cuenta.
+          </p>
+        </div>
+
+        <PaymentAccountEjecucionGfrFo17Section
+          paymentAccount={paymentAccount}
+          paymentAccounts={paymentAccounts}
+          readOnly={readOnly}
+          loading={saveEjecucionGfrFo17Mutation.isPending}
+          onSave={async (payload) => {
+            try {
+              await saveEjecucionGfrFo17Mutation.mutateAsync(payload);
+              showToast({
+                message: "Porcentajes de ejecución guardados",
+                variant: "success",
+              });
+            } catch (error) {
+              showToast({
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : "No se pudieron guardar los porcentajes de ejecución",
+                variant: "error",
+              });
+            }
+          }}
+        />
+      </article>
+
       {requiresReembolsables ? (
         <article className="rounded-4xl border border-border/80 bg-linear-to-br from-card via-background to-ring/5 p-6 shadow-sm md:p-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -972,6 +1016,7 @@ export default function PaymentAccountWorkspace({
         <PaymentAccountSeguridadSocialModal
           isOpen={Boolean(seguridadSocialRequirement)}
           onClose={() => setSeguridadSocialRequirement(null)}
+          valorCuenta={paymentAccount.valor ?? 0}
           existingDocument={seguridadSocialDocument}
           disabled={readOnly || !isActionable}
           loading={uploadAccountDocument.isPending}

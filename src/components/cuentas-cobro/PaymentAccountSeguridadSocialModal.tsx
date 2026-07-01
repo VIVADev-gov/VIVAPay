@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ActionButton from "@/components/buttons/ActionButton";
 import CurrencyFormField from "@/components/forms/CurrencyFormField";
 import FileUpload from "@/components/forms/FileUpload";
@@ -12,13 +12,18 @@ import {
   hasSeguridadSocialAportesManuales,
   parseSeguridadSocialPlantillaMetadata,
   sanitizePlantillaInput,
+  type SeguridadSocialAportes,
   type SeguridadSocialPlantillaMetadata,
 } from "@/lib/cuentas-cobro/seguridadSocialPlantilla";
+import { computeGfrFo17SeguridadSocialAportes } from "@/lib/forms/excel/build/buildGfrFo17SeguridadSocial";
+import { getGfrFo17Config } from "@/lib/forms/excel/config/gfrFo17.config";
 import type { PublicCuentaCobroDocumento } from "@/types/contratos";
+import { formatCurrency } from "@/utils/formatters";
 
 type PaymentAccountSeguridadSocialModalProps = {
   isOpen: boolean;
   onClose: () => void;
+  valorCuenta: number;
   existingDocument?: PublicCuentaCobroDocumento | null;
   disabled?: boolean;
   loading?: boolean;
@@ -28,14 +33,36 @@ type PaymentAccountSeguridadSocialModalProps = {
   }) => Promise<void>;
 };
 
+function formatPct(value: number) {
+  return `${(value * 100).toFixed(2).replace(/\.?0+$/, "")}%`;
+}
+
+function aportesMatchSuggested(
+  current: SeguridadSocialAportes,
+  suggested: SeguridadSocialAportes
+) {
+  return (
+    current.aporteSalud === suggested.aporteSalud &&
+    current.aportePension === suggested.aportePension &&
+    current.aporteArl === suggested.aporteArl
+  );
+}
+
 export default function PaymentAccountSeguridadSocialModal({
   isOpen,
   onClose,
+  valorCuenta,
   existingDocument,
   disabled = false,
   loading = false,
   onSave,
 }: PaymentAccountSeguridadSocialModalProps) {
+  const gfrFo17Config = useMemo(() => getGfrFo17Config(), []);
+  const suggestedAportes = useMemo(
+    () => computeGfrFo17SeguridadSocialAportes(valorCuenta, gfrFo17Config),
+    [valorCuenta, gfrFo17Config]
+  );
+
   const [file, setFile] = useState<File | null>(null);
   const [keepExistingFile, setKeepExistingFile] = useState(false);
   const [modo, setModo] = useState<"UNICO" | "SEPARADO">("UNICO");
@@ -43,11 +70,20 @@ export default function PaymentAccountSeguridadSocialModal({
   const [plantillaPension, setPlantillaPension] = useState("");
   const [plantillaEps, setPlantillaEps] = useState("");
   const [plantillaArl, setPlantillaArl] = useState("");
-  const [useAportesManuales, setUseAportesManuales] = useState(false);
   const [aporteSalud, setAporteSalud] = useState(0);
   const [aportePension, setAportePension] = useState(0);
   const [aporteArl, setAporteArl] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  const currentAportes = useMemo(
+    () => ({ aporteSalud, aportePension, aporteArl }),
+    [aporteSalud, aportePension, aporteArl]
+  );
+  const usesManualAportes = !aportesMatchSuggested(currentAportes, {
+    aporteSalud: suggestedAportes.aporteSalud,
+    aportePension: suggestedAportes.aportePension,
+    aporteArl: suggestedAportes.aporteArl,
+  });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -59,24 +95,29 @@ export default function PaymentAccountSeguridadSocialModal({
     setKeepExistingFile(Boolean(existingDocument));
     setError(null);
 
+    const initialAportes = (() => {
+      if (metadata && hasSeguridadSocialAportesManuales(metadata)) {
+        return metadata.aportesManuales!;
+      }
+      return {
+        aporteSalud: suggestedAportes.aporteSalud,
+        aportePension: suggestedAportes.aportePension,
+        aporteArl: suggestedAportes.aporteArl,
+      };
+    })();
+
+    setAporteSalud(initialAportes.aporteSalud);
+    setAportePension(initialAportes.aportePension);
+    setAporteArl(initialAportes.aporteArl);
+
     if (!metadata) {
       setModo("UNICO");
       setPlantillaUnica("");
       setPlantillaPension("");
       setPlantillaEps("");
       setPlantillaArl("");
-      setUseAportesManuales(false);
-      setAporteSalud(0);
-      setAportePension(0);
-      setAporteArl(0);
       return;
     }
-
-    const hasManualAportes = hasSeguridadSocialAportesManuales(metadata);
-    setUseAportesManuales(hasManualAportes);
-    setAporteSalud(metadata.aportesManuales?.aporteSalud ?? 0);
-    setAportePension(metadata.aportesManuales?.aportePension ?? 0);
-    setAporteArl(metadata.aportesManuales?.aporteArl ?? 0);
 
     if (metadata.modo === "SEPARADO") {
       setModo("SEPARADO");
@@ -92,7 +133,7 @@ export default function PaymentAccountSeguridadSocialModal({
     setPlantillaPension("");
     setPlantillaEps("");
     setPlantillaArl("");
-  }, [isOpen, existingDocument]);
+  }, [isOpen, existingDocument, suggestedAportes]);
 
   const hasPdf = Boolean(file) || (keepExistingFile && Boolean(existingDocument));
 
@@ -100,6 +141,12 @@ export default function PaymentAccountSeguridadSocialModal({
     if (name === "aporteSalud") setAporteSalud(value);
     if (name === "aportePension") setAportePension(value);
     if (name === "aporteArl") setAporteArl(value);
+  };
+
+  const handleRestoreSuggested = () => {
+    setAporteSalud(suggestedAportes.aporteSalud);
+    setAportePension(suggestedAportes.aportePension);
+    setAporteArl(suggestedAportes.aporteArl);
   };
 
   const handleSubmit = async () => {
@@ -114,7 +161,7 @@ export default function PaymentAccountSeguridadSocialModal({
       plantillaPension,
       plantillaEps,
       plantillaArl,
-      useAportesManuales,
+      useAportesManuales: usesManualAportes,
       aporteSalud,
       aportePension,
       aporteArl,
@@ -257,54 +304,93 @@ export default function PaymentAccountSeguridadSocialModal({
         </section>
 
         <section className="grid gap-4 rounded-3xl border border-border/70 bg-muted/20 p-4">
-          <div>
-            <h4 className="text-sm font-bold text-foreground">Valores de aporte (GFR-FO-17)</h4>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Por defecto el formulario calcula los aportes a partir del valor de
-              la cuenta. Activa esta opción si los valores de tu planilla PILA
-              son distintos.
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h4 className="text-sm font-bold text-foreground">
+                Valores de aporte (GFR-FO-17)
+              </h4>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Calculamos los aportes a partir del valor de la cuenta. Puedes
+                ajustarlos si tu planilla PILA muestra valores distintos.
+              </p>
+            </div>
+            {usesManualAportes ? (
+              <ActionButton
+                type="button"
+                variant="outline"
+                label="Restaurar sugerido"
+                disabled={disabled || loading}
+                onClick={handleRestoreSuggested}
+              />
+            ) : null}
+          </div>
+
+          <div className="grid gap-2 rounded-2xl border border-border/60 bg-background/80 p-4 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-muted-foreground">Valor de la cuenta</span>
+              <span className="font-semibold text-foreground">
+                {formatCurrency(valorCuenta)}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-muted-foreground">IBC (40% cuenta o SMMLV)</span>
+              <span className="font-semibold text-foreground">
+                {formatCurrency(suggestedAportes.ibc)}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-muted-foreground">% base sobre valor cuenta</span>
+              <span className="font-semibold text-foreground">
+                {formatPct(suggestedAportes.pctBaseValorCuenta)}
+              </span>
+            </div>
+            <p className="text-xs leading-5 text-muted-foreground">
+              Tasas: salud {formatPct(gfrFo17Config.aporteSalud)}, pensión{" "}
+              {formatPct(gfrFo17Config.aportePension)}, ARL{" "}
+              {formatPct(gfrFo17Config.aporteArl)}. Redondeo PILA al centenar
+              superior.
             </p>
           </div>
 
-          <ToggleSwitch
-            label="Usar valores de aporte según planilla PILA"
-            description="Indica salud, pensión y ARL tal como aparecen en tu comprobante."
-            value={useAportesManuales}
-            disabled={disabled || loading}
-            onChange={setUseAportesManuales}
-          />
+          {usesManualAportes ? (
+            <p className="text-xs font-medium text-amber-700">
+              Valores personalizados: se guardarán tal como los indicaste.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Los valores sugeridos se usarán automáticamente en el GFR-FO-17.
+            </p>
+          )}
 
-          {useAportesManuales ? (
-            <div className="grid gap-3 sm:grid-cols-3">
-              <CurrencyFormField
-                id="aporte-salud"
-                name="aporteSalud"
-                label="Salud"
-                value={aporteSalud}
-                required
-                disabled={disabled || loading}
-                onChange={handleCurrencyChange}
-              />
-              <CurrencyFormField
-                id="aporte-pension"
-                name="aportePension"
-                label="Pensión"
-                value={aportePension}
-                required
-                disabled={disabled || loading}
-                onChange={handleCurrencyChange}
-              />
-              <CurrencyFormField
-                id="aporte-arl"
-                name="aporteArl"
-                label="ARL"
-                value={aporteArl}
-                required
-                disabled={disabled || loading}
-                onChange={handleCurrencyChange}
-              />
-            </div>
-          ) : null}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <CurrencyFormField
+              id="aporte-salud"
+              name="aporteSalud"
+              label="Salud"
+              value={aporteSalud}
+              required
+              disabled={disabled || loading}
+              onChange={handleCurrencyChange}
+            />
+            <CurrencyFormField
+              id="aporte-pension"
+              name="aportePension"
+              label="Pensión"
+              value={aportePension}
+              required
+              disabled={disabled || loading}
+              onChange={handleCurrencyChange}
+            />
+            <CurrencyFormField
+              id="aporte-arl"
+              name="aporteArl"
+              label="ARL"
+              value={aporteArl}
+              required
+              disabled={disabled || loading}
+              onChange={handleCurrencyChange}
+            />
+          </div>
         </section>
 
         {error ? (

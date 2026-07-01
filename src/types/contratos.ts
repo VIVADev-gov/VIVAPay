@@ -122,6 +122,7 @@ export type CreateContratoResponse = {
 };
 
 export type PaymentAccountReembolsables = import("@/lib/cuentas-cobro/paymentAccountReembolsables").PaymentAccountReembolsables;
+export type PaymentAccountEjecucionGfrFo17Manuales = import("@/lib/cuentas-cobro/paymentAccountEjecucionGfrFo17").PaymentAccountEjecucionGfrFo17Manuales;
 
 export type CuentaCobroStatus =
   | "BORRADOR"
@@ -164,6 +165,7 @@ export type PublicCuentaCobro = {
   declaracionesJuradas?: PaymentAccountDeclarations | null;
   gfrFo11?: GfrFo11Responses | null;
   reembolsables?: PaymentAccountReembolsables | null;
+  ejecucionGfrFo17Manuales?: PaymentAccountEjecucionGfrFo17Manuales | null;
   directorFirmadoAt?: string | null;
   directorFirmadoPor?: string | null;
   jefeFirmadoAt?: string | null;
@@ -315,6 +317,15 @@ export type PaymentAccountDeclarations = {
 
 export type CuentaCobroDeclarationsResponse = {
   declarations: PaymentAccountDeclarations | null;
+};
+
+export type CuentaCobroEjecucionGfrFo17Response = {
+  ejecucionGfrFo17Manuales: PaymentAccountEjecucionGfrFo17Manuales | null;
+  resolved: import("@/lib/cuentas-cobro/paymentAccountEjecucionGfrFo17").PaymentAccountEjecucionGfrFo17Resolved;
+  allAccounts: Array<{
+    numero: number;
+    resolved: import("@/lib/cuentas-cobro/paymentAccountEjecucionGfrFo17").PaymentAccountEjecucionGfrFo17Resolved;
+  }>;
 };
 
 export type GfrFo11Responses = {

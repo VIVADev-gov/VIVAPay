@@ -1,5 +1,6 @@
 import "server-only";
 
+import { subareaHasSupervisor } from "@/constants/organizacionViva";
 import { USER_ROLES } from "@/constants/userRoles";
 import { connectDB } from "@/lib/db/mongoose";
 import { getEmailCad } from "@/lib/email/getEmailCad";
@@ -52,13 +53,20 @@ export async function resolveCadEmailCcRecipients(
   }
 
   const supervisor = await findReviewerEmail(USER_ROLES.SUPERVISOR, input.contractor);
-  if (supervisor?.email) {
-    if (!excluded.has(supervisor.email.toLowerCase())) {
-      cc.push(supervisor.email);
+  const director = await findReviewerEmail(USER_ROLES.DIRECTOR, input.contractor);
+  const hasSupervisor = subareaHasSupervisor(
+    input.contractor.organizationalUnitId,
+    input.contractor.subareaId
+  );
+
+  const reviewerEmail = hasSupervisor ? supervisor?.email : director?.email;
+  if (reviewerEmail) {
+    if (!excluded.has(reviewerEmail.toLowerCase())) {
+      cc.push(reviewerEmail);
     }
   } else {
     logger.warn(
-      "[cuentas-cobro/cad-package] No se encontró supervisor activo para CC al CAD"
+      `[cuentas-cobro/cad-package] No se encontró ${hasSupervisor ? "supervisor" : "director"} activo para CC al CAD`
     );
   }
 

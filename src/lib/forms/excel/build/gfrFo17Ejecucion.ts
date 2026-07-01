@@ -2,11 +2,17 @@ import {
   getTotalContractPayableDays,
   mapPayableDaysByAccountNumero,
 } from "@/lib/cuentas-cobro/paymentAccountPreview";
-import type { FormPackageContext } from "../types";
 
-export function computeGfrFo17EjecucionPorcentajes(
-  ctx: Pick<FormPackageContext, "paymentAccounts" | "paymentAccount">
-) {
+export type GfrFo17EjecucionAccount = {
+  numero: number;
+  periodoInicio: Date | null;
+  periodoFin: Date | null;
+};
+
+export function computeGfrFo17EjecucionPorcentajes(ctx: {
+  paymentAccounts: readonly GfrFo17EjecucionAccount[];
+  paymentAccount: GfrFo17EjecucionAccount;
+}) {
   const { paymentAccounts, paymentAccount } = ctx;
   const currentNumero = paymentAccount.numero;
   const payableDaysByNumero = mapPayableDaysByAccountNumero(paymentAccounts);
@@ -16,24 +22,16 @@ export function computeGfrFo17EjecucionPorcentajes(
     (account) => account.numero <= currentNumero
   );
 
-  const valorAcumulado = accountsHastaActual.reduce(
-    (sum, account) => sum + (account.valor ?? 0),
-    0
-  );
-
-  const valorTotalCuentas = paymentAccounts.reduce(
-    (sum, account) => sum + (account.valor ?? 0),
-    0
-  );
-
   const diasEjecutados = accountsHastaActual.reduce(
     (sum, account) => sum + (payableDaysByNumero.get(account.numero) ?? 0),
     0
   );
 
+  const fisica =
+    totalDiasContrato > 0 ? diasEjecutados / totalDiasContrato : 0;
+
   return {
-    financiera:
-      valorTotalCuentas > 0 ? valorAcumulado / valorTotalCuentas : 0,
-    fisica: totalDiasContrato > 0 ? diasEjecutados / totalDiasContrato : 0,
+    financiera: fisica,
+    fisica,
   };
 }

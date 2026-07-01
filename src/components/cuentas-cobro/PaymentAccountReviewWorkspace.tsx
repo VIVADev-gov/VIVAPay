@@ -179,6 +179,7 @@ export default function PaymentAccountReviewWorkspace({
 
         <PaymentAccountReviewMainPanel
           account={account}
+          paymentAccounts={detail.paymentAccounts}
           activities={detail.activities}
           phaseLabel={phaseLabel}
           showGfrFo11={includesGfrFo11(phase)}

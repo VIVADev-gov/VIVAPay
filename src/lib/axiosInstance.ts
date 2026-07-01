@@ -1,5 +1,9 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
 import { getAppHost } from "@/lib/appHost";
+import {
+  notifyUnauthorized,
+  shouldTriggerSessionLogout,
+} from "@/lib/sessionUnauthorized";
 
 // Usar la URL del navegador actual en lugar de localhost
 const getBaseURL = () => {
@@ -32,6 +36,21 @@ api.interceptors.request.use(
         return config;
     },
     (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (
+            shouldTriggerSessionLogout(
+                error.response?.status,
+                error.config?.url
+            )
+        ) {
+            notifyUnauthorized();
+        }
+        return Promise.reject(error);
+    }
 );
 
 export default api;

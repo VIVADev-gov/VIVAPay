@@ -5,6 +5,7 @@ import LoadingScreen from "@/components/loaders/LoadingScreen";
 import ModalHost from "@/components/modals/ModalHost";
 import ToastHost from "@/components/toast/ToastHost";
 import AuthHydrator from "@/providers/AuthHydrator";
+import SessionUnauthorizedHandler from "@/providers/SessionUnauthorizedHandler";
 import { QueryProvider } from "@/providers/QueryProvider";
 
 export default function AppProviders({
@@ -15,6 +16,7 @@ export default function AppProviders({
   return (
     <QueryProvider>
       <AuthHydrator />
+      <SessionUnauthorizedHandler />
       <Suspense fallback={null}>
         <LoadingScreen />
       </Suspense>

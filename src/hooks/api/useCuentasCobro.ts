@@ -9,6 +9,7 @@ import type {
   CuentaCobroActivitiesResponse,
   CuentaCobroContractDocumentsResponse,
   CuentaCobroDeclarationsResponse,
+  CuentaCobroEjecucionGfrFo17Response,
   CuentaCobroGfrFo11Response,
   CuentaCobroReembolsablesResponse,
   CuentasCobroSummaryResponse,
@@ -39,6 +40,8 @@ export const cuentasCobroQueryKeys = {
     ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "activities"] as const,
   declarationsByAccount: (contractId: string, numeroCuenta: number) =>
     ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "declarations"] as const,
+  ejecucionGfrFo17ByAccount: (contractId: string, numeroCuenta: number) =>
+    ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "ejecucion-gfr-fo-17"] as const,
   gfrFo11ByAccount: (contractId: string, numeroCuenta: number) =>
     ["cuentas-cobro", "contract", contractId, "account", numeroCuenta, "gfr-fo-11"] as const,
   reembolsablesByAccount: (contractId: string, numeroCuenta: number) =>
@@ -165,6 +168,59 @@ export function useSaveCuentaCobroDeclarationsMutation(
           contractId,
           numeroCuenta
         ),
+      });
+    },
+  });
+}
+
+export function useCuentaCobroEjecucionGfrFo17Query(
+  contractId: string,
+  numeroCuenta: number,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: cuentasCobroQueryKeys.ejecucionGfrFo17ByAccount(
+      contractId,
+      numeroCuenta
+    ),
+    enabled: Boolean(contractId) && Number.isInteger(numeroCuenta) && enabled,
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<CuentaCobroEjecucionGfrFo17Response>>(
+        `/api/cuentas-cobro/contrato/${contractId}/cuentas/${numeroCuenta}/ejecucion-gfr-fo-17`
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+  });
+}
+
+export function useSaveCuentaCobroEjecucionGfrFo17Mutation(
+  contractId: string,
+  numeroCuenta: number
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: { porcentaje: number }) => {
+      const { data } = await api.put<ApiResponse<CuentaCobroEjecucionGfrFo17Response>>(
+        `/api/cuentas-cobro/contrato/${contractId}/cuentas/${numeroCuenta}/ejecucion-gfr-fo-17`,
+        payload
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: cuentasCobroQueryKeys.ejecucionGfrFo17ByAccount(
+          contractId,
+          numeroCuenta
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: cuentasCobroQueryKeys.reviewDetail(contractId, numeroCuenta),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["contratos", "detail", contractId],
       });
     },
   });

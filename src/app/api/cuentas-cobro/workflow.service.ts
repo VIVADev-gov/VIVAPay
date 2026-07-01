@@ -25,8 +25,10 @@ import {
 import { isDevSendCadStateSkipped } from "@/lib/cuentas-cobro/devSendCadState";
 import { isPaymentAccountSubmissionWindowOpen } from "@/lib/cuentas-cobro/paymentAccountAccess";
 import { validatePaymentAccountReadiness } from "@/lib/cuentas-cobro/paymentAccountReadiness";
-import { sendCadPackageEmail } from "@/lib/cuentas-cobro/sendCadPackageEmail";
-import { sendWorkflowNotificationEmail } from "@/lib/cuentas-cobro/sendWorkflowNotificationEmail";
+import {
+  assertCadEmailConfigured,
+  dispatchWorkflowNotifications,
+} from "@/lib/cuentas-cobro/dispatchWorkflowNotifications";
 import logger from "@/lib/logger";
 import {
   CuentaCobro,
@@ -544,6 +546,7 @@ export const cuentasCobroWorkflowService = {
       }
 
       case CUENTA_COBRO_WORKFLOW_ACTION.DIRECTOR_APPROVE_SEND: {
+        assertCadEmailConfigured();
         contractorForNotification = await assertReviewerAccess(input.actor, account);
         if (input.actor.role !== USER_ROLES.DIRECTOR) {
           throw new PaymentAccountServiceError(
@@ -574,6 +577,7 @@ export const cuentasCobroWorkflowService = {
       }
 
       case CUENTA_COBRO_WORKFLOW_ACTION.SEND_CAD: {
+        assertCadEmailConfigured();
         contractorForNotification = await assertReviewerAccess(input.actor, account);
         if (input.actor.role !== USER_ROLES.SUPERVISOR) {
           throw new PaymentAccountServiceError(
@@ -602,6 +606,7 @@ export const cuentasCobroWorkflowService = {
       }
 
       case CUENTA_COBRO_WORKFLOW_ACTION.JEFE_APPROVE_SEND: {
+        assertCadEmailConfigured();
         contractorForNotification = await assertReviewerAccess(input.actor, account);
         if (input.actor.role !== USER_ROLES.JEFE) {
           throw new PaymentAccountServiceError(
@@ -669,30 +674,17 @@ export const cuentasCobroWorkflowService = {
       });
 
       if (contractorForNotification) {
-      const contract = await Contrato.findById(input.contractId)
-        .select("numeroContrato")
-        .exec();
-      const contractorSnapshot = toContractorSnapshot(contractorForNotification);
-      const estadoNotificacion = estadoParaNotificacion ?? account.estado;
-      const isCadDelivery =
-        estadoNotificacion === "ENVIADA_CAD" || account.estado === "ENVIADA_CAD";
+        const contract = await Contrato.findById(input.contractId)
+          .select("numeroContrato")
+          .exec();
+        const contractorSnapshot = toContractorSnapshot(contractorForNotification);
 
-      if (isCadDelivery) {
-        void sendCadPackageEmail({
-          userId: String(account.userId),
-          contractId: input.contractId,
-          accountNumber: account.numero,
-        }).catch((error) => {
-          logger.error("[cuentas-cobro/workflow] envío CAD", {
-            message: error instanceof Error ? error.message : String(error),
-          });
-        });
-      } else {
-        void sendWorkflowNotificationEmail({
+        await dispatchWorkflowNotifications({
           contractId: input.contractId,
           accountNumber: account.numero,
           contractNumber: contract?.numeroContrato ?? input.contractId,
-          estadoNuevo: estadoNotificacion,
+          accountEstado: account.estado,
+          estadoParaNotificacion,
           contractor: {
             name: contractorSnapshot.name,
             email: contractorSnapshot.email,
@@ -700,13 +692,9 @@ export const cuentasCobroWorkflowService = {
             organizationalUnitType: contractorSnapshot.organizationalUnitType,
             subareaId: contractorSnapshot.subareaId,
           },
+          userId: String(account.userId),
           mensaje: input.mensaje,
-        }).catch((error) => {
-          logger.error("[cuentas-cobro/workflow] notificación", {
-            message: error instanceof Error ? error.message : String(error),
-          });
         });
-      }
       }
 
       return { paymentAccount: toPublicCuentaCobro(account) };

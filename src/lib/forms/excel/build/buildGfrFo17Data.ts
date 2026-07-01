@@ -17,7 +17,9 @@ import {
   getGfrFo17HistorialAccounts,
   isGfrFo17HistorialEligible,
 } from "./gfrFo17Historial";
-import { computeGfrFo17EjecucionPorcentajes } from "./gfrFo17Ejecucion";
+import {
+  resolveEjecucionFractionsForPdf,
+} from "@/lib/cuentas-cobro/paymentAccountEjecucionGfrFo17";
 import {
   applyDeclarationCells,
   formatPlazoMeses,
@@ -147,7 +149,10 @@ export function buildGfrFo17Data(
   const header = GFR_FO_17_HEADER_CELLS;
   const { cells } = layout;
   const valor = paymentAccount.valor ?? 0;
-  const ejecucion = computeGfrFo17EjecucionPorcentajes(ctx);
+  const ejecucion = resolveEjecucionFractionsForPdf(
+    paymentAccount,
+    ctx.paymentAccounts
+  );
 
   const values: CellValues = {
     [header.contratista]: contractor.name.toUpperCase(),

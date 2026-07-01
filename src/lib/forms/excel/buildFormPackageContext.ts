@@ -24,6 +24,9 @@ import {
   type IContratoDocument,
 } from "@/models/contrato";
 import { User, type IUserDocument } from "@/models/user";
+import {
+  parsePaymentAccountEjecucionGfrFo17Manuales,
+} from "@/lib/cuentas-cobro/paymentAccountEjecucionGfrFo17";
 import { parseIsoDate } from "./build/formExcelHelpers";
 import type {
   FormContractSnapshot,
@@ -49,6 +52,9 @@ function toPaymentAccountSnapshot(
     ),
     gfrFo11: parseGfrFo11Responses(account.gfrFo11),
     reembolsables: parsePaymentAccountReembolsables(account.reembolsables),
+    ejecucionGfrFo17Manuales: parsePaymentAccountEjecucionGfrFo17Manuales(
+      account.ejecucionGfrFo17Manuales
+    ),
   };
 }
 

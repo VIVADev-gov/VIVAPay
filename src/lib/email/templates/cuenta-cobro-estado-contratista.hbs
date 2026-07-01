@@ -1,0 +1,83 @@
+{{> header nombreEmpresa="VIVA" badge="Cuenta de cobro" titulo="Actualización de tu cuenta"}}
+
+<tr>
+  <td style="background-color:#ffffff; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0; padding:0 36px;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+      <tr>
+        <td style="padding:14px 0; border-bottom:1px solid #f1f5f9;">
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+              <td width="18" valign="middle">
+                <div style="width:8px; height:8px; border-radius:50%; background-color:#16a34a; display:inline-block;"></div>
+              </td>
+              <td valign="middle">
+                <p style="font-family:'Inter',Arial,sans-serif; font-size:12px; font-weight:600; color:#166534; margin:0; letter-spacing:0.03em;">
+                  {{estado}}</p>
+              </td>
+              <td align="right" valign="middle">
+                <p style="font-family:'Inter',Arial,sans-serif; font-size:12px; font-weight:600; color:#166534; background-color:#f0fdf4; border:1px solid #dcfce7; border-radius:6px; padding:3px 10px; margin:0;">
+                  Cuenta No. {{accountNumber}}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+
+<tr>
+  <td style="background-color:#ffffff; padding:28px 36px 32px; border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0;">
+    <p style="font-family:'Inter',Arial,sans-serif; font-size:15px; font-weight:600; color:#0f172a; margin:0 0 10px 0;">
+      Hola, <span style="color:#166534;">{{nombre}}</span></p>
+
+    <p style="font-family:'Inter',Arial,sans-serif; font-size:14px; color:#64748b; line-height:1.7; margin:0;">
+      {{mensaje}}</p>
+
+    {{#if observaciones}}
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+      style="margin-top:20px; border:1px solid #dcfce7; border-radius:10px;">
+      <tr>
+        <td style="background-color:#f0fdf4; padding:10px 16px; border-bottom:1px solid #dcfce7; border-radius:10px 10px 0 0;">
+          <p style="font-family:'Inter',Arial,sans-serif; font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#16a34a; margin:0;">
+            Observaciones</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="background-color:#ffffff; padding:14px 16px; border-radius:0 0 10px 10px;">
+          <p style="font-family:'Inter',Arial,sans-serif; font-size:13.5px; color:#334155; line-height:1.65; margin:0;">
+            {{observaciones}}</p>
+        </td>
+      </tr>
+    </table>
+    {{/if}}
+
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin:24px 0;">
+      <tr>
+        <td style="height:1px; background-color:#f1f5f9; font-size:0; line-height:0;">&nbsp;</td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+      style="border:1px solid #e2e8f0; border-radius:8px;">
+      <tr>
+        <td style="padding:12px 16px;">
+          <p style="font-family:'Inter',Arial,sans-serif; font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:#94a3b8; margin:0 0 4px 0;">
+            Contrato</p>
+          <p style="font-family:'Inter',Arial,sans-serif; font-size:13px; font-weight:600; color:#1e293b; margin:0;">
+            {{contractNumber}}</p>
+        </td>
+      </tr>
+    </table>
+
+    {{#if url}}
+    {{> boton url=url texto="Ver cuenta"}}
+    {{/if}}
+
+    <p style="font-family:'Inter',Arial,sans-serif; font-size:12px; color:#94a3b8; line-height:1.6; margin:16px 0 0 0;">
+      Este correo fue generado automáticamente por el módulo de cuentas de cobro VIVA.
+    </p>
+  </td>
+</tr>
+
+{{> footer nombreEmpresa="VIVA"}}

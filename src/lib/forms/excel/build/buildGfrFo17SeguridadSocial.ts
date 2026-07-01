@@ -14,6 +14,16 @@ export type GfrFo17SeguridadSocialAportes = {
   pctAporteArl: number;
 };
 
+/** Redondeo comercial al centenar superior (alineado con planillas PILA). */
+export function roundAportePila(value: number) {
+  if (value <= 0) return 0;
+  return Math.ceil(value / 100) * 100;
+}
+
+function computeAutoAporte(ibc: number, rate: number) {
+  return roundAportePila(ibc * rate);
+}
+
 export function computeGfrFo17SeguridadSocialAportes(
   valorCuenta: number,
   config: GfrFo17Config,
@@ -31,13 +41,13 @@ export function computeGfrFo17SeguridadSocialAportes(
 
   const aporteSalud = useManual
     ? aportesManuales.aporteSalud
-    : Math.round(ibc * config.aporteSalud);
+    : computeAutoAporte(ibc, config.aporteSalud);
   const aportePension = useManual
     ? aportesManuales.aportePension
-    : Math.round(ibc * config.aportePension);
+    : computeAutoAporte(ibc, config.aportePension);
   const aporteArl = useManual
     ? aportesManuales.aporteArl
-    : Math.round(ibc * config.aporteArl);
+    : computeAutoAporte(ibc, config.aporteArl);
 
   return {
     ibc,

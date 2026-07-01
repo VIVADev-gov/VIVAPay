@@ -6,6 +6,7 @@ import {
   ReviewDocumentPlaceholder,
 } from "@/components/cuentas-cobro/review/ReviewDocumentCards";
 import PaymentAccountActivitiesViewModal from "@/components/cuentas-cobro/PaymentAccountActivitiesViewModal";
+import PaymentAccountEjecucionGfrFo17Section from "@/components/cuentas-cobro/PaymentAccountEjecucionGfrFo17Section";
 import { getPaymentAccountActivitiesStats } from "@/components/cuentas-cobro/PaymentAccountActivitiesList";
 import PaymentAccountDeclarationsDisplay from "@/components/cuentas-cobro/PaymentAccountDeclarationsDisplay";
 import ActionButton from "@/components/buttons/ActionButton";
@@ -23,12 +24,13 @@ import type {
   PublicCuentaCobroDocumento,
 } from "@/types/contratos";
 import { formatDate } from "@/utils/formatters";
-import { FileText, ListChecks, Wallet } from "lucide-react";
+import { FileText, ListChecks, Percent, Wallet } from "lucide-react";
 
 type ReviewTab = "revision" | "documentos";
 
 type PaymentAccountReviewMainPanelProps = {
   account: PublicCuentaCobro;
+  paymentAccounts: PublicCuentaCobro[];
   activities: PublicCuentaCobroActividadItem[];
   phaseLabel: string;
   showGfrFo11: boolean;
@@ -142,6 +144,7 @@ function countRequiredDocuments(
 
 export default function PaymentAccountReviewMainPanel({
   account,
+  paymentAccounts,
   activities,
   phaseLabel,
   showGfrFo11,
@@ -223,6 +226,18 @@ export default function PaymentAccountReviewMainPanel({
                   />
                 </div>
               )}
+            </SectionBlock>
+
+            <SectionBlock
+              title="Ejecución contractual"
+              description="Porcentaje de ejecución física del contrato (GFR-FO-17)."
+              icon={Percent}
+            >
+              <PaymentAccountEjecucionGfrFo17Section
+                paymentAccount={account}
+                paymentAccounts={paymentAccounts}
+                readOnly
+              />
             </SectionBlock>
 
             <SectionBlock
@@ -346,10 +361,11 @@ export default function PaymentAccountReviewMainPanel({
               </div>
             ) : null}
 
-            {contractRequirements.length > 0 ? (
+            {contractRequirements.length > 0 ||
+            contractDocuments.length > 0 ? (
               <SectionBlock
                 title="Del contrato"
-                description="Documentos reutilizables del contrato para esta fase."
+                description="Documentos contractuales del contratista."
               >
                 <div className="grid gap-4 md:grid-cols-2">
                   {contractRequirements.map((requirement) => {
@@ -370,6 +386,18 @@ export default function PaymentAccountReviewMainPanel({
                       />
                     );
                   })}
+
+                  {contractDocuments
+                    .filter(
+                      (document) =>
+                        !contractRequirements.some(
+                          (requirement) =>
+                            requirement.tipoDocumento === document.tipoDocumento
+                        )
+                    )
+                    .map((document) => (
+                      <ReviewDocumentCard key={document.id} document={document} />
+                    ))}
                 </div>
               </SectionBlock>
             ) : null}

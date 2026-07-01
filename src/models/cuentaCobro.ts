@@ -6,6 +6,10 @@ import {
   parsePaymentAccountReembolsables,
   type PaymentAccountReembolsables,
 } from "@/lib/cuentas-cobro/paymentAccountReembolsables";
+import {
+  parsePaymentAccountEjecucionGfrFo17Manuales,
+  type PaymentAccountEjecucionGfrFo17Manuales,
+} from "@/lib/cuentas-cobro/paymentAccountEjecucionGfrFo17";
 
 export const CUENTA_COBRO_STATUS = {
   BORRADOR: "BORRADOR",
@@ -57,6 +61,9 @@ export type ICuentaCobroDevolucion = {
 
 export type ICuentaCobroReembolsables = PaymentAccountReembolsables | null;
 
+export type ICuentaCobroEjecucionGfrFo17Manuales =
+  PaymentAccountEjecucionGfrFo17Manuales;
+
 export interface ICuentaCobro {
   userId: Types.ObjectId;
   contratoId: Types.ObjectId;
@@ -72,6 +79,7 @@ export interface ICuentaCobro {
   declaracionesJuradas?: ICuentaCobroDeclaracionesJuradas | null;
   gfrFo11?: ICuentaCobroGfrFo11 | null;
   reembolsables?: ICuentaCobroReembolsables;
+  ejecucionGfrFo17Manuales?: ICuentaCobroEjecucionGfrFo17Manuales | null;
   directorFirmadoAt?: Date | null;
   directorFirmadoPor?: Types.ObjectId | null;
   jefeFirmadoAt?: Date | null;
@@ -146,6 +154,10 @@ const cuentaCobroSchema = new Schema<ICuentaCobroDocument>(
       regimenSimple: { type: Boolean },
     },
     reembolsables: { type: Schema.Types.Mixed, default: null },
+    ejecucionGfrFo17Manuales: {
+      financiera: { type: Number, min: 0, max: 100 },
+      fisica: { type: Number, min: 0, max: 100 },
+    },
     directorFirmadoAt: { type: Date, default: null },
     directorFirmadoPor: {
       type: Schema.Types.ObjectId,
@@ -203,6 +215,9 @@ export function toPublicCuentaCobro(doc: ICuentaCobroDocument) {
     ),
     gfrFo11: parseGfrFo11Responses(doc.gfrFo11),
     reembolsables: parsePaymentAccountReembolsables(doc.reembolsables),
+    ejecucionGfrFo17Manuales: parsePaymentAccountEjecucionGfrFo17Manuales(
+      doc.ejecucionGfrFo17Manuales
+    ),
     directorFirmadoAt: toDateIso(doc.directorFirmadoAt),
     directorFirmadoPor: doc.directorFirmadoPor
       ? String(doc.directorFirmadoPor)
