@@ -9,6 +9,7 @@ import { enrichContractWithPaymentStats } from "@/lib/contratos/contractStats";
 import { connectDB } from "@/lib/db/mongoose";
 import {
   canContractorSubmit,
+  canDirectorApproveSend,
   canDirectorSign,
   canJefeApproveSend,
   canMarkPaid,
@@ -19,6 +20,7 @@ import {
   contractorQueryFilterForReviewer,
   hasWorkflowSignature,
   resolveStateAfterContractorSubmit,
+  shouldHideFromSupervisorInbox,
 } from "@/lib/cuentas-cobro/paymentAccountWorkflow";
 import { isDevSendCadStateSkipped } from "@/lib/cuentas-cobro/devSendCadState";
 import { isPaymentAccountSubmissionWindowOpen } from "@/lib/cuentas-cobro/paymentAccountAccess";
@@ -232,6 +234,16 @@ export const cuentasCobroWorkflowService = {
         const contractor = contractorMap.get(String(account.userId));
         if (!contract || !contractor) return null;
 
+        const contractorSnapshot = toContractorSnapshot(contractor);
+        if (
+          shouldHideFromSupervisorInbox(
+            contractorSnapshot,
+            account.estado as CuentaCobroStatus
+          )
+        ) {
+          return null;
+        }
+
         const publicContract = toPublicContrato(contract);
         const current = getCurrentContractSnapshot(contract);
 
@@ -249,6 +261,9 @@ export const cuentasCobroWorkflowService = {
             email: contractor.email,
             documentId: contractor.documentId,
             organizationalUnitName: contractor.organizationalUnitName ?? "",
+            organizationalUnitId: contractor.organizationalUnitId ?? "",
+            organizationalUnitType: contractor.organizationalUnitType ?? "",
+            subareaId: contractor.subareaId ?? null,
             subareaName: contractor.subareaName ?? null,
           },
         };
@@ -315,6 +330,9 @@ export const cuentasCobroWorkflowService = {
         email: contractor.email,
         documentId: contractor.documentId,
         organizationalUnitName: contractor.organizationalUnitName ?? "",
+        organizationalUnitId: contractor.organizationalUnitId ?? "",
+        organizationalUnitType: contractor.organizationalUnitType ?? "",
+        subareaId: contractor.subareaId ?? null,
         subareaName: contractor.subareaName ?? null,
       },
       paymentAccounts: paymentAccounts.map(toPublicCuentaCobro),
@@ -434,13 +452,9 @@ export const cuentasCobroWorkflowService = {
         }
 
         contractorForNotification = await loadContractor(account.userId);
+        const contractorSnapshot = toContractorSnapshot(contractorForNotification);
         account.estado = resolveStateAfterContractorSubmit(
-          {
-            organizationalUnitId:
-              contractorForNotification.organizationalUnitId ?? "",
-            organizationalUnitType:
-              contractorForNotification.organizationalUnitType ?? "",
-          },
+          contractorSnapshot,
           account
         );
         account.fechaEnvio = new Date();
@@ -456,7 +470,8 @@ export const cuentasCobroWorkflowService = {
             PAYMENT_ACCOUNT_ERROR_CODES.WORKFLOW_FORBIDDEN
           );
         }
-        if (!canSupervisorForwardDirector(account)) {
+        const contractorSnapshot = toContractorSnapshot(contractorForNotification);
+        if (!canSupervisorForwardDirector(account, contractorSnapshot)) {
           throw new PaymentAccountServiceError(
             "La cuenta no puede enviarse al director en este estado",
             400,
@@ -486,7 +501,8 @@ export const cuentasCobroWorkflowService = {
         }
         if (
           input.actor.role === USER_ROLES.SUPERVISOR ||
-          input.actor.role === USER_ROLES.JEFE
+          input.actor.role === USER_ROLES.JEFE ||
+          input.actor.role === USER_ROLES.DIRECTOR
         ) {
           contractorForNotification = await assertReviewerAccess(input.actor, account);
         } else {
@@ -512,7 +528,8 @@ export const cuentasCobroWorkflowService = {
             PAYMENT_ACCOUNT_ERROR_CODES.WORKFLOW_FORBIDDEN
           );
         }
-        if (!canDirectorSign(account)) {
+        const contractorSnapshot = toContractorSnapshot(contractorForNotification);
+        if (!canDirectorSign(account, contractorSnapshot)) {
           throw new PaymentAccountServiceError(
             "La cuenta no está pendiente de firma del director",
             400,
@@ -526,6 +543,36 @@ export const cuentasCobroWorkflowService = {
         break;
       }
 
+      case CUENTA_COBRO_WORKFLOW_ACTION.DIRECTOR_APPROVE_SEND: {
+        contractorForNotification = await assertReviewerAccess(input.actor, account);
+        if (input.actor.role !== USER_ROLES.DIRECTOR) {
+          throw new PaymentAccountServiceError(
+            "Solo el director puede firmar y enviar al CAD",
+            403,
+            PAYMENT_ACCOUNT_ERROR_CODES.WORKFLOW_FORBIDDEN
+          );
+        }
+        const contractorSnapshot = toContractorSnapshot(contractorForNotification);
+        if (!canDirectorApproveSend(account, contractorSnapshot)) {
+          throw new PaymentAccountServiceError(
+            "La cuenta no está pendiente de revisión del director",
+            400,
+            PAYMENT_ACCOUNT_ERROR_CODES.WORKFLOW_INVALID_STATE
+          );
+        }
+        assertSignature(input.actor);
+        if (isDevSendCadStateSkipped()) {
+          estadoParaNotificacion = "ENVIADA_CAD";
+        } else {
+          account.directorFirmadoAt = new Date();
+          account.directorFirmadoPor = new Types.ObjectId(input.actor.id);
+          account.enviadaCadAt = new Date();
+          account.enviadaCadPor = new Types.ObjectId(input.actor.id);
+          account.estado = "ENVIADA_CAD";
+        }
+        break;
+      }
+
       case CUENTA_COBRO_WORKFLOW_ACTION.SEND_CAD: {
         contractorForNotification = await assertReviewerAccess(input.actor, account);
         if (input.actor.role !== USER_ROLES.SUPERVISOR) {
@@ -535,7 +582,8 @@ export const cuentasCobroWorkflowService = {
             PAYMENT_ACCOUNT_ERROR_CODES.WORKFLOW_FORBIDDEN
           );
         }
-        if (!canSupervisorSendCad(account)) {
+        const contractorSnapshot = toContractorSnapshot(contractorForNotification);
+        if (!canSupervisorSendCad(account, contractorSnapshot)) {
           throw new PaymentAccountServiceError(
             "La cuenta requiere la firma del director antes de enviarse al CAD",
             400,

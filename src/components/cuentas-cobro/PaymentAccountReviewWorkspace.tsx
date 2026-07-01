@@ -22,6 +22,7 @@ import {
   resolvePaymentPhase,
 } from "@/lib/cuentas-cobro/paymentAccountRules";
 import {
+  canDirectorApproveSend,
   canDirectorSign,
   canJefeApproveSend,
   canReturnToContractor,
@@ -114,13 +115,25 @@ export default function PaymentAccountReviewWorkspace({
     );
   }
 
+  const contractorWorkflow = {
+    organizationalUnitId: contractor.organizationalUnitId,
+    organizationalUnitType: contractor.organizationalUnitType,
+    subareaId: contractor.subareaId,
+  };
+
   const canReturn = canReturnToContractor(account, role);
   const canForwardDirector =
-    role === USER_ROLES.SUPERVISOR && canSupervisorForwardDirector(account);
+    role === USER_ROLES.SUPERVISOR &&
+    canSupervisorForwardDirector(account, contractorWorkflow);
   const canSignDirector =
-    role === USER_ROLES.DIRECTOR && canDirectorSign(account);
+    role === USER_ROLES.DIRECTOR &&
+    canDirectorSign(account, contractorWorkflow);
+  const canDirectorSend =
+    role === USER_ROLES.DIRECTOR &&
+    canDirectorApproveSend(account, contractorWorkflow);
   const canSendCad =
-    role === USER_ROLES.SUPERVISOR && canSupervisorSendCad(account);
+    role === USER_ROLES.SUPERVISOR &&
+    canSupervisorSendCad(account, contractorWorkflow);
   const canJefeSend =
     role === USER_ROLES.JEFE && canJefeApproveSend(account);
   const devSendCadStateSkipped = isDevSendCadStateSkipped();
@@ -150,6 +163,7 @@ export default function PaymentAccountReviewWorkspace({
         canReturn={canReturn}
         canForwardDirector={canForwardDirector}
         canSignDirector={canSignDirector}
+        canDirectorSend={canDirectorSend}
         canSendCad={canSendCad}
         canJefeSend={canJefeSend}
         onReturnClick={() => setIsReturnModalOpen(true)}

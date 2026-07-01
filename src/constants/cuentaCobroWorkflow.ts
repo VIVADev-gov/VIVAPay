@@ -9,6 +9,7 @@ export const CUENTA_COBRO_WORKFLOW_ACTION = {
   DIRECTOR_SIGN: "director_sign",
   SEND_CAD: "send_cad",
   JEFE_APPROVE_SEND: "jefe_approve_send",
+  DIRECTOR_APPROVE_SEND: "director_approve_send",
   MARK_PAID: "mark_paid",
 } as const;
 

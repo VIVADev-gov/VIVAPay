@@ -11,6 +11,8 @@ export type OrganizacionTipo =
 export type SubareaOrganizacional = {
   id: string;
   name: string;
+  /** Si es false, el flujo de cuentas de cobro va directo al director (sin supervisor). */
+  hasSupervisor?: boolean;
 };
 
 export type UnidadOrganizacional = {
@@ -28,7 +30,7 @@ export const UNIDADES_ORGANIZACIONALES: UnidadOrganizacional[] = [
     subareas: [
       { id: "proc-gestion-financiera", name: "Gestión Financiera" },
       { id: "proc-gestion-bienes-servicios", name: "Gestión de Bienes y Servicios" },
-      { id: "proc-gestion-documental", name: "Gestión Documental" },
+      { id: "proc-gestion-documental", name: "Gestión Documental", hasSupervisor: false },
       {
         id: "proc-gestion-informacion-tecnologia",
         name: "Gestión de Información y Tecnología",
@@ -40,7 +42,11 @@ export const UNIDADES_ORGANIZACIONALES: UnidadOrganizacional[] = [
     name: "Dirección de Control Interno",
     tipo: ORGANIZACION_TIPO.DIRECCION,
     subareas: [
-      { id: "proc-evaluacion-independiente", name: "Evaluación Independiente" },
+      {
+        id: "proc-evaluacion-independiente",
+        name: "Evaluación Independiente",
+        hasSupervisor: false,
+      },
     ],
   },
   {
@@ -133,6 +139,30 @@ export function getUnidadOrganizacional(id: string) {
 export function getSubareaOrganizacional(unidadId: string, subareaId: string) {
   const unidad = getUnidadOrganizacional(unidadId);
   return unidad?.subareas?.find((subarea) => subarea.id === subareaId);
+}
+
+/** Por defecto true si la subárea no declara lo contrario. */
+export function subareaHasSupervisor(
+  unidadId: string,
+  subareaId: string | null | undefined
+): boolean {
+  if (!subareaId) return true;
+  const subarea = getSubareaOrganizacional(unidadId, subareaId);
+  return subarea?.hasSupervisor !== false;
+}
+
+export function contractorUsesSupervisorWorkflow(contractor: {
+  organizationalUnitId: string;
+  organizationalUnitType: string;
+  subareaId?: string | null;
+}): boolean {
+  if (contractor.organizationalUnitType !== ORGANIZACION_TIPO.DIRECCION) {
+    return false;
+  }
+  return subareaHasSupervisor(
+    contractor.organizationalUnitId,
+    contractor.subareaId
+  );
 }
 
 export function unidadRequiereSubarea(unidadId: string) {

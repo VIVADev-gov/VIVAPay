@@ -32,6 +32,7 @@ type PaymentAccountReviewHeaderProps = {
   canReturn: boolean;
   canForwardDirector: boolean;
   canSignDirector: boolean;
+  canDirectorSend: boolean;
   canSendCad: boolean;
   canJefeSend: boolean;
   onReturnClick: () => void;
@@ -64,6 +65,7 @@ export default function PaymentAccountReviewHeader({
   canReturn,
   canForwardDirector,
   canSignDirector,
+  canDirectorSend,
   canSendCad,
   canJefeSend,
   onReturnClick,
@@ -183,6 +185,19 @@ export default function PaymentAccountReviewHeader({
             label="Firmar y confirmar"
             onClick={() =>
               onWorkflowAction(CUENTA_COBRO_WORKFLOW_ACTION.DIRECTOR_SIGN)
+            }
+            loading={workflowPending}
+          />
+        ) : null}
+
+        {canDirectorSend ? (
+          <ActionButton
+            type="button"
+            variant="primary"
+            icon={CheckCircle2}
+            label="Firmar y enviar al CAD"
+            onClick={() =>
+              onWorkflowAction(CUENTA_COBRO_WORKFLOW_ACTION.DIRECTOR_APPROVE_SEND)
             }
             loading={workflowPending}
           />

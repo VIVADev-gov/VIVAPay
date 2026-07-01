@@ -183,6 +183,9 @@ export type PaymentAccountReviewContractor = {
   email: string;
   documentId: string;
   organizationalUnitName: string;
+  organizationalUnitId: string;
+  organizationalUnitType: string;
+  subareaId?: string | null;
   subareaName?: string | null;
 };
 

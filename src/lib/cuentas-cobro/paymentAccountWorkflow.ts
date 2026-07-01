@@ -1,4 +1,7 @@
-import { ORGANIZACION_TIPO } from "@/constants/organizacionViva";
+import {
+  ORGANIZACION_TIPO,
+  subareaHasSupervisor,
+} from "@/constants/organizacionViva";
 import { USER_ROLES, type UserRole } from "@/constants/userRoles";
 import { isDevPaymentAccountWindowSkipped } from "@/lib/cuentas-cobro/devPaymentAccountWindow";
 import type { CuentaCobroStatus } from "@/types/contratos";
@@ -85,13 +88,22 @@ export function contractorMatchesReviewer(
   return false;
 }
 
-/** Tras envío del contratista: salta director si ya firmó previamente. */
+/** Tras envío del contratista: jefatura → jefe; dirección sin supervisor → director; con supervisor → supervisor o CAD si ya firmó. */
 export function resolveStateAfterContractorSubmit(
   contractor: WorkflowContractor,
   account: WorkflowAccount
 ): CuentaCobroStatus {
   if (contractor.organizationalUnitType === ORGANIZACION_TIPO.JEFATURA) {
     return "PENDIENTE_JEFE";
+  }
+
+  const hasSupervisor = subareaHasSupervisor(
+    contractor.organizationalUnitId,
+    contractor.subareaId
+  );
+
+  if (!hasSupervisor) {
+    return "PENDIENTE_DIRECTOR";
   }
 
   if (account.directorFirmadoAt) {
@@ -109,16 +121,58 @@ export function canContractorSubmit(account: WorkflowAccount) {
   return isDevPaymentAccountWindowSkipped() && account.estado === "PENDIENTE";
 }
 
-export function canSupervisorForwardDirector(account: WorkflowAccount) {
-  return account.estado === "PENDIENTE_SUPERVISOR" && !account.directorFirmadoAt;
+export function canSupervisorForwardDirector(
+  account: WorkflowAccount,
+  contractor: WorkflowContractor
+) {
+  return (
+    subareaHasSupervisor(
+      contractor.organizationalUnitId,
+      contractor.subareaId
+    ) &&
+    account.estado === "PENDIENTE_SUPERVISOR" &&
+    !account.directorFirmadoAt
+  );
 }
 
-export function canSupervisorSendCad(account: WorkflowAccount) {
-  return account.estado === "PENDIENTE_ENVIO_CAD" && Boolean(account.directorFirmadoAt);
+export function canSupervisorSendCad(
+  account: WorkflowAccount,
+  contractor: WorkflowContractor
+) {
+  return (
+    subareaHasSupervisor(
+      contractor.organizationalUnitId,
+      contractor.subareaId
+    ) &&
+    account.estado === "PENDIENTE_ENVIO_CAD" &&
+    Boolean(account.directorFirmadoAt)
+  );
 }
 
-export function canDirectorSign(account: WorkflowAccount) {
-  return account.estado === "PENDIENTE_DIRECTOR";
+export function canDirectorSign(
+  account: WorkflowAccount,
+  contractor: WorkflowContractor
+) {
+  return (
+    account.estado === "PENDIENTE_DIRECTOR" &&
+    subareaHasSupervisor(
+      contractor.organizationalUnitId,
+      contractor.subareaId
+    )
+  );
+}
+
+export function canDirectorApproveSend(
+  account: WorkflowAccount,
+  contractor: WorkflowContractor
+) {
+  return (
+    account.estado === "PENDIENTE_DIRECTOR" &&
+    !subareaHasSupervisor(
+      contractor.organizationalUnitId,
+      contractor.subareaId
+    )
+  );
 }
 
 export function canJefeApproveSend(account: WorkflowAccount) {
@@ -142,5 +196,26 @@ export function canReturnToContractor(
   if (role === USER_ROLES.JEFE) {
     return account.estado === "PENDIENTE_JEFE";
   }
+  if (role === USER_ROLES.DIRECTOR) {
+    return account.estado === "PENDIENTE_DIRECTOR";
+  }
   return false;
+}
+
+/** Cuentas que no deben aparecer en la bandeja del supervisor (flujo directo al director). */
+export function shouldHideFromSupervisorInbox(
+  contractor: WorkflowContractor,
+  estado: CuentaCobroStatus
+) {
+  if (
+    subareaHasSupervisor(
+      contractor.organizationalUnitId,
+      contractor.subareaId
+    )
+  ) {
+    return false;
+  }
+  return (
+    estado === "PENDIENTE_SUPERVISOR" || estado === "PENDIENTE_ENVIO_CAD"
+  );
 }
