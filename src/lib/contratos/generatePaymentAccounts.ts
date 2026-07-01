@@ -6,6 +6,7 @@ import {
 } from "@/models/cuentaCobro";
 import { parseDateOnlyToUtcNoon } from "@/utils/date";
 import { resolveInitialStatus } from "@/lib/contratos/paymentAccountInitialStatus";
+import { getPayableDays } from "@/lib/cuentas-cobro/paymentAccountPreview";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const DAYS_BEFORE_ENABLE = 5;
@@ -36,49 +37,6 @@ function utcMonthStart(year: number, month: number): Date {
 function utcMonthEnd(year: number, month: number): Date {
   const last = lastDayOfUtcMonth(year, month);
   return new Date(Date.UTC(year, month, last, 12, 0, 0, 0));
-}
-
-function calendarDaysInclusive(start: Date, end: Date): number {
-  return (
-    Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY) + 1
-  );
-}
-
-function isFullCalendarMonthSegment(start: Date, end: Date): boolean {
-  const y = start.getUTCFullYear();
-  const m = start.getUTCMonth();
-  return (
-    start.getUTCDate() === 1 &&
-    end.getUTCDate() === lastDayOfUtcMonth(y, m) &&
-    start.getUTCFullYear() === end.getUTCFullYear() &&
-    start.getUTCMonth() === end.getUTCMonth()
-  );
-}
-
-function getPayableDays(
-  periodoInicio: Date,
-  periodoFin: Date,
-  isFirstSegment: boolean,
-  isLastSegment: boolean
-): number {
-  const calendarDays = calendarDaysInclusive(periodoInicio, periodoFin);
-
-  if (isFullCalendarMonthSegment(periodoInicio, periodoFin)) {
-    return 30;
-  }
-
-  if (isFirstSegment && periodoInicio.getUTCDate() !== 1) {
-    return Math.min(30, periodoFin.getUTCDate() - periodoInicio.getUTCDate());
-  }
-
-  if (isLastSegment && periodoFin.getUTCDate() !== lastDayOfUtcMonth(
-    periodoFin.getUTCFullYear(),
-    periodoFin.getUTCMonth()
-  )) {
-    return Math.min(30, calendarDays);
-  }
-
-  return Math.min(30, calendarDays);
 }
 
 function subtractDays(date: Date, days: number): Date {
@@ -141,20 +99,24 @@ function buildPaymentSegments(
 }
 
 /**
- * Genera cuentas de cobro por cada mes calendario tocado, con prorrateo
- * (máx. 30 días pagables por mes) y consumo exacto del valor total del contrato.
+ * Genera cuentas de cobro por cada mes calendario tocado. El valor se reparte
+ * proporcional a los días pagables reales de cada mes (mes contable de 30 días),
+ * de modo que los meses completos valen `valorTotal × 30 / totalDías` y el primer
+ * y último mes parciales cobran solo su fracción. La última cuenta toma el
+ * remanente exacto para consumir el valor total sin inflarse.
  */
 export async function generatePaymentAccountsForContract(
   input: GeneratePaymentAccountsInput
 ) {
-  const { userId, contratoId, fechaActaInicio, fechaFinal, plazoMeses, valorTotal } =
-    input;
+  const { userId, contratoId, fechaActaInicio, fechaFinal, valorTotal } = input;
 
   const segments = buildPaymentSegments(fechaActaInicio, fechaFinal);
   if (segments.length === 0) return [];
 
-  const plazo = Math.max(1, Math.round(plazoMeses));
-  const valorMensual = valorTotal / plazo;
+  const totalDias = segments.reduce(
+    (sum, segment) => sum + segment.diasPagables,
+    0
+  );
   const today = new Date();
 
   const accounts: Omit<ICuentaCobro, "createdAt" | "updatedAt">[] = [];
@@ -163,11 +125,17 @@ export async function generatePaymentAccountsForContract(
   for (let i = 0; i < segments.length; i++) {
     const { periodoInicio, periodoFin, diasPagables } = segments[i];
 
-    let valor = Math.round((valorMensual * diasPagables) / 30);
+    // Reparto proporcional a los días pagables reales. La última cuenta toma el
+    // remanente exacto para cuadrar con el valor total sin inflarse (el remanente
+    // equivale a su parte proporcional salvo centavos de redondeo).
+    let valor: number;
     if (i === segments.length - 1) {
       valor = valorTotal - totalAssigned;
+    } else {
+      valor =
+        totalDias > 0 ? Math.round((valorTotal * diasPagables) / totalDias) : 0;
+      totalAssigned += valor;
     }
-    totalAssigned += valor;
 
     const fechaLimiteEnvio = new Date(periodoFin);
     const fechaHabilitadaEnvio = subtractDays(periodoFin, DAYS_BEFORE_ENABLE);

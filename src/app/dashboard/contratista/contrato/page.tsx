@@ -16,17 +16,19 @@ import { useContratosStore } from "@/store/contratos/contratos.store";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 
 export default function InformacionContractualPage() {
-  const contratosQuery = useContratosQuery();
-  const contracts = useContratosStore((s) => s.contracts);
-  const currentContract = useContratosStore((s) => s.currentContract);
-  const lastContract = useContratosStore((s) => s.lastContract);
-  const listError = useContratosStore((s) => s.listError);
-  const isLoadingList = useContratosStore((s) => s.isLoadingList);
+  const {
+    contracts,
+    currentContract,
+    lastContract,
+    listError,
+    isListLoading,
+    refetch,
+  } = useContratosQuery();
   const isCreateModalOpen = useContratosStore((s) => s.isCreateModalOpen);
   const openCreateModal = useContratosStore((s) => s.openCreateModal);
   const closeCreateModal = useContratosStore((s) => s.closeCreateModal);
 
-  const heroContract = currentContract ?? lastContract;
+  const heroContract = isListLoading ? null : currentContract ?? lastContract;
   const current = heroContract?.actual;
   const hasVigenteContract = Boolean(currentContract?.vigente);
 
@@ -39,14 +41,18 @@ export default function InformacionContractualPage() {
         <DashboardHero
           eyebrow="Información contractual"
           title={
-            heroContract
-              ? `Contrato No. ${current?.numeroContrato ?? heroContract.numeroContrato}`
-              : "Sin contratos registrados"
+            isListLoading
+              ? "Cargando contratos..."
+              : heroContract
+                ? `Contrato No. ${current?.numeroContrato ?? heroContract.numeroContrato}`
+                : "Sin contratos registrados"
           }
           description={
-            heroContract
-              ? "Gestiona tu contrato vigente o histórico, revisa el detalle completo y el historial de cuentas de cobro asociadas."
-              : "Cuando registres un contrato, aparecerá aquí como referencia principal de tu información contractual."
+            isListLoading
+              ? "Estamos consultando tu información contractual."
+              : heroContract
+                ? "Gestiona tu contrato vigente o histórico, revisa el detalle completo y el historial de cuentas de cobro asociadas."
+                : "Cuando registres un contrato, aparecerá aquí como referencia principal de tu información contractual."
           }
         >
           {heroContract ? (
@@ -117,13 +123,13 @@ export default function InformacionContractualPage() {
               description={listError}
               variant="error"
               icon="alert"
-              onRefresh={() => contratosQuery.refetch()}
+              onRefresh={() => refetch()}
             />
           ) : (
             <ContractsTable
               contracts={contracts}
-              loading={isLoadingList}
-              onRefresh={() => contratosQuery.refetch()}
+              loading={isListLoading}
+              onRefresh={() => refetch()}
             />
           )}
         </section>

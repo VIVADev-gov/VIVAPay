@@ -1,7 +1,5 @@
 import { parseDateOnlyToUtcNoon } from "@/utils/date";
 
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
-
 export type PaymentAccountPreview = {
   numero: number;
   periodoInicio: Date;
@@ -24,10 +22,6 @@ function utcMonthEnd(year: number, month: number): Date {
   );
 }
 
-function calendarDaysInclusive(start: Date, end: Date): number {
-  return Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY) + 1;
-}
-
 function isFullCalendarMonthSegment(start: Date, end: Date): boolean {
   return (
     start.getUTCDate() === 1 &&
@@ -38,29 +32,57 @@ function isFullCalendarMonthSegment(start: Date, end: Date): boolean {
   );
 }
 
-function getPayableDays(
+/**
+ * Conteo de días con convención 30/360 (NASD): cada mes vale 30 días.
+ * `end` se interpreta de forma exclusiva.
+ */
+function days360(start: Date, end: Date): number {
+  let d1 = start.getUTCDate();
+  let d2 = end.getUTCDate();
+  if (d1 === 31) d1 = 30;
+  if (d2 === 31 && d1 === 30) d2 = 30;
+  return (
+    (end.getUTCFullYear() - start.getUTCFullYear()) * 360 +
+    (end.getUTCMonth() - start.getUTCMonth()) * 30 +
+    (d2 - d1)
+  );
+}
+
+/**
+ * Días pagables de un segmento (máx. 30/mes) usando mes contable de 30 días:
+ * - Mes calendario completo → 30.
+ * - Primer mes parcial (arranca después del día 1) → paga desde el día de inicio
+ *   hasta fin de mes contable: `31 - díaInicio` (ej. inicia el 29 → 2 días).
+ * - Último mes parcial → la fecha final es el aniversario (exclusiva), por lo que
+ *   paga los días `[1 .. díaFin - 1]` (ej. termina el 29 → 28 días).
+ *
+ * Así el primer y último mes se complementan a 30 en contratos de aniversario y la
+ * suma total de días equivale a `plazo × 30`, sin inflar ninguna cuenta.
+ */
+export function getPayableDays(
   periodoInicio: Date,
   periodoFin: Date,
   isFirstSegment: boolean,
   isLastSegment: boolean
 ): number {
-  const calendarDays = calendarDaysInclusive(periodoInicio, periodoFin);
-
   if (isFullCalendarMonthSegment(periodoInicio, periodoFin)) return 30;
 
-  if (isFirstSegment && periodoInicio.getUTCDate() !== 1) {
-    return Math.min(30, periodoFin.getUTCDate() - periodoInicio.getUTCDate());
+  const startDay = periodoInicio.getUTCDate();
+  const endDay = periodoFin.getUTCDate();
+
+  if (isFirstSegment && isLastSegment) {
+    return Math.max(0, Math.min(30, days360(periodoInicio, periodoFin)));
   }
 
-  if (
-    isLastSegment &&
-    periodoFin.getUTCDate() !==
-      lastDayOfUtcMonth(periodoFin.getUTCFullYear(), periodoFin.getUTCMonth())
-  ) {
-    return Math.min(30, calendarDays);
+  if (isFirstSegment && startDay !== 1) {
+    return Math.min(30, 31 - startDay);
   }
 
-  return Math.min(30, calendarDays);
+  if (isLastSegment) {
+    return Math.max(0, Math.min(30, endDay - 1));
+  }
+
+  return Math.max(0, Math.min(30, days360(periodoInicio, periodoFin)));
 }
 
 export function getPayableDaysForAccountAtIndex(
@@ -157,21 +179,29 @@ export function buildPaymentAccountPreviews({
     }
   }
 
-  const monthlyValue = valorTotal / plazo;
-  let totalAssigned = 0;
-
-  return segments.map((segment, index) => {
-    const diasPagables = getPayableDays(
+  const diasList = segments.map((segment, index) =>
+    getPayableDays(
       segment.periodoInicio,
       segment.periodoFin,
       index === 0,
       index === segments.length - 1
-    );
-    let valor = Math.round((monthlyValue * diasPagables) / 30);
+    )
+  );
+  const totalDias = diasList.reduce((sum, dias) => sum + dias, 0);
+  let totalAssigned = 0;
+
+  return segments.map((segment, index) => {
+    const diasPagables = diasList[index];
+    // Reparto proporcional a los días pagables reales. La última cuenta toma el
+    // remanente exacto para cuadrar con el total sin inflarse.
+    let valor: number;
     if (index === segments.length - 1) {
       valor = valorTotal - totalAssigned;
+    } else {
+      valor =
+        totalDias > 0 ? Math.round((valorTotal * diasPagables) / totalDias) : 0;
+      totalAssigned += valor;
     }
-    totalAssigned += valor;
 
     return {
       numero: index + 1,

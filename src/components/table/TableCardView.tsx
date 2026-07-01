@@ -313,12 +313,19 @@ export default function TableCardView<T extends object>({
       ) : (
         <div
           className={`space-y-4 ${
-            loading && isServer
+            loading
               ? "pointer-events-none opacity-55 transition-opacity"
               : ""
           }`}
         >
-          {pagedCards.length === 0 ? (
+          {loading && pagedCards.length === 0 ? (
+            <div
+              className="rounded-2xl border border-dashed border-primary/20 bg-muted/30 px-6 py-12 text-center text-sm text-muted-foreground"
+              aria-busy="true"
+            >
+              Cargando registros...
+            </div>
+          ) : pagedCards.length === 0 ? (
             <EmptyState
               message={emptyMessage}
               description="Puedes crear un nuevo registro o recargar la lista."

@@ -9,7 +9,6 @@ import {
 import Link from "next/link";
 import { useContratosQuery } from "@/hooks/api/useContratos";
 import { useCuentasCobroSummaryQuery } from "@/hooks/api/useCuentasCobro";
-import { useContratosStore } from "@/store/contratos/contratos.store";
 import { useCuentasCobroStore } from "@/store/cuentas-cobro/cuentas-cobro.store";
 import {
   getPaymentAccountActionLabel,
@@ -86,19 +85,17 @@ type DashboardOverviewGridProps = {
 export default function DashboardOverviewGrid({
   basePath = "/dashboard/contratista",
 }: DashboardOverviewGridProps) {
-  useContratosQuery();
+  const { currentContract, lastContract, isListLoading: isLoadingContratos } =
+    useContratosQuery();
   useCuentasCobroSummaryQuery();
 
-  const currentContract = useContratosStore((s) => s.currentContract);
-  const lastContract = useContratosStore((s) => s.lastContract);
-  const contract = currentContract ?? lastContract;
+  const contract = isLoadingContratos ? null : currentContract ?? lastContract;
   const nextPayment = useCuentasCobroStore((s) => s.nextPaymentAccount);
   const lastPayment = useCuentasCobroStore((s) => s.lastPaymentAccount);
   const completedAll = useCuentasCobroStore((s) => s.completedAllPaymentAccounts);
   const summaryMessage = useCuentasCobroStore((s) => s.summaryMessage);
-  const isLoadingList = useContratosStore((s) => s.isLoadingList);
   const isLoadingSummary = useCuentasCobroStore((s) => s.isLoadingSummary);
-  const isLoading = isLoadingList || isLoadingSummary;
+  const isLoading = isLoadingContratos || isLoadingSummary;
 
   const contractNumber =
     contract?.actual.numeroContrato ?? contract?.numeroContrato;

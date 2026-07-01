@@ -145,8 +145,10 @@ export function formatFechaHoraDisplay(value: unknown): string {
 };
 
 /**
- * Plazo en meses calendario entre fecha de acta de inicio y fecha final.
- * Si el día final es igual o posterior al día de inicio, cuenta el mes de cierre completo.
+ * Plazo en meses entre fecha de acta de inicio y fecha final.
+ * La fecha final se interpreta como aniversario (exclusiva): del 29-ene al 29-jul
+ * son 6 meses, no 7. Solo se suma el mes de cierre cuando el día final es
+ * estrictamente posterior al día de inicio (p. ej. 01-ene → 31-jul = 7 meses).
  */
 export function calculatePlazoMeses(
     fechaActaInicio: string,
@@ -160,7 +162,7 @@ export function calculatePlazoMeses(
         (end.getFullYear() - start.getFullYear()) * 12 +
         (end.getMonth() - start.getMonth());
 
-    if (end.getDate() >= start.getDate()) {
+    if (end.getDate() > start.getDate()) {
         months += 1;
     }
 

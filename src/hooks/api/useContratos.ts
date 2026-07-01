@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import api from "@/lib/axiosInstance";
+import { useAuthStore } from "@/store/auth/auth.store";
 import { useContratosStore } from "@/store/contratos/contratos.store";
 import type {
   ContratoDetailResponse,
   ContratosResponse,
   CreateContratoBody,
   CreateContratoResponse,
+  PublicContrato,
   UpdateContratoBody,
   UpdateManualRegularizationBody,
 } from "@/types/contratos";
@@ -21,40 +29,111 @@ type ApiResponse<T> = {
 };
 
 export const contratosQueryKeys = {
-  all: ["contratos"] as const,
-  detail: (id: string) => ["contratos", id] as const,
+  root: ["contratos"] as const,
+  list: (userId: string) => ["contratos", "list", userId] as const,
+  detail: (userId: string, id: string) =>
+    ["contratos", "detail", userId, id] as const,
 };
 
-export function useContratosQuery() {
+export type UseContratosQueryResult = UseQueryResult<ContratosResponse> & {
+  isListLoading: boolean;
+  contracts: PublicContrato[];
+  currentContract: PublicContrato | null;
+  lastContract: PublicContrato | null;
+  listError: string | null;
+};
+
+function resolveListLoading(
+  enabled: boolean,
+  isPending: boolean,
+  isFetching: boolean,
+  hasData: boolean
+) {
+  if (!enabled) return true;
+  return isPending || (isFetching && !hasData);
+}
+
+export function useContratosQuery(): UseContratosQueryResult {
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
   const setListLoading = useContratosStore((s) => s.setListLoading);
   const setListError = useContratosStore((s) => s.setListError);
   const setContratosList = useContratosStore((s) => s.setContratosList);
+  const storeContracts = useContratosStore((s) => s.contracts);
+  const storeCurrentContract = useContratosStore((s) => s.currentContract);
+  const storeLastContract = useContratosStore((s) => s.lastContract);
+  const storeListError = useContratosStore((s) => s.listError);
 
-  return useQuery({
-    queryKey: contratosQueryKeys.all,
+  const enabled = isHydrated && Boolean(userId);
+
+  const query = useQuery({
+    queryKey: contratosQueryKeys.list(userId ?? ""),
+    enabled,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
-      setListLoading(true);
-      setListError(null);
-      try {
-        const { data } = await api.get<ApiResponse<ContratosResponse>>(
-          "/api/contratos"
-        );
-        if (!data.success) throw new Error(data.message);
-        setContratosList(data.data);
-        return data.data;
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Error al cargar contratos";
-        setListError(message);
-        throw error;
-      } finally {
-        setListLoading(false);
-      }
+      const { data } = await api.get<ApiResponse<ContratosResponse>>(
+        "/api/contratos"
+      );
+      if (!data.success) throw new Error(data.message);
+      return data.data;
     },
   });
+
+  const isListLoading = resolveListLoading(
+    enabled,
+    query.isPending,
+    query.isFetching,
+    query.data !== undefined
+  );
+
+  useEffect(() => {
+    setListLoading(isListLoading);
+  }, [isListLoading, setListLoading]);
+
+  useEffect(() => {
+    if (query.data) {
+      setContratosList(query.data);
+    }
+  }, [query.data, setContratosList]);
+
+  useEffect(() => {
+    if (query.error) {
+      const message =
+        query.error instanceof Error
+          ? query.error.message
+          : "Error al cargar contratos";
+      setListError(message);
+      return;
+    }
+    if (!query.isPending) {
+      setListError(null);
+    }
+  }, [query.error, query.isPending, setListError]);
+
+  const contracts = query.data?.contracts ?? storeContracts;
+  const currentContract =
+    query.data?.currentContract ?? storeCurrentContract;
+  const lastContract = query.data?.lastContract ?? storeLastContract;
+  const listError =
+    query.error instanceof Error
+      ? query.error.message
+      : query.error
+        ? "Error al cargar contratos"
+        : storeListError;
+
+  return {
+    ...query,
+    isListLoading,
+    contracts,
+    currentContract,
+    lastContract,
+    listError,
+  };
 }
 
 export function useContratoDetailQuery(id: string) {
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
   const setDetailLoading = useContratosStore((s) => s.setDetailLoading);
   const setDetailError = useContratosStore((s) => s.setDetailError);
   const setContratoDetail = useContratosStore((s) => s.setContratoDetail);
@@ -70,11 +149,15 @@ export function useContratoDetailQuery(id: string) {
     }
   }, [id, detailContractId, setContratoDetail, setDetailError]);
 
-  return useQuery({
-    queryKey: contratosQueryKeys.detail(id),
-    enabled: Boolean(id),
+  const enabled = isHydrated && Boolean(userId) && Boolean(id);
+
+  const query = useQuery({
+    queryKey: contratosQueryKeys.detail(userId ?? "", id),
+    enabled,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
-      const hasCurrentDetail = useContratosStore.getState().detail?.contract.id === id;
+      const hasCurrentDetail =
+        useContratosStore.getState().detail?.contract.id === id;
       if (!hasCurrentDetail) {
         setDetailLoading(true);
       }
@@ -101,6 +184,8 @@ export function useContratoDetailQuery(id: string) {
       }
     },
   });
+
+  return query;
 }
 
 export function useCreateContratoMutation() {
@@ -118,7 +203,7 @@ export function useCreateContratoMutation() {
     },
     onSuccess: () => {
       closeCreateModal();
-      queryClient.invalidateQueries({ queryKey: contratosQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: contratosQueryKeys.root });
       queryClient.invalidateQueries({ queryKey: cuentasCobroQueryKeys.summary });
     },
   });
@@ -140,8 +225,14 @@ export function useRegenerateContratoPaymentAccountsMutation(contractId: string)
     },
     onSuccess: (data) => {
       applyContratoDetailUpdate(data);
-      queryClient.setQueryData(contratosQueryKeys.detail(contractId), data);
-      queryClient.invalidateQueries({ queryKey: contratosQueryKeys.all });
+      const userId = useAuthStore.getState().user?.id;
+      if (userId) {
+        queryClient.setQueryData(
+          contratosQueryKeys.detail(userId, contractId),
+          data
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: contratosQueryKeys.root });
       queryClient.invalidateQueries({ queryKey: cuentasCobroQueryKeys.summary });
     },
   });
@@ -164,8 +255,14 @@ export function useUpdateManualRegularizationMutation(contractId: string) {
     },
     onSuccess: (data) => {
       applyContratoDetailUpdate(data);
-      queryClient.setQueryData(contratosQueryKeys.detail(contractId), data);
-      queryClient.invalidateQueries({ queryKey: contratosQueryKeys.all });
+      const userId = useAuthStore.getState().user?.id;
+      if (userId) {
+        queryClient.setQueryData(
+          contratosQueryKeys.detail(userId, contractId),
+          data
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: contratosQueryKeys.root });
       queryClient.invalidateQueries({ queryKey: cuentasCobroQueryKeys.summary });
     },
   });
@@ -188,8 +285,14 @@ export function useUpdateContratoMutation(contractId: string) {
     },
     onSuccess: (data) => {
       applyContratoDetailUpdate(data);
-      queryClient.setQueryData(contratosQueryKeys.detail(contractId), data);
-      queryClient.invalidateQueries({ queryKey: contratosQueryKeys.all });
+      const userId = useAuthStore.getState().user?.id;
+      if (userId) {
+        queryClient.setQueryData(
+          contratosQueryKeys.detail(userId, contractId),
+          data
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: contratosQueryKeys.root });
       queryClient.invalidateQueries({ queryKey: cuentasCobroQueryKeys.summary });
     },
   });
