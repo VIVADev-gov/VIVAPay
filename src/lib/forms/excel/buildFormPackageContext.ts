@@ -1,7 +1,7 @@
 import "server-only";
 
 import { Types } from "mongoose";
-import { ORGANIZACION_TIPO } from "@/constants/organizacionViva";
+import { ORGANIZACION_TIPO, contractorUsesSupervisorWorkflow } from "@/constants/organizacionViva";
 import { parseGfrFo11Responses } from "@/lib/cuentas-cobro/gfrFo11Responses";
 import { parsePaymentAccountReembolsables } from "@/lib/cuentas-cobro/paymentAccountReembolsables";
 import { parsePaymentAccountDeclarations } from "@/lib/cuentas-cobro/paymentAccountDeclarations";
@@ -130,8 +130,17 @@ export async function buildFormPackageContext(
     subareaId: contractor.subareaId ?? null,
   };
 
+  const reviewerSignedUserId =
+    contractorOrg.organizationalUnitType === ORGANIZACION_TIPO.JEFATURA
+      ? account.jefeFirmadoPor
+        ? String(account.jefeFirmadoPor)
+        : null
+      : !contractorUsesSupervisorWorkflow(contractorOrg) && account.directorFirmadoPor
+        ? String(account.directorFirmadoPor)
+        : null;
+
   const [reviewer, ordenador] = await Promise.all([
-    resolveFormReviewer(contractorOrg),
+    resolveFormReviewer(contractorOrg, reviewerSignedUserId),
     resolveFormOrdenador(
       contractorOrg,
       contractor.organizationalUnitType === ORGANIZACION_TIPO.JEFATURA
